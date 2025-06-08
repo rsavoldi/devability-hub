@@ -1,13 +1,53 @@
 
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
-import { mockLessons, lessonCategories } from '@/lib/mockData';
+// import { mockLessons, lessonCategories as mockLessonCategoriesFromData } from '@/lib/mockData'; // Removido mockLessons
+import { mockRoadmapData } from '@/lib/mockData'; // Mantido para ícones e nomes de categorias
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, ListFilter, ListChecks } from 'lucide-react'; 
+import { BookOpen, ListFilter, ListChecks, type LucideIcon } from 'lucide-react'; 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy as firestoreOrderBy } from 'firebase/firestore'; // Renomeado orderBy para evitar conflito
+import type { Lesson } from '@/lib/types';
+import { unstable_noStore as noStore } from 'next/cache';
 
-export default function LessonsPage() {
+
+interface LessonCategory {
+  name: string;
+  icon: LucideIcon;
+  lessons: Lesson[];
+}
+
+async function getLessonsFromFirestore(): Promise<Lesson[]> {
+  noStore(); // Impede o cache estático para esta busca, garantindo dados frescos
+  try {
+    const lessonsCollectionRef = collection(db, 'lessons');
+    // Adicionando ordenação, se os documentos tiverem um campo 'order' e 'moduleTitle'
+    const q = query(lessonsCollectionRef, firestoreOrderBy("moduleTitle"), firestoreOrderBy("order"));
+    const lessonsSnapshot = await getDocs(q);
+    return lessonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lesson));
+  } catch (error) {
+    console.error("Error fetching lessons from Firestore:", error);
+    return [];
+  }
+}
+
+export default async function LessonsPage() {
+  const allLessons = await getLessonsFromFirestore();
+
+  // Recriar lessonCategories com base nos módulos de mockRoadmapData e nas lições do Firestore
+  const lessonCategories: LessonCategory[] = mockRoadmapData.map(roadmapStep => ({
+    name: roadmapStep.modules[0]?.title || roadmapStep.title, // Usa o título do primeiro módulo ou da trilha
+    icon: roadmapStep.icon || BookOpen, // Usa o ícone da trilha ou um padrão
+    lessons: allLessons.filter(lesson => lesson.moduleId === roadmapStep.modules[0]?.id || lesson.moduleTitle === roadmapStep.modules[0]?.title)
+  }));
+  
+  // Adicionar uma categoria "Todas as Lições" se necessário, ou filtrar as categorias que realmente têm lições
+  const categoriesWithLessons = lessonCategories.filter(cat => cat.lessons.length > 0);
+  const defaultTabValue = categoriesWithLessons[0]?.name.toLowerCase().replace(/\s+/g, '-') || 'all';
+
+
   return (
     <div className="container mx-auto py-8">
       <header className="mb-8">
@@ -20,8 +60,7 @@ export default function LessonsPage() {
         </p>
       </header>
 
-      <Tabs defaultValue={lessonCategories[0]?.name.toLowerCase().replace(/\s+/g, '-') || 'all'} className="w-full">
-        {/* Card para seleção de módulos - SEM BORDA E SEM SOMBRA */}
+      <Tabs defaultValue={defaultTabValue} className="w-full">
         <Card className="mb-8 bg-card text-card-foreground rounded-lg border-0 shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center text-2xl">
@@ -53,7 +92,7 @@ export default function LessonsPage() {
                 </TooltipContent>
               </Tooltip>
 
-              {lessonCategories.map((category) => {
+              {categoriesWithLessons.map((category) => {
                 const CategoryIcon = category.icon;
                 return (
                   <Tooltip key={category.name}>
@@ -79,27 +118,30 @@ export default function LessonsPage() {
           </TooltipProvider>
         </Card>
 
-        {/* Container para visualização das lições */}
         <div className="mt-8">
           <TabsContent value="all">
               <h2 className="text-2xl font-semibold mb-6 mt-4 flex items-center">
                 <ListChecks className="w-6 h-6 mr-2 text-primary shrink-0" />
-                Todas as Lições
+                Todas as Lições ({allLessons.length})
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {mockLessons.map((lesson) => (
-                  <LessonItemCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
+              {allLessons.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {allLessons.map((lesson) => (
+                    <LessonItemCard key={lesson.id} lesson={lesson} />
+                  ))}
+                </div>
+              ) : (
+                 <p className="text-muted-foreground text-center py-8">Nenhuma lição encontrada no momento.</p>
+              )}
           </TabsContent>
 
-          {lessonCategories.map((category) => {
+          {categoriesWithLessons.map((category) => {
             const CategoryIcon = category.icon;
             return (
             <TabsContent key={category.name} value={category.name.toLowerCase().replace(/\s+/g, '-')}>
               <h2 className="text-2xl font-semibold mb-6 mt-4 flex items-center">
                 <CategoryIcon className="w-6 h-6 mr-2 text-primary shrink-0" />
-                {category.name}
+                {category.name} ({category.lessons.length})
               </h2>
               {category.lessons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">

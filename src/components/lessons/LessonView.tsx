@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState, useMemo, Fragment } from 'react';
 import Image from 'next/image';
-import { mockLessons } from '@/lib/mockData';
 import type { Lesson } from '@/lib/types'; 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,9 +14,11 @@ import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils'; 
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { db } from '@/lib/firebase'; // Import db
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; // Import firestore functions
 
 interface LessonViewProps {
-  lessonId: string;
+  lesson: Lesson; // Alterado de lessonId: string para lesson: Lesson
 }
 
 const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
@@ -47,7 +48,6 @@ const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Elemen
   }
   return parts;
 };
-
 
 const parseLessonContent = (content: string): (string | JSX.Element)[] => {
   const elements: (string | JSX.Element)[] = [];
@@ -124,7 +124,6 @@ const parseLessonContent = (content: string): (string | JSX.Element)[] => {
   return elements;
 };
 
-
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
   const paragraphs: JSX.Element[] = [];
   let currentParagraphAccumulator: (string | JSX.Element)[] = [];
@@ -132,11 +131,11 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   elements.forEach((element, elIndex) => {
     const elementKeyPrefix = `${baseKey}-el-${elIndex}`;
     if (typeof element === 'string') {
-      const textSegments = element.split(/(\n)/g);
+      const textSegments = element.split(/(\\n)/g); // Regex para split em \n, mantendo-o
 
       textSegments.forEach((segment, segIndex) => {
         const segmentKey = `${elementKeyPrefix}-seg-${segIndex}`;
-        if (segment === '\n') {
+        if (segment === '\\n' || segment === '\n') { // Considerar string literal '\n' e caractere de nova linha
           if (currentParagraphAccumulator.length > 0 && currentParagraphAccumulator.some(p => (typeof p === 'string' && p.trim() !== '') || React.isValidElement(p))) {
             paragraphs.push(
               <p key={`para-${paragraphs.length}-${segmentKey}`} className="mb-4 leading-relaxed">
@@ -161,24 +160,34 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       </p>
     );
   }
+  
+  // Se nenhum parágrafo foi formado mas há elementos (ex: apenas interativos sem texto ao redor), renderizá-los.
+  if (paragraphs.length === 0 && elements.length > 0) {
+    return elements.map((element, idx) => 
+        React.isValidElement(element) ? 
+        <div key={`${baseKey}-direct-${idx}`} className="my-2">{element}</div> : 
+        <p key={`${baseKey}-direct-${idx}`} className="mb-4 leading-relaxed">{renderTextWithBold(element as string, `${baseKey}-direct-text-${idx}`)}</p>
+    );
+  }
 
   if (paragraphs.length === 0) {
-    if (elements.length === 0) {
-      return [<p key="empty-lesson" className="text-muted-foreground">Conteúdo da lição indisponível.</p>];
-    }
-    if (elements.every(el => typeof el === 'string' && el.trim() === '')) {
-      return [<p key="whitespace-lesson" className="text-muted-foreground">Conteúdo da lição parece ser apenas espaços em branco.</p>];
+    if (elements.length === 0 || (elements.length === 1 && typeof elements[0] === 'string' && elements[0].trim() === '')) {
+      return [<p key="empty-lesson" className="text-muted-foreground">Conteúdo da lição indisponível ou em processamento.</p>];
     }
   }
   return paragraphs;
 };
 
-export function LessonView({ lessonId }: LessonViewProps) {
-  const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+export function LessonView({ lesson }: LessonViewProps) {
+  // const [lesson, setLesson] = useState<Lesson | null>(null); // Removido, pois lesson é recebida como prop
+  // const [isLoading, setIsLoading] = useState(true); // Removido
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
+  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -188,16 +197,43 @@ export function LessonView({ lessonId }: LessonViewProps) {
   }, [lesson?.content]);
 
   useEffect(() => {
-    setIsLoading(true);
+    // Resetar sumário e erro quando a lição mudar
     setSummary(null); 
     setSummaryError(null);
-    const foundLesson = mockLessons.find(l => l.id === lessonId);
-    if (foundLesson) {
-      setLesson(foundLesson);
-    }
-    const timer = setTimeout(() => setIsLoading(false), 300); 
-    return () => clearTimeout(timer);
-  }, [lessonId]);
+    setIsLoadingSummary(false); // Garantir que o estado de carregamento seja resetado
+
+    const fetchAdjacentLessons = async () => {
+      if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) {
+        setPrevLesson(null);
+        setNextLesson(null);
+        return;
+      }
+
+      // Fetch previous lesson
+      const prevQuery = query(
+        collection(db, 'lessons'),
+        where('moduleId', '==', lesson.moduleId),
+        where('order', '<', lesson.order),
+        orderBy('order', 'desc'),
+        limit(1)
+      );
+      const prevSnapshot = await getDocs(prevQuery);
+      setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
+
+      // Fetch next lesson
+      const nextQuery = query(
+        collection(db, 'lessons'),
+        where('moduleId', '==', lesson.moduleId),
+        where('order', '>', lesson.order),
+        orderBy('order', 'asc'),
+        limit(1)
+      );
+      const nextSnapshot = await getDocs(nextQuery);
+      setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
+    };
+
+    fetchAdjacentLessons();
+  }, [lesson]); // Dependência da prop lesson
 
   const handleGenerateSummary = async () => {
     if (!lesson?.content) return;
@@ -219,22 +255,9 @@ export function LessonView({ lessonId }: LessonViewProps) {
     }
   };
   
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!lesson) {
-    return <div className="text-center py-10">Lição não encontrada.</div>;
-  }
-
-  const currentIndex = mockLessons.findIndex(l => l.id === lessonId);
-  const prevLesson = currentIndex > 0 ? mockLessons[currentIndex - 1] : null;
-  const nextLesson = currentIndex < mockLessons.length - 1 ? mockLessons[currentIndex + 1] : null;
+  // Removido isLoading e verificação de !lesson no início, pois a página pai já faz isso
+  // if (isLoading) { ... }
+  // if (!lesson) { ... }
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -250,6 +273,7 @@ export function LessonView({ lessonId }: LessonViewProps) {
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="transition-transform duration-500 hover:scale-105"
                 data-ai-hint={lesson.aiHint || "visualização dados estatisticos"}
+                priority // Adicionar priority para a imagem principal
               />
              </div>
           )}
@@ -331,7 +355,7 @@ export function LessonView({ lessonId }: LessonViewProps) {
               <Alert className="mt-4 prose dark:prose-invert max-w-none text-sm" variant="default">
                 <AlertTitle>Resultado do Resumo:</AlertTitle>
                 <AlertDescription>
-                    {summary.split('\n').map((paragraph, index) => (
+                    {summary.split('\\n').map((paragraph, index) => ( // Mudado para split por '\\n' caso a IA retorne assim
                         <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                     ))}
                 </AlertDescription>
@@ -347,7 +371,7 @@ export function LessonView({ lessonId }: LessonViewProps) {
                 <Link href={`/lessons/${prevLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
                     <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="truncate hidden sm:inline">Anterior: {prevLesson.title.substring(0,15)}...</span>
+                    <span className="truncate hidden sm:inline">Anterior: {prevLesson.title.length > 15 ? prevLesson.title.substring(0,15) + '...' : prevLesson.title}</span>
                     <span className="sm:hidden">Anterior</span>
                   </span>
                 </Link>
@@ -356,9 +380,9 @@ export function LessonView({ lessonId }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:w-auto flex-shrink-0 my-2 sm:my-0">
-            <Button variant="default" size="default" className="w-full sm:w-auto">
+            <Button variant="default" size="default" className="w-full sm:w-auto" disabled>
                 <CheckCircle className="h-5 w-5 mr-2" />
-                Marcar como Concluído
+                Marcar como Concluído (em breve)
             </Button>
         </div>
         
@@ -367,7 +391,7 @@ export function LessonView({ lessonId }: LessonViewProps) {
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
-                    <span className="truncate hidden sm:inline">Próxima: {nextLesson.title.substring(0,15)}...</span>
+                    <span className="truncate hidden sm:inline">Próxima: {nextLesson.title.length > 15 ? nextLesson.title.substring(0,15) + '...' : nextLesson.title}</span>
                     <span className="sm:hidden">Próxima</span>
                     <ArrowRight className="h-4 w-4 ml-1 sm:ml-2" />
                   </span>
@@ -379,4 +403,3 @@ export function LessonView({ lessonId }: LessonViewProps) {
     </div>
   );
 }
-
