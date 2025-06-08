@@ -40,7 +40,7 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile } = useAuth(); // Will be null if not logged in
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
@@ -171,7 +171,7 @@ export function AppHeader() {
             )}
 
 
-            {isMobile && currentUser && (
+            {isMobile && ( // Mobile menu should appear regardless of login state for navigation
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Abrir menu principal" suppressHydrationWarning>
@@ -190,12 +190,14 @@ export function AppHeader() {
                       </Link>
                     </DropdownMenuItem>
                   ))}
-                   <DropdownMenuSeparator />
-                   {userProfile && (
-                    <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">
-                        <span>💎</span>
-                        <span>{userProfile.points} Pontos</span>
-                    </DropdownMenuItem>
+                   {currentUser && userProfile && ( // Only show points in mobile menu if logged in
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">
+                          <span>💎</span>
+                          <span>{userProfile.points} Pontos</span>
+                      </DropdownMenuItem>
+                    </>
                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
