@@ -5,8 +5,8 @@ import { mockRoadmapData } from '../src/lib/mockData'; // Caminho correto para m
 import type { Lesson as LessonType, Module as ModuleType, RoadmapStep } from '../src/lib/types'; // Caminho para seus tipos
 
 // ----- INÍCIO DA CONFIGURAÇÃO -----
-// TODO: Substitua pelo caminho para o seu arquivo de chave de conta de serviço
-const serviceAccount = require('../serviceAccountKey.json'); // Assumindo que está na raiz do projeto
+// Caminho para o seu arquivo de chave de conta de serviço
+const serviceAccount = require('../devability-hub-ppi4m-firebase-adminsdk-fbsvc-5ce82fb95b.json'); // Assumindo que está na raiz do projeto
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)

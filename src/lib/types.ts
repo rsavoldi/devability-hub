@@ -33,9 +33,10 @@ export interface Lesson {
   estimatedTime: string;
   coverImage?: string;
   aiHint?: string;
+  iconName?: string; // Campo adicionado
   references?: string[];
-  moduleId?: string; // Adicionado para vincular ao módulo
-  moduleTitle?: string; // Adicionado para nome da categoria/módulo
+  moduleId?: string;
+  moduleTitle?: string;
 }
 
 export type ExerciseType =
