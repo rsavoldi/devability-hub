@@ -44,4 +44,6 @@ next-env.d.ts
 firebase-debug.log
 firestore-debug.log
 src/lib/firebase.ts
-
+scripts/migrateLessons.ts
+devability-hub-ppi4m-firebase-adminsdk-fbsvc-5ce82fb95b.json
+scripts/migrateLessons.ts
