@@ -1,14 +1,14 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { LanguageProvider } from '@/contexts/LanguageContext';
-import { ProgressProvider } from '@/contexts/ProgressContext';
-import { Toaster } from '@/components/ui/toaster';
-import AppProviders from '@/components/layout/AppProviders';
+"use client";
 
-export const metadata: Metadata = {
-  title: 'DevAbility Hub',
-  description: 'Plataforma de aprendizado sobre desenvolvimento e inclusão de pessoas com deficiência.',
-};
+import { GeistSans } from 'geist/font/sans';
+// import { GeistMono } from 'geist/font/mono'; // Removido pois não está no package.json
+import './globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { Toaster } from "@/components/ui/toaster";
+import VLibras from '@/components/VLibras';
+
+// Solução temporária para GeistMono se não estiver instalado ou causar problemas:
+const geistMono = { variable: "" }; // Fallback
 
 export default function RootLayout({
   children,
@@ -16,19 +16,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
+        <title>DevAbility Hub</title>
+        <meta name="description" content="Sua jornada personalizada para dominar habilidades de desenvolvimento e inclusão." />
+        <link rel="icon" href="/favicon.ico" sizes="48x48" type="image/x-icon" />
       </head>
-      <body className="font-body antialiased">
-        <AppProviders>
+      <body className={`${GeistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
           <Toaster />
-        </AppProviders>
+        </ThemeProvider>
+        
+       <VLibras /> 
       </body>
     </html>
   );

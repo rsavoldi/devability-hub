@@ -1,80 +1,86 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 @layer base {
   :root {
-    --background: 198 93% 95%; /* Light Cyan */
-    --foreground: 210 20% 20%; /* Darker text for Light Cyan */
-    --card: 198 93% 95%; /* Match background */
-    --card-foreground: 210 20% 20%; /* Match foreground */
-    --popover: 198 93% 95%; /* Match background */
-    --popover-foreground: 210 20% 20%; /* Match foreground */
-    --primary: 207 70% 53%; /* Deep Sky Blue */
-    --primary-foreground: 210 40% 98%; /* Light text for primary */
-    --secondary: 205 75% 85%; /* Lighter Sapphire Blue for secondary elements */
-    --secondary-foreground: 205 65% 35%; /* Darker text for secondary */
-    --muted: 200 80% 90%; /* Muted version of light blue */
-    --muted-foreground: 200 30% 50%; /* Muted text */
-    --accent: 205 65% 45%; /* Sapphire Blue */
-    --accent-foreground: 210 40% 98%; /* Light text for accent */
+    --background: 210 40% 98%; /* Light Cool Gray */
+    --foreground: 210 40% 9.8%; /* Dark Cool Gray */
+    --card: 210 40% 99%; /* Almost White */
+    --card-foreground: 210 40% 9.8%;
+    --popover: 210 40% 99%;
+    --popover-foreground: 210 40% 9.8%;
+    --primary: 262 80% 58%; /* Vibrant Purple */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 90%; /* Lighter Cool Gray */
+    --secondary-foreground: 210 40% 20%; /* Mid-Dark Cool Gray */
+    --muted: 210 40% 90%;
+    --muted-foreground: 210 40% 45.1%;
+    --accent: 262 80% 65%; /* Slightly Lighter Purple */
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 200 50% 80%; /* Softer border color */
-    --input: 200 50% 88%; /* Input background */
-    --ring: 207 70% 53%; /* Ring to match primary */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 210 40% 85%;
+    --input: 210 40% 88%;
+    --ring: 262 80% 58%;
     --radius: 0.5rem;
-    --sidebar-background: 200 20% 98%; /* Slightly off-white for sidebar */
-    --sidebar-foreground: 210 20% 20%;
-    --sidebar-primary: 207 70% 53%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 205 65% 45%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 200 50% 80%;
-    --sidebar-ring: 207 70% 53%;
+
+    --chart-1: 262 80% 58%;
+    --chart-2: 210 80% 58%;
+    --chart-3: 30 80% 58%;
+    --chart-4: 150 80% 58%;
+    --chart-5: 300 80% 58%;
+
+    --sidebar-background: 220 30% 96%;
+    --sidebar-foreground: 220 25% 25%;
+    --sidebar-primary: 262 70% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 220 30% 90%;
+    --sidebar-accent-foreground: 220 25% 15%;
+    --sidebar-border: 220 20% 88%;
+    --sidebar-ring: 262 80% 58%;
   }
+
   .dark {
-    --background: 205 30% 12%; /* Dark Blue background */
-    --foreground: 198 93% 90%; /* Light Cyanish text */
-    --card: 205 30% 12%;
-    --card-foreground: 198 93% 90%;
-    --popover: 205 30% 12%;
-    --popover-foreground: 198 93% 90%;
-    --primary: 207 70% 63%; /* Slightly lighter Deep Sky Blue */
-    --primary-foreground: 210 20% 10%; 
-    --secondary: 205 65% 25%; /* Darker Sapphire Blue for secondary */
-    --secondary-foreground: 198 93% 90%;
-    --muted: 205 40% 20%;
-    --muted-foreground: 198 80% 70%;
-    --accent: 205 65% 55%; /* Slightly lighter Sapphire Blue */
-    --accent-foreground: 210 20% 10%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 210 20% 12%; /* Dark Slate Blue */
+    --foreground: 210 40% 98%; /* Light Cool Gray */
+    --card: 210 20% 15%; /* Slightly Lighter Dark Slate Blue */
+    --card-foreground: 210 40% 98%;
+    --popover: 210 20% 15%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262 70% 65%; /* Lighter Vibrant Purple for Dark Mode */
+    --primary-foreground: 210 20% 12%;
+    --secondary: 210 20% 25%; /* Darker Cool Gray */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 210 20% 25%;
+    --muted-foreground: 210 40% 60%;
+    --accent: 262 70% 70%; /* Lighter Purple Accent for Dark Mode */
+    --accent-foreground: 210 20% 12%;
+    --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 205 50% 30%;
-    --input: 205 50% 25%;
-    --ring: 207 70% 63%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 205 25% 15%; 
-    --sidebar-foreground: 198 93% 90%;
-    --sidebar-primary: 207 70% 63%;
-    --sidebar-primary-foreground: 210 20% 10%;
-    --sidebar-accent: 205 65% 55%;
-    --sidebar-accent-foreground: 210 20% 10%;
-    --sidebar-border: 205 50% 30%;
-    --sidebar-ring: 207 70% 63%;
+    --border: 210 20% 30%;
+    --input: 210 20% 30%;
+    --ring: 262 70% 65%;
+
+    --chart-1: 262 70% 65%;
+    --chart-2: 210 70% 65%;
+    --chart-3: 30 70% 65%;
+    --chart-4: 150 70% 65%;
+    --chart-5: 300 70% 65%;
+    
+    --sidebar-background: 220 15% 18%; /* Darker blue-gray for dark mode sidebar */
+    --sidebar-foreground: 220 15% 85%;
+    --sidebar-primary: 262 70% 65%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 220 15% 25%;
+    --sidebar-accent-foreground: 220 15% 95%;
+    --sidebar-border: 220 15% 28%;
+    --sidebar-ring: 262 70% 65%;
   }
 }
 
@@ -84,5 +90,9 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Estilos específicos para o Roadmap, se necessário, podem ser adicionados aqui */
+/* No entanto, a maior parte do layout do novo roadmap é controlada por posicionamento absoluto e JS */
