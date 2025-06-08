@@ -1,29 +1,28 @@
 
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
-// import { mockLessons, lessonCategories as mockLessonCategoriesFromData } from '@/lib/mockData'; // Removido mockLessons
-import { mockRoadmapData } from '@/lib/mockData'; // Mantido para ícones e nomes de categorias
+import { mockRoadmapData as fallbackRoadmapData } from '@/lib/mockData'; // Renomeado para fallback
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookOpen, ListFilter, ListChecks, type LucideIcon } from 'lucide-react'; 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy as firestoreOrderBy } from 'firebase/firestore'; // Renomeado orderBy para evitar conflito
-import type { Lesson } from '@/lib/types';
+import { collection, getDocs, query, orderBy as firestoreOrderBy, collectionGroup } from 'firebase/firestore';
+import type { Lesson, Module as ModuleType, RoadmapStep } from '@/lib/types'; // ModuleType importado
 import { unstable_noStore as noStore } from 'next/cache';
 
 
 interface LessonCategory {
   name: string;
-  icon: LucideIcon;
+  icon: LucideIcon; // Assumindo que o ícone do módulo/trilha será usado
   lessons: Lesson[];
+  moduleId: string;
 }
 
 async function getLessonsFromFirestore(): Promise<Lesson[]> {
-  noStore(); // Impede o cache estático para esta busca, garantindo dados frescos
+  noStore(); 
   try {
     const lessonsCollectionRef = collection(db, 'lessons');
-    // Adicionando ordenação, se os documentos tiverem um campo 'order' e 'moduleTitle'
     const q = query(lessonsCollectionRef, firestoreOrderBy("moduleTitle"), firestoreOrderBy("order"));
     const lessonsSnapshot = await getDocs(q);
     return lessonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lesson));
@@ -33,19 +32,60 @@ async function getLessonsFromFirestore(): Promise<Lesson[]> {
   }
 }
 
+// Função para buscar módulos de TODAS as trilhas
+async function getAllModulesFromFirestore(): Promise<(ModuleType & { roadmapTitle: string, roadmapIcon?: LucideIcon })[]> {
+  noStore();
+  const allModules: (ModuleType & { roadmapTitle: string, roadmapIcon?: LucideIcon })[] = [];
+  try {
+    const roadmapsCollectionRef = collection(db, 'roadmaps');
+    const roadmapsQuery = query(roadmapsCollectionRef, firestoreOrderBy("order"));
+    const roadmapsSnapshot = await getDocs(roadmapsQuery);
+
+    for (const roadmapDoc of roadmapsSnapshot.docs) {
+      const roadmapData = roadmapDoc.data() as RoadmapStep;
+      const modulesCollectionRef = collection(db, `roadmaps/${roadmapDoc.id}/modules`);
+      const modulesQuery = query(modulesCollectionRef, firestoreOrderBy("order"));
+      const modulesSnapshot = await getDocs(modulesQuery);
+
+      modulesSnapshot.docs.forEach(moduleDoc => {
+        const moduleData = moduleDoc.data() as ModuleType;
+        allModules.push({
+          ...moduleData,
+          id: moduleDoc.id, // Garante que o ID do módulo está correto
+          roadmapTitle: roadmapData.title,
+          roadmapIcon: roadmapData.icon || BookOpen, // Usa o ícone da trilha, se existir
+        });
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching modules from Firestore:", error);
+    // Em caso de erro, podemos usar fallbackRoadmapData para categorias, se preferir
+    // return fallbackRoadmapData.flatMap(roadmap => 
+    //   roadmap.modules.map(module => ({
+    //     ...module,
+    //     id: module.id,
+    //     roadmapTitle: roadmap.title,
+    //     roadmapIcon: roadmap.icon || BookOpen,
+    //   }))
+    // );
+  }
+  return allModules;
+}
+
+
 export default async function LessonsPage() {
   const allLessons = await getLessonsFromFirestore();
+  const allModulesFromFirestore = await getAllModulesFromFirestore();
 
-  // Recriar lessonCategories com base nos módulos de mockRoadmapData e nas lições do Firestore
-  const lessonCategories: LessonCategory[] = mockRoadmapData.map(roadmapStep => ({
-    name: roadmapStep.modules[0]?.title || roadmapStep.title, // Usa o título do primeiro módulo ou da trilha
-    icon: roadmapStep.icon || BookOpen, // Usa o ícone da trilha ou um padrão
-    lessons: allLessons.filter(lesson => lesson.moduleId === roadmapStep.modules[0]?.id || lesson.moduleTitle === roadmapStep.modules[0]?.title)
+  const lessonCategories: LessonCategory[] = allModulesFromFirestore.map(module => ({
+    name: module.title,
+    icon: module.roadmapIcon || BookOpen, // Usando o ícone da trilha associada ao módulo
+    lessons: allLessons.filter(lesson => lesson.moduleId === module.id),
+    moduleId: module.id
   }));
   
-  // Adicionar uma categoria "Todas as Lições" se necessário, ou filtrar as categorias que realmente têm lições
   const categoriesWithLessons = lessonCategories.filter(cat => cat.lessons.length > 0);
-  const defaultTabValue = categoriesWithLessons[0]?.name.toLowerCase().replace(/\s+/g, '-') || 'all';
+  const defaultTabValue = categoriesWithLessons[0]?.moduleId || 'all';
 
 
   return (
@@ -95,10 +135,10 @@ export default async function LessonsPage() {
               {categoriesWithLessons.map((category) => {
                 const CategoryIcon = category.icon;
                 return (
-                  <Tooltip key={category.name}>
+                  <Tooltip key={category.moduleId}>
                     <TooltipTrigger asChild>
                       <TabsTrigger
-                        value={category.name.toLowerCase().replace(/\s+/g, '-')}
+                        value={category.moduleId} // Usando moduleId como value
                         className={cn(
                             "h-10 w-10 p-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground", 
                             "rounded-md border-transparent hover:bg-accent hover:text-accent-foreground data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-ring"
@@ -138,7 +178,7 @@ export default async function LessonsPage() {
           {categoriesWithLessons.map((category) => {
             const CategoryIcon = category.icon;
             return (
-            <TabsContent key={category.name} value={category.name.toLowerCase().replace(/\s+/g, '-')}>
+            <TabsContent key={category.moduleId} value={category.moduleId}> {/* Usando moduleId como value */}
               <h2 className="text-2xl font-semibold mb-6 mt-4 flex items-center">
                 <CategoryIcon className="w-6 h-6 mr-2 text-primary shrink-0" />
                 {category.name} ({category.lessons.length})
@@ -160,3 +200,4 @@ export default async function LessonsPage() {
     </div>
   );
 }
+
