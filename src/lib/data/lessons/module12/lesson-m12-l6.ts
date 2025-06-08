@@ -1,54 +1,104 @@
-
 import type { Lesson } from '@/lib/types';
 
 export const lessonM12L6: Lesson = {
   id: 'm12-l6',
   title: 'Lição 12.6: Políticas Públicas e Direitos da Pessoa Idosa',
   type: 'interactive',
-  content: `A garantia dos direitos da pessoa idosa evoluiu de abordagens assistencialistas para perspectivas baseadas em <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*direitos humanos e cidadania;proteção passiva e caridade;medicalização e controle] -->, reconhecendo o idoso como sujeito ativo.
+  content: `
+A garantia dos direitos da pessoa idosa representa um avanço civilizatório fundamental, que reflete a evolução das sociedades em reconhecer a velhice não como um período de declínio, passividade ou mero objeto de caridade, mas como uma fase da vida com direitos plenos e vasto potencial de contribuição contínua. Historicamente, a abordagem predominante foi o **modelo assistencialista**, focado em ações de caridade ou na proteção paternalista, onde o idoso era visto como um ser fragilizado e incapaz de autodeterminação. Contudo, essa perspectiva tem sido gradualmente substituída por uma que se alicerça nos <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*direitos humanos e cidadania;proteção passiva e caridade;medicalização e controle] -->, reconhecendo o idoso como sujeito ativo de direitos, detentor de dignidade intrínseca e agente de sua própria vida. Este movimento global é fundamental para combater o **etarismo** (preconceito baseado na idade) e promover a inclusão em todas as esferas. O etarismo é o preconceito contra a <!-- INTERACTIVE_FILL_IN_BLANK: [idade;raça;deficiência] -->.
 
-**Marcos Internacionais:**
-*   Plano de Ação de Viena (1ª Assembleia Mundial sobre Envelhecimento, ONU, 1982).
-*   Princípios da ONU para Pessoas Idosas (1991): independência, participação, cuidado, autorrealização, dignidade.
-*   Plano de Ação de Madri (2ª Assembleia, 2002).
-*   Convenção Interamericana sobre a Proteção dos Direitos Humanos dos Idosos (OEA, 2015): 1º instrumento internacional <!-- INTERACTIVE_FILL_IN_BLANK: [juridicamente vinculante|apenas declaratório|focado em saúde] --> específico para idosos (Brasil assinou, mas não ratificou).
+**1. Marcos Internacionais para a Proteção e Promoção dos Direitos dos Idosos:**
 
-**Marcos Nacionais (Brasil):**
-*   **Constituição Federal (1988), Art. 230:** Dever da família, sociedade e Estado de amparar idosos, assegurando participação, dignidade, bem-estar e direito à vida.
-*   **Política Nacional do Idoso (PNI - Lei nº 8.842/1994):** Assegurar direitos sociais, promover autonomia, integração e participação. Criou o Conselho Nacional do Idoso (atual CNDPI).
-*   **Estatuto do Idoso (Lei nº 10.741/2003):** Ampliou e consolidou direitos para pessoas com 60+ anos. Abrange:
-    *   Vida, saúde, alimentação (atendimento preferencial SUS, medicamentos gratuitos).
-    *   Educação, cultura, esporte, lazer (desconto 50%).
-    *   Profissionalização e trabalho (proibição de discriminação etária).
-    *   Previdência e assistência social (BPC).
-    *   Habitação (prioridade, cotas).
-    *   <!-- INTERACTIVE_FILL_IN_BLANK: [Transporte (gratuidade para 65+)|Moradia compulsória em asilos|Trabalho forçado até 70 anos] -->.
-    *   Convivência familiar e comunitária.
-    *   Acesso à justiça (prioridade na tramitação).
-*   **Política Nacional de Saúde da Pessoa Idosa (PNSPI, Portaria nº 2.528/2006):** Atenção integral no SUS.
-*   **Política Nacional de Assistência Social (PNAS) e SUAS:** Serviços como SCFV para Idosos, BPC.
+A conscientização sobre os direitos das pessoas idosas ganhou força e visibilidade no cenário internacional a partir da segunda metade do século XX, impulsionando a criação de documentos e planos de ação que serviram de base para legislações nacionais e para o desenvolvimento de políticas públicas globais.
 
-**Desafios na Efetivação dos Direitos (Camarano, 2014):**
-*   Implementação incompleta/inadequada de leis.
-*   Desigualdades regionais e socioeconômicas.
-*   Persistência de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*etarismo (preconceito de idade);capacitismo (preconceito de deficiência);xenofobia (preconceito de nacionalidade)] -->.
-*   Fragmentação de políticas e serviços.
-*   Participação limitada de idosos em decisões.
-*   Insuficiência de dados e pesquisas.
+*   **Plano de Ação Internacional de Viena sobre o Envelhecimento (1982):** Resultado da 1ª Assembleia Mundial sobre o Envelhecimento, promovida pela Organização das Nações Unidas (ONU), este documento foi um marco inicial e fundamental. Ele reconheceu o envelhecimento populacional como um fenômeno global de proporções sem precedentes e a necessidade urgente de governos e sociedades se prepararem para suas consequências. Embora não fosse um tratado juridicamente vinculante, o Plano de Viena estabeleceu princípios gerais e recomendações para os Estados-membros em áreas como saúde, nutrição, moradia, família, bem-estar social, emprego, educação e pesquisa, marcando o início de uma agenda internacional sobre o tema. Viena foi o <!-- INTERACTIVE_FILL_IN_BLANK: [primeiro plano global|último plano;plano regional] --> sobre envelhecimento da ONU.
 
-**Estratégias para Avançar:** Fortalecer monitoramento/fiscalização, desenvolver indicadores, formar profissionais, conscientizar público, promover participação, articular políticas.
-Efetivar direitos dos idosos contribui para uma sociedade mais justa e <!-- INTERACTIVE_FILL_IN_BLANK: [sustentável para todas as idades|focada apenas nos mais jovens|economicamente mais competitiva] --> (Kalache, 2008).`,
-  estimatedTime: '10-15 mins',
-  coverImage: 'https://placehold.co/600x300.png',
-  aiHint: 'direitos idosos políticas estatuto do idoso etarismo',
+*   **Princípios das Nações Unidas para Pessoas Idosas (1991):** Adotados pela Assembleia Geral da ONU através da Resolução 46/91, esses princípios são mais detalhados e serviram como um guia ético e prático para a formulação de políticas e programas nacionais. Eles se dividem em cinco categorias essenciais para a qualidade de vida e a dignidade na velhice, enfatizando o protagonismo do idoso:
+    1.  **Independência:** Possibilitar o acesso a alimentos, água, abrigo, vestuário e cuidados de saúde adequados; oportunidades de trabalho remunerado ou voluntário; acesso à educação e formação; e a possibilidade de viver em segurança e com dignidade em seu próprio ambiente.
+    2.  **Participação:** Assegurar que os idosos permaneçam integrados à sociedade, participem ativamente da formulação e implementação de políticas que os afetam, e compartilhem seus conhecimentos e habilidades com as gerações mais jovens. A participação promove o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*engajamento social;isolamento;declínio] -->.
+    3.  **Cuidado:** Garantir acesso a cuidados de saúde e sociais que ajudem a manter o mais alto nível de bem-estar físico, mental e emocional; e acesso a serviços de cuidado institucional que proporcionem um ambiente humano e seguro.
+    4.  **Autorrealização:** Oferecer oportunidades para o pleno desenvolvimento do potencial individual, o acesso a recursos educacionais, culturais, espirituais e recreativos da sociedade. A autorrealização envolve <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*desenvolvimento pessoal;dependência financeira;isolamento social] -->.
+    5.  **Dignidade:** Assegurar que os idosos vivam com dignidade e segurança, livres de exploração, abuso físico ou mental, e de tratamento desumano e degradante.
+Esses princípios influenciaram muitas constituições e leis em todo o mundo, incluindo a brasileira.
+
+*   **Plano de Ação Internacional de Madri sobre o Envelhecimento (2002):** Convocada uma década após o Plano de Viena, a 2ª Assembleia Mundial sobre o Envelhecimento reavaliou as tendências demográficas e epidemiológicas, estabelecendo um roteiro mais detalhado e pragmático para a ação nos próximos anos. O Plano de Madri focou em três direções principais: Pessoas Idosas e Desenvolvimento, Promoção da Saúde e Bem-Estar na Velhice, e Criação de Ambientes Capacitadores. Madri focou em <!-- INTERACTIVE_FILL_IN_BLANK: [ambientes capacitadores;apenas a saúde;só a economia] --> para o envelhecimento. Ele enfatizou a necessidade de uma abordagem de curso de vida e a integração da perspectiva do envelhecimento em todas as políticas públicas.
+
+*   **Convenção Interamericana sobre a Proteção dos Direitos Humanos dos Idosos (OEA, 2015):** Este é o mais significativo avanço regional e global em termos de proteção jurídica dos direitos dos idosos. É o **primeiro instrumento internacional <!-- INTERACTIVE_FILL_IN_BLANK: [juridicamente vinculante|apenas declaratório|focado em saúde] -->** específico para proteger e promover os direitos humanos das pessoas idosas, no âmbito da Organização dos Estados Americanos (OEA). A Convenção abrange uma vasta gama de direitos, desde o direito à vida e à dignidade até o direito à participação na vida cultural e política, à acessibilidade, à não discriminação e ao cuidado de longa duração. O Brasil assinou esta Convenção em 2015, mas até o momento não a ratificou, o que impede sua força de lei em território nacional. A ratificação é essencial para que a Convenção tenha <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*pleno efeito legal;apenas valor simbólico;impacto limitado] --> e para que suas normas sejam diretamente aplicáveis.
+
+**2. Marcos Nacionais para a Proteção dos Direitos dos Idosos no Brasil:**
+
+O Brasil possui um arcabouço legal robusto e progressista para a proteção dos direitos da pessoa idosa, resultado de intensa mobilização social e avanços democráticos que reconhecem a velhice como um direito.
+
+*   **Constituição Federal de 1988 (Art. 230):** A Carta Magna do Brasil, em seu Artigo 230, já consagra a proteção da pessoa idosa como um dever tripartite, estabelecendo que "a família, a sociedade e o Estado têm o dever de amparar as pessoas idosas, assegurando sua participação na comunidade, sua dignidade, bem-estar e o direito à vida". Este artigo eleva a proteção do idoso ao nível de direito constitucional fundamental, garantindo sua prioridade.
+
+*   **Política Nacional do Idoso (PNI - Lei nº 8.842/1994):** Esta lei foi a primeira a estabelecer as diretrizes e os princípios para as políticas públicas voltadas à pessoa idosa no Brasil. Seu objetivo principal é assegurar os direitos sociais do idoso, promover sua autonomia, integração e participação efetiva na sociedade. A PNI criou o Conselho Nacional do Idoso (atual Conselho Nacional dos Direitos da Pessoa Idosa - CNDPI), um órgão colegiado com representação governamental e da sociedade civil, responsável por acompanhar, propor e fiscalizar as políticas públicas para idosos. A PNI buscou promover a <!-- INTERACTIVE_FILL_IN_BLANK: [autonomia e participação|dependência e isolamento|medicalização excessiva] -->.
+
+*   **Estatuto do Idoso (Lei nº 10.741/2003):** Considerado o mais importante e abrangente marco legal nacional para a pessoa idosa, o Estatuto do Idoso ampliou e consolidou de forma detalhada os direitos para todas as pessoas com 60 anos ou mais. É uma lei que visa garantir uma vida digna e plena, abrangendo diversas áreas cruciais da vida do idoso:
+    *   **Direito à Vida, Saúde e Alimentação:** Garante o direito à vida e à saúde, com atendimento preferencial e humanizado no Sistema Único de Saúde (SUS) em todos os níveis de complexidade, gratuidade de medicamentos (especialmente os de uso contínuo) e vacinas, e prioridade no atendimento e tratamento de doenças. Também assegura o direito à alimentação adequada e à segurança alimentar e nutricional.
+    *   **Direito à Educação, Cultura, Esporte e Lazer:** Assegura o acesso à educação formal e não formal ao longo da vida, programas de educação continuada, e o direito à participação e ao acesso a bens e serviços culturais, esportivos e de lazer, com desconto de 50% em eventos.
+    *   **Direito à Profissionalização e ao Trabalho:** Proíbe qualquer forma de discriminação etária na admissão, remuneração e condições de trabalho, valorizando a experiência e a capacidade produtiva do idoso. Estimula a reinserção no mercado e a criação de programas de qualificação profissional. A discriminação etária no trabalho é <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*proibida;estimulada;irrelevante] --> pelo Estatuto.
+    *   **Direito à Previdência Social e Assistência Social:** Garante o acesso aos benefícios previdenciários e assistenciais, como aposentadorias e pensões, e o Benefício de Prestação Continuada (BPC) para idosos que não possuem meios de prover a própria subsistência ou de tê-la provida por sua família.
+    *   **Direito à Habitação:** Estabelece prioridade na aquisição de imóveis em programas habitacionais públicos ou subsidiados, a reserva de cotas para idosos, e a proteção contra despejos injustos. A habitação deve ser <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*adequada e segura;apenas barata;temporária] -->.
+    *   **Direito ao Transporte:** Garante a <!-- INTERACTIVE_FILL_IN_BLANK: [gratuidade para 65+ em transporte público|moradia compulsória em asilos|trabalho forçado até 70 anos] --> (em linhas urbanas e semiurbanas) e a reserva de assentos preferenciais em veículos de transporte coletivo. Também prevê a acessibilidade nos veículos e terminais. O transporte público deve ser <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*acessível a todos;exclusivo para idosos;com custos altos] -->.
+    *   **Direito à Convivência Familiar e Comunitária:** Protege o direito do idoso de viver em família e na comunidade, coibindo o abandono, a negligência e o isolamento. Incentiva a criação de centros de convivência e a manutenção de vínculos sociais. O abandono é uma forma de <!-- INTERACTIVE_FILL_IN_BLANK: [violência contra o idoso|cuidado necessário;liberdade individual] -->.
+    *   **Direito à Acesso à Justiça:** Garante prioridade na tramitação de processos judiciais e extrajudiciais envolvendo idosos, e a proteção contra qualquer forma de violência, negligência ou discriminação. O acesso à justiça é fundamental para a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*proteção dos direitos;lentidão dos processos;burocracia legal] -->.
+
+*   **Política Nacional de Saúde da Pessoa Idosa (PNSPI - Portaria nº 2.528/2006):** Complementar ao Estatuto, esta política foca na atenção integral à saúde do idoso no âmbito do SUS, com ênfase na promoção da saúde, prevenção de doenças e agravos, manutenção da capacidade funcional e cuidado integrado. Busca organizar a rede de atenção à saúde para responder às necessidades específicas da população que envelhece. A PNSPI visa a atenção <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*integral no SUS;apenas hospitalar;focada em doenças agudas] -->.
+
+*   **Política Nacional de Assistência Social (PNAS) e Sistema Único de Assistência Social (SUAS):** O SUAS oferece serviços e benefícios para idosos em situação de vulnerabilidade e risco social, por meio de Centros de Referência de Assistência Social (CRAS) e Centros de Referência Especializados de Assistência Social (CREAS). Incluem o Serviço de Convivência e Fortalecimento de Vínculos (SCFV) para Idosos, e o já mencionado Benefício de Prestação Continuada (BPC), que é um direito assistencial. O SUAS é um sistema de <!-- INTERACTIVE_FILL_IN_BLANK: [proteção social|serviços de saúde;educação formal] -->.
+
+**3. Desafios Persistentes na Efetivação dos Direitos da Pessoa Idosa:**
+
+Apesar da existência de um robusto arcabouço legal, a efetivação dos direitos da pessoa idosa no Brasil ainda enfrenta desafios consideráveis, que frequentemente se interligam e se potencializam (Camarano, 2014; IPEA, 2011).
+
+*   **Implementação Incompleta e Inadequada:** Muitas leis e políticas existentes não são plenamente implementadas ou são aplicadas de forma inadequada, seja por falta de recursos (financeiros e humanos), capacitação profissional insuficiente, ausência de fiscalização efetiva ou, em alguns casos, falta de vontade política. A lacuna entre a lei e a prática é um obstáculo significativo. A implementação das leis é um <!-- INTERACTIVE_FILL_IN_BLANK: [desafio contínuo|sucesso total;problema resolvido] --> e exige engajamento.
+
+*   **Desigualdades Regionais e Socioeconômicas:** O acesso aos direitos e serviços previstos em lei é dramaticamente desigual entre as regiões do país e entre diferentes estratos socioeconômicos. Idosos de baixa renda, residentes em áreas rurais ou remotas, ou com menor escolaridade frequentemente chegam à velhice com mais doenças crônicas e menor capacidade funcional, e enfrentam maiores barreiras geográficas, financeiras e informacionais para acessar seus direitos. As desigualdades afetam a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*acessibilidade aos serviços;qualidade do ar;distribuição de renda] -->.
+
+*   **Persistência do Etarismo:** O preconceito e a discriminação contra a idade (etarismo) continuam sendo um entrave cultural e social significativo. Manifesta-se em atitudes cotidianas, na invisibilização da velhice na mídia, em práticas discriminatórias no mercado de trabalho e, de forma mais sutil, até mesmo nos serviços públicos (ex: infantilização, desconsideração da autonomia do idoso), dificultando o reconhecimento da plena capacidade e dignidade dos idosos. O etarismo é o preconceito contra a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*idade;deficiência;xenofobia] -->.
+
+*   **Fragmentação de Políticas e Serviços:** Há uma desarticulação entre as diversas políticas e serviços (saúde, assistência social, educação, transporte, habitação), o que impede um atendimento integral e coordenado das complexas e múltiplas necessidades dos idosos, especialmente aqueles com deficiência. A falta de comunicação e integração entre os sistemas gera descontinuidade do cuidado e sobrecarga para as famílias. A fragmentação de serviços leva à <!-- INTERACTIVE_FILL_IN_BLANK: [descontinuidade do cuidado|melhoria da coordenação;maior eficiência] -->.
+
+*   **Participação Limitada de Idosos em Decisões:** Embora a legislação preveja e o movimento de direitos humanos do idoso defenda o protagonismo, a voz dos idosos e sua participação ativa no planejamento e na avaliação das políticas e serviços que os afetam ainda é limitada. Isso pode levar a soluções que nem sempre correspondem às suas reais necessidades e preferências. A participação ativa garante a <!-- INTERACTIVE_FILL_IN_BLANK: [legitimidade das políticas|dependência do Estado;burocracia] -->.
+
+*   **Insuficiência de Dados e Pesquisas:** A carência de dados atualizados, desagregados por tipo de deficiência, raça, gênero e condição socioeconômica, e de pesquisas aprofundadas sobre as condições de vida, saúde, funcionalidade e demandas específicas dos idosos (especialmente dos subgrupos como idosos com deficiência, idosos LGBT+), dificulta o planejamento de políticas públicas baseadas em evidências e a alocação eficiente de recursos. Dados precisos são fundamentais para <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*planejamento de políticas;especulação financeira;decisões arbitrárias] -->.
+
+*   **Violência e Abuso contra a Pessoa Idosa:** Apesar das proteções legais, a violência (física, psicológica, financeira, negligência, abandono) e o abuso são desafios alarmantes que afetam a dignidade e a segurança de muitos idosos, exigindo mecanismos mais eficazes de denúncia e proteção. A violência contra o idoso pode ser <!-- INTERACTIVE_FILL_IN_BLANK: [física, psicológica ou financeira|apenas física;somente negligência] -->.
+
+**4. Estratégias e Caminhos para Avançar na Efetivação dos Direitos:**
+
+Para superar os desafios persistentes e consolidar uma sociedade verdadeiramente protetora dos direitos dos idosos, são necessárias estratégias contínuas, coordenadas e multidimensionais, que envolvam todos os setores da sociedade.
+
+*   **Fortalecer Monitoramento e Fiscalização:** É essencial assegurar que os órgãos de controle (Ministério Público, Defensoria Pública, Conselhos de Direitos do Idoso) e a sociedade civil monitorem de perto a aplicação das leis e fiscalizem a qualidade dos serviços prestados. A criação de canais de denúncia acessíveis e a agilização da resposta a violações de direitos são cruciais. A fiscalização é crucial para a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*garantia de direitos;demora nos processos;resistência à mudança] -->.
+
+*   **Desenvolver Indicadores e Pesquisas Robustas:** Investir massivamente na produção de dados estatísticos (Censos, Pesquisas Nacionais de Saúde com amostras representativas de idosos e idosos com deficiência) e de pesquisas científicas aprofundadas. Esses dados devem ser desagregados para permitir uma compreensão nuançada da realidade dos diversos subgrupos de idosos e para informar a formulação e avaliação de políticas eficazes e equitativas. Dados precisos são a base para <!-- INTERACTIVE_FILL_IN_BLANK: [políticas baseadas em evidências|decisões políticas arbitrárias|custos desnecessários] -->.
+
+*   **Formar e Capacitar Profissionais de Todas as Áreas:** Promover a formação inicial e continuada de profissionais de todas as áreas (saúde, assistência social, educação, direito, urbanismo, engenharia, arquitetura, segurança pública) para atuarem com uma perspectiva gerontológica e anticapacitista. Isso inclui conhecimentos sobre as especificidades do envelhecimento, as diversas deficiências, as tecnologias assistivas, a comunicação inclusiva e, fundamentalmente, o respeito à autonomia e à dignidade do idoso. A formação continuada combate o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*preconceito e a ignorância;o interesse em inclusão;a necessidade de adaptações] -->.
+
+*   **Conscientizar e Engajar a Sociedade:** Lançar e manter campanhas de sensibilização em massa para combater o etarismo, desmistificar a velhice, promover uma imagem positiva e diversa dos idosos e valorizar sua contribuição para a sociedade. Estimular o contato intergeracional e a construção de uma cultura de respeito e solidariedade entre todas as idades. A conscientização visa a <!-- INTERACTIVE_FILL_IN_BLANK: [mudança de atitudes|padronização do comportamento|aceitação passiva] -->.
+
+*   **Promover a Participação e o Protagonismo dos Idosos:** Criar e fortalecer canais para que os próprios idosos participem ativamente da formulação, implementação e avaliação das políticas públicas, seja por meio de conselhos, audiências públicas, associações ou plataformas digitais. O princípio "Nada sobre nós, sem nós" é aplicável e essencial para garantir que as soluções sejam relevantes e eficazes. A participação ativa garante a <!-- INTERACTIVE_FILL_IN_BLANK: [legitimidade das políticas|dependência do Estado;burocracia] -->.
+
+*   **Articular e Integrar Políticas e Serviços:** Promover a intersetorialidade e a integração entre as diferentes políticas e serviços (saúde, assistência social, previdência, transporte, habitação, educação, justiça) para garantir um atendimento contínuo, coordenado e abrangente que responda às múltiplas e complexas necessidades dos idosos, com foco na rede de cuidados de longa duração. A intersetorialidade visa a <!-- INTERACTIVE_FILL_IN_BLANK: [integração de políticas|fragmentação de serviços;duplicação de esforços] -->.
+
+*   **Financiamento Adequado e Sustentável:** Assegurar a alocação de recursos financeiros e humanos suficientes e sustentáveis para a implementação plena das leis e a manutenção dos serviços e programas voltados à pessoa idosa. A questão do financiamento é central para a materialização dos direitos. O financiamento adequado é <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*crucial para a implementação;um fator secundário;responsabilidade exclusiva da família] -->.
+
+Efetivar os direitos das pessoas idosas não é apenas uma questão de justiça social e de cumprimento de um dever; é um investimento estratégico no futuro e na construção de uma sociedade mais justa, equitativa e <!-- INTERACTIVE_FILL_IN_BLANK: [sustentável para todas as idades|focada apenas nos mais jovens|economicamente mais competitiva] --> (Kalache, 2008). Uma sociedade que cuida de seus idosos é uma sociedade que valoriza a experiência, a sabedoria e a dignidade humana em todas as suas fases, reconhecendo a velhice como um pilar da diversidade social e um período de vida com valor intrínseco.
+`,
+  estimatedTime: '10-15 mins', // User requested to keep this time, despite significant content expansion
+  coverImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlZHVjYXRpb24lMjBjaGFsbGVuZ2VzfGVufDB8fHx8MTcyMDU3MjM3N3ww&ixlib=rb-4.0.3&q=80&w=1080',
+  aiHint: 'direitos idosos políticas estatuto do idoso etarismo inclusão velhice',
   references: [
-    "Camarano, A. A. (2014). Op. cit.",
-    "Organização das Nações Unidas (ONU).", // Generic, needs specific docs if desired
-    "Organização dos Estados Americanos (OEA). (2015). Convenção Interamericana sobre a Proteção dos Direitos Humanos dos Idosos.",
-    "Brasil. (1988). Constituição da República Federativa do Brasil.",
-    "Brasil. (1994). Lei nº 8.842. Política Nacional do Idoso.",
-    "Brasil. (2003). Lei nº 10.741. Estatuto do Idoso.",
-    "Brasil. Ministério da Saúde. (2006). Portaria nº 2.528. Política Nacional de Saúde da Pessoa Idosa.",
-    "Kalache, A. (2008). Op. cit."
+    "Brasil. (1988). Constituição da República Federativa do Brasil. <a href='http://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: http://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm</a>",
+    "Brasil. (1994). Lei nº 8.842, de 4 de janeiro de 1994. Dispõe sobre a Política Nacional do Idoso. <a href='http://www.planalto.gov.br/ccivil_03/leis/l8842.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: http://www.planalto.gov.br/ccivil_03/leis/l8842.htm</a>",
+    "Brasil. (2003). Lei nº 10.741, de 1º de outubro de 2003. Estatuto do Idoso. <a href='http://www.planalto.gov.br/ccivil_03/leis/l10741.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: http://www.planalto.gov.br/ccivil_03/leis/l10741.htm</a>",
+    "Brasil. Ministério da Saúde. (2006). Portaria nº 2.528, de 19 de outubro de 2006. Aprova a Política Nacional de Saúde da Pessoa Idosa. <a href='https://bvsms.saude.gov.br/bvs/saudelegis/gm/2006/prt2528_19_10_2006.html' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://bvsms.saude.gov.br/bvs/saudelegis/gm/2006/prt2528_19_10_2006.html</a>",
+    "Camarano, A. A. (2014). Novo regime demográfico: uma nova relação entre população e desenvolvimento? *Textos para Discussão*, 1980. Instituto de Pesquisa Econômica Aplicada (IPEA). <a href='https://www.ipea.gov.br/portal/images/stories/PDFs/TDs/td_1980.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://www.ipea.gov.br/portal/images/stories/PDFs/TDs/td_1980.pdf</a>",
+    "IPEA. (2011). Características das instituições de longa permanência para idosos – região Sudeste. *Texto para Discussão*, 1629. Instituto de Pesquisa Econômica Aplicada. <a href='https://www.ipea.gov.br/portal/images/stories/PDFs/TDs/td_1629.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://www.ipea.gov.br/portal/images/stories/PDFs/TDs/td_1629.pdf</a>",
+    "Kalache, A. (2008). O mundo envelhece: é imperativo criar um pacto de solidariedade social. In A. Kalache & G. L. Lebrão (Orgs.), *Saúde do Idoso: o desafio da transição demográfica e epidemiológica* (pp. 11-20). Fiocruz.", // Buscar link público se possível
+    "Organização das Nações Unidas (ONU). (1982). Plano de Ação Internacional de Viena sobre o Envelhecimento.",
+    "Organização das Nações Unidas (ONU). (1991). Princípios das Nações Unidas para Pessoas Idosas. (Resolução 46/91 da Assembleia Geral).",
+    "Organização das Nações Unidas (ONU). (2002). Plano de Ação Internacional de Madri sobre o Envelhecimento.",
+    "Organização dos Estados Americanos (OEA). (2015). Convenção Interamericana sobre a Proteção dos Direitos Humanos dos Idosos. <a href='https://www.oas.org/es/cidh/expresion/docs/convenios/convencion_interamericana_persona_mayor.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://www.oas.org/es/cidh/expresion/docs/convenios/convencion_interamericana_persona_mayor.pdf</a>"
   ]
 };

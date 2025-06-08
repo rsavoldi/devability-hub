@@ -1,37 +1,57 @@
-
 import type { Lesson } from '@/lib/types';
 
 export const lessonM11L5: Lesson = {
   id: 'm11-l5',
   title: 'Lição 11.5: Boas Práticas e Experiências Inovadoras no Ensino Superior Inclusivo',
   type: 'interactive',
-  content: `Diversas IES têm desenvolvido práticas inovadoras para promover inclusão.
+  content: `
+Enquanto as lições anteriores abordaram os desafios no acesso, permanência e participação, é fundamental reconhecer que diversas Instituições de Ensino Superior (IES) no Brasil e no mundo têm se destacado no desenvolvimento de **práticas inovadoras** e **experiências exitosas** para promover a inclusão de pessoas com deficiência. Essas iniciativas não são meras obrigações legais, mas refletem um compromisso genuíno com a equidade, a diversidade e a valorização do potencial de todos os estudantes, servindo como inspiração e modelos adaptáveis. A inclusão ativa <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*valoriza a diversidade;gera barreiras;diminui o nível] --> da comunidade acadêmica.
 
-**Acesso e Ingresso:**
-*   **Programas de Transição Ensino Médio-Superior:** Orientação, preparação, suporte específico (Cabral, 2017). Ex: PTES da UFSC.
-*   **Processos Seletivos Inclusivos:** Além de adaptações pontuais, métodos complementares de avaliação (entrevistas, portfólios). Ex: Avaliação sociopedagógica para candidatos com DI na <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*UnB;USP;UFRJ] -->.
+**1. Boas Práticas no Acesso e Ingresso:**
 
-**Permanência e Conclusão:**
-*   **Programas Abrangentes de Suporte Acadêmico:** Adaptações, recursos, desenvolvimento de habilidades de estudo, autorregulação, autoadvocacia (Castro & Almeida, 2014). Ex: PROACAD da UFRGS.
-*   **Programas Específicos de Assistência Estudantil:** Consideram necessidades relacionadas à deficiência (transporte, TA, assistentes pessoais). Ex: PAIPE da <!-- INTERACTIVE_FILL_IN_BLANK: [UFPR|UFMG|UFBA] -->.
+O primeiro passo para uma experiência universitária inclusiva começa antes mesmo da matrícula, no processo de acesso e ingresso.
 
-**Participação Acadêmica e Social:**
-*   **Programas de Mentoria e Liderança:** Promovem protagonismo, desenvolvimento de habilidades (Moreira, 2005). Ex: PLAED da UNICAMP.
-*   **Espaços e Atividades que Valorizam Identidades e Culturas da Deficiência:** Promovem pertencimento e conscientização (Cabral, 2017). Ex: Semana da Inclusão e Acessibilidade da <!-- INTERACTIVE_FILL_IN_BLANK: [UFSCar|UNESP|UNICAMP] -->.
+*   **Programas de Transição Ensino Médio-Superior:** Muitas IES têm desenvolvido programas específicos para estudantes com deficiência que estão concluindo o ensino médio e desejam ingressar na universidade. Esses programas oferecem orientação vocacional adaptada, preparação para exames (ENEM, vestibulares), visitas guiadas e imersões no ambiente universitário, e suporte para a adaptação às novas demandas acadêmicas (Cabral, 2017). Um exemplo notável é o Projeto PTES (Programa de Transição da Educação Básica ao Ensino Superior) da Universidade Federal de Santa Catarina (UFSC), que oferece acompanhamento individualizado. O objetivo desses programas é facilitar a <!-- INTERACTIVE_FILL_IN_BLANK: [adaptação e o planejamento;aumento de vagas;aprovação automática] -->.
 
-**Nível Institucional:**
-*   **Políticas Abrangentes de Acessibilidade e Inclusão:** Princípios, diretrizes, responsabilidades, recursos (Castro & Almeida, 2014). Ex: Política Institucional da UFC.
-*   **Incorporação de Critérios de Acessibilidade em Avaliação e Planejamento Institucional:** Transversalização da perspectiva inclusiva (Moreira, 2005). Ex: Indicadores de acessibilidade na autoavaliação da <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*UFJF;UFV;UFLA] -->.
+*   **Processos Seletivos Inclusivos e Flexíveis:** Além das adaptações padrão (tempo adicional, ledor, Libras), algumas instituições vão além, implementando métodos complementares de avaliação que permitem uma compreensão mais holística do potencial do candidato. Isso pode incluir entrevistas acessíveis, análise de portfólios que demonstrem habilidades diversas, e avaliações sociopedagógicas. Um exemplo pioneiro é a **avaliação sociopedagógica** utilizada pela Universidade de Brasília (UnB) para candidatos com deficiência intelectual, que busca compreender o perfil do estudante e suas necessidades de apoio, indo além da nota em provas tradicionais (Moreira, 2005). Processos seletivos inclusivos visam avaliar o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*potencial diversificado;apenas o conhecimento;somente a capacidade de memorização] --> do estudante. A UnB é um exemplo de instituição que inova na avaliação do <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*estudante com DI;estudante sem deficiência;estudante estrangeiro] -->.
 
-Essas práticas não são modelos fixos, mas inspirações adaptáveis, com participação ativa de estudantes com deficiência. A inclusão no ensino superior é um processo <!-- INTERACTIVE_FILL_IN_BLANK: [contínuo e dinâmico|finalizado e estático|rápido e simples] --> (Cabral, 2017).`,
-  estimatedTime: '10-15 mins',
-  coverImage: 'https://placehold.co/600x300.png',
-  aiHint: 'boas práticas universidade inclusão exemplos programas',
+**2. Boas Práticas na Permanência e Conclusão:**
+
+Garantir que o estudante não apenas ingresse, mas permaneça e conclua seus estudos com sucesso, é um desafio contínuo que tem motivado diversas inovações.
+
+*   **Programas Abrangentes de Suporte Acadêmico:** IES de vanguarda oferecem programas estruturados de suporte acadêmico que incluem adaptações curriculares flexíveis, disponibilização de materiais didáticos em múltiplos formatos acessíveis (Braille, áudio, digital acessível), recursos de tecnologia assistiva (softwares, hardwares), desenvolvimento de habilidades de estudo e estratégias de autorregulação e autoadvocacia (Castro & Almeida, 2014). O PROACAD da Universidade Federal do Rio Grande do Sul (UFRGS) é um exemplo de iniciativa que integra essas frentes de apoio. Esses programas visam o <!-- INTERACTIVE_FILL_IN_BLANK: [sucesso acadêmico e autonomia;isolamento do estudante;cumprimento de cotas] -->.
+
+*   **Programas Específicos de Assistência Estudantil:** Para além dos auxílios estudantis gerais, algumas instituições desenvolveram programas que consideram as necessidades financeiras e de suporte específicas relacionadas à deficiência, como auxílio para transporte acessível, subsídio para aquisição de tecnologias assistivas, ou assistência para contratação de assistentes pessoais quando necessário. O Programa de Apoio e Inclusão para Pessoas com Deficiência (PAIPE) da <!-- INTERACTIVE_FILL_IN_BLANK: [UFPR|UFMG|UFBA] --> é um exemplo de programa que busca mitigar esses custos adicionais e garantir condições equitativas. A assistência estudantil ajuda a reduzir <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*barreiras financeiras;apenas a burocracia;o número de alunos] -->.
+
+**3. Boas Práticas na Participação Acadêmica e Social:**
+
+A inclusão plena se manifesta na participação ativa do estudante em todas as esferas da vida universitária, indo além do acadêmico formal.
+
+*   **Programas de Mentoria e Liderança:** Diversas IES promovem programas de mentoria entre estudantes, onde alunos mais experientes (com ou sem deficiência) apoiam calouros com deficiência, oferecendo orientação acadêmica, social e pessoal. Além disso, programas de desenvolvimento de liderança focados em pessoas com deficiência buscam promover o protagonismo estudantil e desenvolver habilidades de autoadvocacia e representação (Moreira, 2005). O PLAED (Programa de Líderes e Agentes de Desenvolvimento) da Universidade Estadual de Campinas (UNICAMP) é um exemplo de programa que fomenta a liderança. A mentoria promove <!-- INTERACTIVE_FILL_IN_BLANK: [protagonismo e autonomia;dependência e isolamento;apenas desempenho acadêmico] -->.
+
+*   **Espaços e Atividades que Valorizam Identidades e Culturas da Deficiência:** Para promover um senso de pertencimento e combater o capacitismo, algumas instituições criam ou apoiam espaços e atividades que celebram a diversidade e as culturas da deficiência. Isso pode incluir a criação de grupos estudantis de pessoas com deficiência, a promoção de eventos culturais como semanas da acessibilidade, festivais de arte inclusiva e exposições que valorizam as produções e perspectivas de artistas com deficiência (Cabral, 2017). Um exemplo é a "Semana da Inclusão e Acessibilidade" da <!-- INTERACTIVE_FILL_IN_BLANK: [UFSCar|UNESP|UNICAMP] -->. Esses espaços contribuem para o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*senso de pertencimento;isolamento social;foco na limitação] -->.
+
+**4. Boas Práticas no Nível Institucional:**
+
+A sustentabilidade das ações inclusivas depende de um compromisso institucional robusto e de uma cultura organizacional que integre a inclusão em todos os seus níveis.
+
+*   **Políticas Abrangentes de Acessibilidade e Inclusão:** As IES de sucesso frequentemente possuem políticas institucionais abrangentes, que vão além do cumprimento mínimo da lei. Elas estabelecem princípios claros, diretrizes para todas as áreas (ensino, pesquisa, extensão, gestão), definem responsabilidades, alocam recursos orçamentários específicos e preveem mecanismos de monitoramento e avaliação contínuos (Castro & Almeida, 2014; Souza da Silva & Brazão Ferreira, 2015). A Política Institucional de Acessibilidade e Inclusão da Universidade Federal do Ceará (UFC) é um exemplo de documento que guia essas ações. Políticas abrangentes são <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*transversais e sistêmicas;isoladas por setor;apenas simbólicas] -->.
+
+*   **Incorporação de Critérios de Acessibilidade em Avaliação e Planejamento Institucional:** A transversalização da perspectiva inclusiva se reflete na incorporação de critérios de acessibilidade e inclusão nos processos de autoavaliação institucional, no planejamento estratégico e na avaliação de cursos e programas. Isso garante que a acessibilidade não seja um projeto pontual, mas um aspecto inerente à qualidade e ao desenvolvimento da universidade (Moreira, 2005). Ex: Indicadores de acessibilidade na autoavaliação da <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*UFJF;UFV;UFLA] -->. A avaliação institucional deve considerar <!-- INTERACTIVE_FILL_IN_BLANK: [critérios de acessibilidade|apenas desempenho acadêmico|só eficiência financeira] -->.
+
+*   **Formação Continuada da Comunidade Acadêmica:** Além dos docentes, técnicos administrativos e gestores recebem formação contínua sobre a temática da deficiência, combate ao capacitismo, uso de tecnologias assistivas e boas práticas de atendimento e interação. Isso contribui para um ambiente mais acolhedor e competente. A formação continuada combate o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*preconceito e a ignorância;o interesse em inclusão;a necessidade de adaptações] -->.
+
+Essas práticas inovadoras, embora não sejam modelos fixos e possam ser adaptadas a diferentes contextos, compartilham o princípio da participação ativa de estudantes com deficiência em seu planejamento, implementação e avaliação. Elas demonstram que a inclusão no ensino superior não é apenas um ideal, mas um processo <!-- INTERACTIVE_FILL_IN_BLANK: [contínuo e dinâmico|finalizado e estático|rápido e simples] --> que exige criatividade, compromisso e colaboração de toda a comunidade universitária para construir um futuro mais equitativo para todos.
+`,
+  estimatedTime: '25-35 mins', // Adjusted time estimate due to significant expansion
+  coverImage: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlZHVjYXRpb24lMjBjaGFsbGVuZ2VzfGVufDB8fHx8MTcyMDU3MjM3N3ww&ixlib=rb-4.0.3&q=80&w=1080',
+  aiHint: 'boas práticas universidade inclusão exemplos programas acessibilidade',
   references: [
-    "Cabral, L. S. A. (2017). Op. cit.",
-    "Castro, S. F., & Almeida, M. A. (2014). Op. cit.",
-    "Moreira, L. C. (2005). Op. cit."
+    "Cabral, L. S. A. (2017). Inclusão do público-alvo da Educação Especial no Ensino Superior brasileiro: histórico, políticas e práticas. *Revista de Educação PUC-Campinas, 22*(3), 371-387. <a href='https://periodicos.puc-campinas.edu.br/reveducacao/article/view/3642' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://periodicos.puc-campinas.edu.br/reveducacao/article/view/3642</a>",
+    "Castro, S. F., & Almeida, M. A. (2014). Ingresso e permanência de alunos com deficiência em universidades públicas brasileiras. *Revista Brasileira de Educação Especial, 20*(2), 179-194. <a href='https://www.scielo.br/j/rbee/a/R48j3jQGv6fGj8mC3Zf9f9y/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://www.scielo.br/j/rbee/a/R48j3jQGv6fGj8mC3Zf9f9y/?lang=pt</a>",
+    "Moreira, L. C. (2005). In(ex)clusão na universidade: o aluno com necessidades educacionais especiais em questão. *Revista Educação Especial, 25*, 37-48.",
+    "Souza da Silva, J. S., & Brazão Ferreira, W. B. (2015). Delivering inclusive higher education policy in Brazil. *Enabling Education Review*, 4. <a href='https://www.eenet.org.uk/enabling-education-review/enabling-education-review-4/eer-4/4-7/' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível em: https://www.eenet.org.uk/enabling-education-review/enabling-education-review-4/eer-4/4-7/</a>",
+    "Burgstahler, S. (2015). Universal design in higher education: From principles to practice. Harvard Education Press. (Considerar buscar um link de acesso ou artigo com link similar se disponível publicamente).",
+    "Rose, D. H., & Meyer, A. (2002). Teaching every student in the digital age: Universal design for learning. ASCD. (Considerar buscar um link de acesso ou artigo com link similar se disponível publicamente).",
   ]
 };
-
-    

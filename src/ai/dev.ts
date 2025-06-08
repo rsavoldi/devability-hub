@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/faq-chatbot.ts';
-import '@/ai/flows/rag-document-chatbot.ts';
+import '@/ai/flows/query-pdf-library.ts';
+import '@/ai/flows/summarize-lesson.ts';
+import '@/ai/flows/generate-exercise-questions.ts';
