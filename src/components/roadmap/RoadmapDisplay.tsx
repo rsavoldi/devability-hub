@@ -2,12 +2,14 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { mockRoadmapData, mockUserProfile } from '@/lib/mockData';
-import type { RoadmapStep } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from "lucide-react";
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, type QueryDocumentSnapshot, type DocumentData, orderBy, query } from 'firebase/firestore';
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types'; // Assuming Module is also in types
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // Constants for SVG layout
 const NODE_RADIUS_BASE = 40;
@@ -24,19 +26,35 @@ const LINE_THICKNESS = 3;
 
 interface ProcessedRoadmapNode {
   id: string;
-  originalStep: RoadmapStep;
+  originalStep: RoadmapStep; // Keep original data for potential use
   nodeX: number;
   nodeY: number;
   titleLines: string[];
   svg_x_title: number;
   svg_title_start_y: number;
   emoji: string | null;
-  icon?: LucideIcon;
+  iconName?: string; // Store icon name to dynamically import later or pass to a component
   description: string;
   firstModuleId?: string;
   isCompleted: boolean;
   isCurrent: boolean;
+  order: number;
 }
+
+// Helper for dynamic Lucide icon import (if storing names)
+// This is conceptual; actual dynamic import in JSX can be tricky.
+// It might be better to map icon names to actual Icon components.
+async function getLucideIcon(iconName?: string): Promise<LucideIcon | null> {
+  if (!iconName) return null;
+  try {
+    const icons = await import('lucide-react');
+    return (icons as any)[iconName] as LucideIcon || null;
+  } catch (error) {
+    console.error("Error loading icon:", iconName, error);
+    return null;
+  }
+}
+
 
 function splitTitleIntoLines(title: string | undefined, maxChars: number): string[] {
   if (!title) return [''];
@@ -69,11 +87,49 @@ function splitTitleIntoLines(title: string | undefined, maxChars: number): strin
 export function RoadmapDisplay() {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
-  
-  const { completedModules } = mockUserProfile;
+  const [roadmapData, setRoadmapData] = useState<RoadmapStep[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const { userProfile } = useAuth(); // Get userProfile from AuthContext
 
   useEffect(() => {
     setIsClient(true);
+    const fetchRoadmapData = async () => {
+      setLoadingData(true);
+      try {
+        const roadmapCollectionRef = collection(db, 'roadmaps');
+        const q = query(roadmapCollectionRef, orderBy("order", "asc")); // Assuming you have an 'order' field
+        const roadmapSnapshot = await getDocs(q);
+        const fetchedRoadmapData: RoadmapStep[] = [];
+        
+        for (const docSnap of roadmapSnapshot.docs) {
+            const data = docSnap.data() as Omit<RoadmapStep, 'id' | 'modules'> & { modulesData?: ModuleType[]}; // modulesData is a placeholder
+            
+            // Fetch modules for this roadmap step
+            const modulesCollectionRef = collection(db, `roadmaps/${docSnap.id}/modules`);
+            const modulesQuery = query(modulesCollectionRef, orderBy("order", "asc")); // Assuming modules also have an 'order' field
+            const modulesSnapshot = await getDocs(modulesQuery);
+            const modules: ModuleType[] = modulesSnapshot.docs.map(modDoc => ({
+                id: modDoc.id,
+                ...(modDoc.data() as Omit<ModuleType, 'id' | 'lessons' | 'exercises'>),
+                lessons: [], // Placeholder, lessons would be fetched similarly or be subcollections
+                exercises: [], // Placeholder
+            }));
+
+            fetchedRoadmapData.push({
+                id: docSnap.id,
+                ...data,
+                modules,
+            } as RoadmapStep);
+        }
+        setRoadmapData(fetchedRoadmapData);
+      } catch (error) {
+        console.error("Error fetching roadmap data: ", error);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchRoadmapData();
   }, []);
 
   const handleNavigation = useCallback((moduleId: string | undefined) => {
@@ -83,7 +139,11 @@ export function RoadmapDisplay() {
   }, [router]);
 
   const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-    return mockRoadmapData.map((step, index) => {
+    if (!userProfile || roadmapData.length === 0) return []; // Ensure userProfile is loaded
+
+    const completedModules = userProfile.completedModules || [];
+
+    return roadmapData.map((step, index) => {
       const localizedTitleFull = step.title;
       const emoji = step.emoji || null;
       const displayTitleWithoutEmoji = localizedTitleFull.replace(emoji || '', '').trim();
@@ -99,20 +159,33 @@ export function RoadmapDisplay() {
       let titleXShift = 0;
       if (index > 0) { 
         titleXShift = (index % 2 !== 0) ? TITLE_HORIZONTAL_SHIFT_AMOUNT : -TITLE_HORIZONTAL_SHIFT_AMOUNT;
-      } else if (index === 0 && index % 2 === 0) {
-        titleXShift = 0;
       }
       const svg_x_title = relativeNodeX + titleXShift;
       
       const firstModuleOfStep = step.modules && step.modules.length > 0 ? step.modules[0] : null;
-      const isStepCompleted = firstModuleOfStep ? completedModules.includes(firstModuleOfStep.id) : false;
+      
+      // Determine if step is completed based on its modules
+      let isStepCompleted = false;
+      if (step.modules && step.modules.length > 0) {
+        isStepCompleted = step.modules.every(mod => completedModules.includes(mod.id));
+      } else {
+        // If a step has no modules, consider it completed if the roadmap step itself is marked (e.g. for introductory steps)
+        // Or, if it has no modules and no explicit completion, it's not completed by module logic.
+        // For simplicity here, if no modules, it's not completed through module completion.
+        isStepCompleted = step.isCompleted || false; 
+      }
       
       let isStepCurrent = false;
-      const firstUncompletedIndex = mockRoadmapData.findIndex(s => s.modules && s.modules.length > 0 && !completedModules.includes(s.modules[0]?.id || ''));
+      // Find the first roadmap step that is not fully completed
+      const firstUncompletedRoadmapStepIndex = roadmapData.findIndex(s => {
+        if (!s.modules || s.modules.length === 0) return !(s.isCompleted || false); // if no modules, check its own completion
+        return !s.modules.every(mod => completedModules.includes(mod.id));
+      });
       
-      if (firstUncompletedIndex === -1 && mockRoadmapData.every(s => s.isCompleted || (s.modules && s.modules.length === 0)) ) {
+      if (firstUncompletedRoadmapStepIndex === -1 && roadmapData.every(s => s.isCompleted || (s.modules && s.modules.every(mod => completedModules.includes(mod.id) )) ) ) {
+         // All roadmap steps are completed
         isStepCurrent = false; 
-      } else if (index === firstUncompletedIndex) {
+      } else if (index === firstUncompletedRoadmapStepIndex) {
         isStepCurrent = true;
       }
 
@@ -127,12 +200,13 @@ export function RoadmapDisplay() {
         isCompleted: isStepCompleted,
         isCurrent: isStepCurrent,
         emoji: step.emoji || null,
-        icon: step.icon,
+        iconName: step.iconName, // Assuming 'iconName' is stored in Firestore for dynamic import
         description: step.description,
         firstModuleId: step.modules && step.modules.length > 0 ? step.modules[0].id : undefined,
+        order: step.order !== undefined ? step.order : index, // Use Firestore order or index
       };
     });
-  }, [completedModules]); 
+  }, [roadmapData, userProfile]); // Add userProfile to dependencies
 
   const paths = useMemo(() => {
     if (processedNodes.length < 2) return [];
@@ -140,6 +214,7 @@ export function RoadmapDisplay() {
     for (let i = 0; i < processedNodes.length - 1; i++) {
       const startNode = processedNodes[i];
       const endNode = processedNodes[i + 1];
+      // Path is completed if the startNode (which is a roadmap step) is completed
       const isPathCompleted = startNode.isCompleted; 
       pathData.push({
         id: `line-${startNode.id}-${endNode.id}`,
@@ -171,7 +246,7 @@ export function RoadmapDisplay() {
     });
     
     const contentWidth = (maxX === -Infinity || minX === Infinity) ? (NODE_RADIUS_BASE * 2 + HORIZONTAL_ZIGZAG_OFFSET) : maxX - minX;
-    const contentHeight = (maxY === -Infinity || minY === Infinity) ? (NODE_RADIUS_BASE * 2 + VERTICAL_NODE_SPACING * (mockRoadmapData.length > 0 ? mockRoadmapData.length -1 : 0)) : maxY - minY;
+    const contentHeight = (maxY === -Infinity || minY === Infinity) ? (NODE_RADIUS_BASE * 2 + VERTICAL_NODE_SPACING * (roadmapData.length > 0 ? roadmapData.length -1 : 0)) : maxY - minY;
     
     const vbWidth = contentWidth + PADDING * 2;
     const vbHeight = contentHeight + PADDING * 2;
@@ -185,7 +260,7 @@ export function RoadmapDisplay() {
       translateX: transX, 
       translateY: transY 
     };
-  }, [isClient, processedNodes]);
+  }, [isClient, processedNodes, roadmapData.length]);
 
   const emojiTargetNode = useMemo(() => {
       const currentNodes = processedNodes.filter(node => node.isCurrent && !node.isCompleted);
@@ -194,13 +269,14 @@ export function RoadmapDisplay() {
       const firstNotCompleted = processedNodes.find(node => !node.isCompleted);
       if (firstNotCompleted) return firstNotCompleted;
       
-      return processedNodes.length > 0 && mockRoadmapData.every(s => s.isCompleted) ? null : (processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null);
-  }, [processedNodes]);
+      return processedNodes.length > 0 && roadmapData.every(s => s.isCompleted) ? null : (processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null);
+  }, [processedNodes, roadmapData]);
 
-  if (!isClient) {
+  if (!isClient || loadingData) {
     return (
       <div className="flex justify-center items-center min-h-[300px] w-full">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-2">Carregando trilhas...</p>
       </div>
     );
   }
@@ -248,14 +324,16 @@ export function RoadmapDisplay() {
           ))}
 
           {processedNodes.map((node) => {
-            const NodeIconComponent = node.icon as LucideIcon | undefined;
+            // Dynamic icon rendering would require a mapping or async import strategy here
+            // For simplicity, assuming iconName directly maps to something displayable or an emoji/fallback
+            const NodeIconComponent = node.originalStep.icon; // Using the icon component directly from the original step data
             const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado'}. Pressione Enter ou Espaço para ${node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
             
             return (
               <g 
                 key={node.id}
                 className={cn(
-                  "group/node-visual focus:outline-none focus-visible:ring-0", // Removido anel de foco
+                  "group/node-visual focus:outline-none focus-visible:ring-0",
                   node.firstModuleId && "cursor-pointer"
                 )}
                 onClick={() => node.firstModuleId && handleNavigation(node.firstModuleId)}
@@ -269,7 +347,6 @@ export function RoadmapDisplay() {
                 role={node.firstModuleId ? "link" : "img"}
                 aria-label={nodeAriaLabel}
               >
-                {/* Tooltip nativo do SVG, aparece apenas no hover do mouse */}
                 <title>{node.originalStep.title.replace(node.emoji || '', '').trim()}: {node.description}</title>
                 
                 <circle
@@ -278,7 +355,7 @@ export function RoadmapDisplay() {
                   r={NODE_RADIUS_BASE}
                   className={cn(
                     "stroke-2 transition-all duration-200 ease-in-out",
-                    "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", // Estilo de hover
+                    "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90",
                      node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" : "",
                     node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" 
                                      : "fill-background stroke-border"

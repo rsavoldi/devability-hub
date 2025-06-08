@@ -4,8 +4,10 @@ import type { LucideIcon } from "lucide-react";
 export interface RoadmapStep {
   id: string;
   title: string;
+  order?: number; // Added for ordering from Firestore
   emoji?: string;
-  icon?: LucideIcon;
+  iconName?: string; // Changed from icon: LucideIcon to store the name
+  icon?: LucideIcon; // Keep for direct use if available, but prioritize iconName for Firestore
   description: string;
   modules: Module[];
   isCompleted?: boolean;
@@ -15,6 +17,7 @@ export interface RoadmapStep {
 export interface Module {
   id: string;
   title: string;
+  order?: number; // Added for ordering from Firestore
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
@@ -24,10 +27,10 @@ export interface Module {
 export interface Lesson {
   id: string;
   title: string;
+  order?: number; // Added for ordering from Firestore
   type: 'text' | 'video' | 'interactive' | 'quiz';
   content: string;
   estimatedTime: string;
-  // Removido: SummarizeLessonOutput: string; 
   coverImage?: string;
   aiHint?: string;
   references?: string[];
@@ -48,13 +51,14 @@ export interface ExerciseOption {
 
 export interface Exercise {
   id:string;
-  moduleId?: string; // Adicionado para associar exercício a um módulo
+  moduleId?: string;
   title: string;
+  order?: number; // Added for ordering from Firestore
   type: ExerciseType;
   question: string;
   options?: ExerciseOption[];
-  targetCategories?: ExerciseOption[]; // For drag-and-drop (categorization)
-  correctAnswer?: string | string[] | Record<string, string>; // string for MC/Fill, string[] for Ordering, Record for Association/DragDrop
+  targetCategories?: ExerciseOption[];
+  correctAnswer?: string | string[] | Record<string, string>;
   feedback?: string;
   points: number;
   estimatedTime: string;
@@ -72,7 +76,8 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: LucideIcon | string;
+  iconName?: string; // Changed from icon: LucideIcon
+  icon?: LucideIcon;
   isUnlocked: boolean;
   dateUnlocked?: string;
   criteria: string;
@@ -99,7 +104,6 @@ export interface NavItem {
   items?: NavItem[];
 }
 
-// Para o exercício de associação em ExerciseView.tsx
 export interface FormedAssociation {
   itemAId: string;
   itemBId: string;
@@ -107,8 +111,6 @@ export interface FormedAssociation {
   itemBText: string;
 }
 
-// Tipos para o flow summarizeLesson (já existem em src/ai/flows/summarize-lesson.ts, mas podem ser centralizados aqui se preferir)
-// Por ora, vamos assumir que são importados do flow específico.
 export interface SummarizeLessonInput {
   lessonContent: string;
 }
