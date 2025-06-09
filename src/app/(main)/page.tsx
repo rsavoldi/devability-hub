@@ -1,5 +1,7 @@
+// src/app/(main)/page.tsx
 
 import { RoadmapDisplay } from "@/components/roadmap/RoadmapDisplay";
+import { Suspense } from 'react';
 
 export default function HomePage() {
   return (
@@ -12,9 +14,20 @@ export default function HomePage() {
           Navegue pelas trilhas e expanda seus conhecimentos sobre desenvolvimento e inclusão.
         </p>
       </header>
-      <RoadmapDisplay />
+
+      {/* 
+        O Suspense mostra uma mensagem de "carregando" enquanto o RoadmapDisplay, 
+        que agora pode buscar dados no servidor, faz seu trabalho.
+        É uma boa prática para uma melhor experiência do usuário.
+      */}
+      <Suspense fallback={
+        <div className="flex justify-center items-center min-h-[300px] w-full">
+          <p className="text-lg text-muted-foreground">Carregando trilhas...</p>
+        </div>
+      }>
+        <RoadmapDisplay />
+      </Suspense>
+      
     </div>
   );
 }
-
-    

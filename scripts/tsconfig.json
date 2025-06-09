@@ -1,0 +1,12 @@
+// ARQUIVO ATUALIZADO: scripts/tsconfig.json
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "Node", // <--- ADICIONE ESTA LINHA PARA RESOLVER O ERRO
+      "noEmit": false
+    },
+    "include": [
+      "*.ts"
+    ]
+  }
