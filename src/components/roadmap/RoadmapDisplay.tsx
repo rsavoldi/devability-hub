@@ -4,9 +4,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, University, Landmark, Accessibility, GraduationCap, HelpingHand, type LucideIcon } from 'lucide-react'; 
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
-import { mockRoadmapData } from '@/lib/mockData'; 
+import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, type LucideIcon, BookOpen, PackageSearch, PersonStanding, Rocket } from 'lucide-react'; 
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types'; // Usando ModuleType
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
@@ -24,13 +23,13 @@ const LINE_THICKNESS = 3;
 
 interface ProcessedRoadmapNode {
     id: string;
-    originalStep: RoadmapStep;
+    originalStep: RoadmapStep; // Mantém a estrutura original para referência
     nodeX: number;
     nodeY: number;
     titleLines: string[];
     svg_x_title: number;
     svg_title_start_y: number;
-    emoji: string | null;
+    emoji: string | undefined; // Tornar emoji opcional
     iconName?: string; 
     description: string;
     firstModuleId?: string;
@@ -39,6 +38,7 @@ interface ProcessedRoadmapNode {
     order: number;
 }
 
+// Mapa para converter nome do ícone (string) para o componente Lucide
 const lucideIconMap: Record<string, LucideIcon> = {
     "UsersRound": UsersRound,
     "UserCheck": UserCheck,
@@ -52,10 +52,15 @@ const lucideIconMap: Record<string, LucideIcon> = {
     "Accessibility": Accessibility,
     "GraduationCap": GraduationCap,
     "HandHelping": HelpingHand,
-    // Adicione aqui outros ícones que você usa nas suas trilhas
-    // Ex: "BookOpen": BookOpen,
+    "BookOpen": BookOpen,
+    "PackageSearch": PackageSearch,
+    "PersonStanding": PersonStanding,
+    // Adicione todos os ícones que você utiliza em mockData.ts aqui
 };
 
+interface RoadmapDisplayProps {
+  initialRoadmapData: RoadmapStep[]; // Recebe os dados do Firestore via props
+}
 
 // --- FUNÇÃO HELPER ---
 function splitTitleIntoLines(title: string | undefined, maxChars: number): string[] {
@@ -79,12 +84,12 @@ function splitTitleIntoLines(title: string | undefined, maxChars: number): strin
 }
 
 // --- COMPONENTE PRINCIPAL ---
-export function RoadmapDisplay() {
+export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
     const router = useRouter();
     const { userProfile, loading: authLoading } = useAuth();
     
-    const [dataLoading, setDataLoading] = useState(false); 
-    const roadmapData = mockRoadmapData; 
+    // Não precisamos mais de dataLoading, pois os dados vêm via props
+    // e a página pai (Server Component) já lidou com o carregamento deles.
 
     const handleNavigation = useCallback((moduleId: string | undefined) => {
         if (moduleId) {
@@ -93,14 +98,17 @@ export function RoadmapDisplay() {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        if (authLoading || dataLoading) return [];
+        // Se authLoading for true, ou se initialRoadmapData não estiver pronto, retorna array vazio para evitar erros
+        if (authLoading || !initialRoadmapData || initialRoadmapData.length === 0) return [];
 
         const completedModules = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
 
-        return roadmapData.map((step, index) => {
+        const sortedInitialData = [...initialRoadmapData].sort((a,b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+
+        return sortedInitialData.map((step, index) => {
             const localizedTitleFull = step.title;
-            const emoji = step.emoji || null;
-            const displayTitleWithoutEmoji = localizedTitleFull.replace(emoji || '', '').trim();
+            const emoji = step.emoji; // Já é string ou undefined
+            const displayTitleWithoutEmoji = emoji ? localizedTitleFull.replace(emoji, '').trim() : localizedTitleFull.trim();
             const titleLines = splitTitleIntoLines(displayTitleWithoutEmoji, MAX_CHARS_PER_LINE_TITLE);
             const titleBlockHeight = titleLines.length * SVG_TEXT_LINE_HEIGHT;
 
@@ -119,41 +127,44 @@ export function RoadmapDisplay() {
 
             let isCurrentNode = false;
             if (!userProfile) { 
-                isCurrentNode = (step.order ?? index) === (roadmapData[0]?.order ?? 0); 
+                isCurrentNode = index === 0; // Primeira trilha é a atual para não logados
             } else { 
-                const allNodesForCurrentLogic = roadmapData.map((s, idx) => ({
+                const allNodesForCurrentLogic = sortedInitialData.map((s, idx) => ({
+                    id: s.id,
                     isCompleted: s.modules ? s.modules.every(m => completedModules.has(m.id)) : false,
-                    order: s.order ?? idx,
-                })).sort((a,b) => a.order - b.order);
+                    order: s.order ?? idx, // Usa a ordem vinda do Firestore/mock, ou o índice como fallback
+                })).sort((a,b) => a.order - b.order); // Garante a ordem correta
 
                 const firstUncompletedNode = allNodesForCurrentLogic.find(n => !n.isCompleted);
                 if (firstUncompletedNode) {
-                    isCurrentNode = (step.order ?? index) === firstUncompletedNode.order;
+                    isCurrentNode = step.id === firstUncompletedNode.id;
                 } else if (allNodesForCurrentLogic.length > 0) { 
-                    isCurrentNode = (step.order ?? index) === allNodesForCurrentLogic[allNodesForCurrentLogic.length -1].order;
+                    // Se todas estão completas, a "atual" pode ser a última
+                    isCurrentNode = step.id === allNodesForCurrentLogic[allNodesForCurrentLogic.length -1].id;
                 } else { 
-                    isCurrentNode = (step.order ?? index) === (roadmapData[0]?.order ?? 0); 
+                     // Caso raro: sem nós ou perfil sem progresso em nenhum
+                    isCurrentNode = index === 0;
                 }
             }
             
             return {
                 id: step.id,
-                originalStep: step,
+                originalStep: step, // Mantém a referência ao dado original
                 nodeX: relativeNodeX,
                 nodeY: relativeNodeY,
                 titleLines,
                 svg_x_title,
                 svg_title_start_y,
                 emoji,
-                iconName: step.iconName,
+                iconName: step.iconName, // Usaremos este para buscar no lucideIconMap
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
-                isCompleted: isStepCompleted, // Correção aqui
-                isCurrent: isCurrentNode,   // Correção aqui
+                isCompleted: isStepCompleted,
+                isCurrent: isCurrentNode,
                 order: step.order ?? index,
             };
         });
-    }, [roadmapData, userProfile, authLoading, dataLoading]);
+    }, [initialRoadmapData, userProfile, authLoading]);
 
     const paths = useMemo(() => {
         if (processedNodes.length < 2) return [];
@@ -169,14 +180,14 @@ export function RoadmapDisplay() {
         if (processedNodes.length === 0) return { viewBoxWidth: 400, viewBoxHeight: 600, translateX: PADDING, translateY: PADDING };
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         processedNodes.forEach(pos => {
-            const textWidthApprox = MAX_CHARS_PER_LINE_TITLE * 8;
+            const textWidthApprox = MAX_CHARS_PER_LINE_TITLE * 8; // Estimativa
             minX = Math.min(minX, pos.nodeX - NODE_RADIUS_BASE, pos.svg_x_title - textWidthApprox / 2);
             maxX = Math.max(maxX, pos.nodeX + NODE_RADIUS_BASE, pos.svg_x_title + textWidthApprox / 2);
-            minY = Math.min(minY, pos.svg_title_start_y);
+            minY = Math.min(minY, pos.svg_title_start_y); // Considera a altura do título
             maxY = Math.max(maxY, pos.nodeY + NODE_RADIUS_BASE);
         });
-        const contentWidth = maxX - minX;
-        const contentHeight = maxY - minY;
+        const contentWidth = Math.max(maxX - minX, 300); // Garante uma largura mínima
+        const contentHeight = Math.max(maxY - minY, 500); // Garante uma altura mínima
         return {
             viewBoxWidth: contentWidth + PADDING * 2,
             viewBoxHeight: contentHeight + PADDING * 2,
@@ -186,7 +197,7 @@ export function RoadmapDisplay() {
     }, [processedNodes]);
     
     const emojiTargetNode = useMemo(() => {
-        if (authLoading || dataLoading) return null;
+        if (authLoading) return null;
         if (!userProfile) { 
             return processedNodes.length > 0 ? processedNodes[0] : null;
         }
@@ -197,14 +208,23 @@ export function RoadmapDisplay() {
         if (firstNotCompletedFromProfile) return firstNotCompletedFromProfile;
 
         return processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
-    }, [processedNodes, userProfile, authLoading, dataLoading]);
+    }, [processedNodes, userProfile, authLoading]);
 
 
-    if (authLoading || dataLoading) {
+    if (authLoading) { // Mostra loader enquanto o AuthContext carrega
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="ml-2">Carregando trilhas...</p>
+                <p className="ml-2">Carregando informações do usuário...</p>
+            </div>
+        );
+    }
+    
+    // Se initialRoadmapData estiver vazio após o carregamento da página, pode indicar erro no fetch do server ou dados vazios no DB
+    if (initialRoadmapData.length === 0 && !authLoading) {
+         return (
+            <div className="flex justify-center items-center min-h-[300px] w-full">
+                <p className="text-lg text-muted-foreground">Nenhuma trilha encontrada ou erro ao carregar. Tente recarregar.</p>
             </div>
         );
     }
@@ -252,11 +272,20 @@ export function RoadmapDisplay() {
                             </g>
                         );
                     })}
-                    {emojiTargetNode && (<text x={emojiTargetNode.nodeX} y={emojiTargetNode.nodeY + NODE_RADIUS_BASE + EMOJI_FONT_SIZE_BASE * 0.6} fontSize={EMOJI_FONT_SIZE_BASE * 0.7} textAnchor="middle" dominantBaseline="central" className="pointer-events-none" style={{ filter: 'url(#emoji-shadow)' }}><tspan>🚀</tspan><animateTransform attributeName="transform" type="translate" values={`0 0; 0 -${NODE_RADIUS_BASE * 0.12}; 0 0`} begin="0s" dur="1.5s" repeatCount="indefinite" additive="sum" accumulate="none" /></text>)}
+                    {emojiTargetNode && (
+                        <Rocket 
+                            x={emojiTargetNode.nodeX - (ICON_SIZE * 0.8 / 2)} 
+                            y={emojiTargetNode.nodeY + NODE_RADIUS_BASE + (ICON_SIZE * 0.8 * 0.2)} 
+                            width={ICON_SIZE * 0.8} 
+                            height={ICON_SIZE * 0.8}
+                            className="pointer-events-none text-primary opacity-80" 
+                            style={{ filter: 'url(#emoji-shadow)' }} 
+                        >
+                            <animateTransform attributeName="transform" type="translate" values={`0 0; 0 -${NODE_RADIUS_BASE * 0.12}; 0 0`} begin="0s" dur="1.5s" repeatCount="indefinite" additive="sum" accumulate="none" />
+                        </Rocket>
+                    )}
                 </g>
             </svg>
         </div>
     );
 }
-
-    

@@ -1,9 +1,14 @@
-// src/app/(main)/page.tsx
 
+// src/app/(main)/page.tsx
 import { RoadmapDisplay } from "@/components/roadmap/RoadmapDisplay";
 import { Suspense } from 'react';
+import { getRoadmapDataFromFirestore } from '@/lib/firebase/roadmap'; // Importar a função
+import type { RoadmapStep } from '@/lib/types';
 
-export default function HomePage() {
+// Esta página agora é um Server Component assíncrono
+export default async function HomePage() {
+  const initialRoadmapData: RoadmapStep[] = await getRoadmapDataFromFirestore();
+
   return (
     <div className="w-full">
       <header className="mb-8 text-center">
@@ -15,17 +20,13 @@ export default function HomePage() {
         </p>
       </header>
 
-      {/* 
-        O Suspense mostra uma mensagem de "carregando" enquanto o RoadmapDisplay, 
-        que agora pode buscar dados no servidor, faz seu trabalho.
-        É uma boa prática para uma melhor experiência do usuário.
-      */}
       <Suspense fallback={
         <div className="flex justify-center items-center min-h-[300px] w-full">
           <p className="text-lg text-muted-foreground">Carregando trilhas...</p>
         </div>
       }>
-        <RoadmapDisplay />
+        {/* Passa os dados buscados do Firestore para o RoadmapDisplay */}
+        <RoadmapDisplay initialRoadmapData={initialRoadmapData} />
       </Suspense>
       
     </div>
