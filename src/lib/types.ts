@@ -38,6 +38,7 @@ export interface Lesson {
   references?: string[];
   moduleId?: string;
   moduleTitle?: string;
+  trilhaId?: string; // Adicionado para navegação
 }
 
 export type ExerciseType =
@@ -96,6 +97,7 @@ export interface UserProfile {
   completedExercises: string[];
   unlockedAchievements: string[];
   completedModules: string[];
+  roles: string[]; // Novo campo para papéis
 }
 
 export interface NavItem {

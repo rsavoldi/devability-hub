@@ -1,3 +1,4 @@
+
 // src/app/(auth)/register/page.tsx
 "use client";
 
@@ -56,13 +57,10 @@ export default function RegisterPage() {
       );
       const user = userCredential.user;
 
-      // Atualizar perfil do Firebase Auth (nome e foto, se houver)
       await updateProfile(user, {
         displayName: data.name,
-        // photoURL: "URL_DA_FOTO_PADRAO_SE_TIVER" 
       });
 
-      // Criar documento de perfil no Firestore
       const userDocRef = doc(db, "users", user.uid);
       const newUserProfile: UserProfile = {
         id: user.uid,
@@ -71,8 +69,9 @@ export default function RegisterPage() {
         points: 0,
         completedLessons: [],
         completedExercises: [],
-        unlockedAchievements: ['ach1'], // Conquista de Pioneiro ao registrar
+        unlockedAchievements: ['ach1'], 
         completedModules: [],
+        roles: ['student'], // Papel padrão para novos usuários
       };
       await setDoc(userDocRef, newUserProfile);
 
@@ -80,7 +79,7 @@ export default function RegisterPage() {
         title: "Conta criada com sucesso! 🎉",
         description: "Bem-vindo(a) ao DevAbility Hub!",
       });
-      router.push("/"); // Redireciona para a página principal
+      router.push("/"); 
     } catch (error: any) {
       console.error("Erro no registro:", error);
       let errorMessage = "Ocorreu um erro ao criar sua conta. Tente novamente.";

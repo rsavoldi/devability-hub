@@ -6,8 +6,8 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, type DocumentData, type Unsubscribe } from 'firebase/firestore';
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { auth, db } from '@/lib/firebase'; // Assuming firebase.ts is in lib
-import type { UserProfile } from '@/lib/types'; // Your existing UserProfile type
+import { auth, db } from '@/lib/firebase'; 
+import type { UserProfile } from '@/lib/types'; 
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
@@ -24,76 +24,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (user: FirebaseUser) => {
+  const fetchUserProfile = async (user: FirebaseUser): Promise<UserProfile | null> => {
     if (!user) {
       setUserProfile(null);
+      setLoading(false); // Added to stop loading if no user
       return null;
     }
     const userDocRef = doc(db, 'users', user.uid);
-    const userDocSnap = await getDoc(userDocRef);
+    
+    try {
+        const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-      const profileData = userDocSnap.data() as UserProfile;
-      setUserProfile(profileData);
-      return profileData;
-    } else {
-      // Create a basic profile if it doesn't exist
-      const newProfile: UserProfile = {
-        id: user.uid,
-        name: user.displayName || user.email || 'Novo Usuário',
-        avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.email || 'U').charAt(0).toUpperCase()}`,
-        points: 0,
-        completedLessons: [],
-        completedExercises: [],
-        unlockedAchievements: [],
-        completedModules: [],
-      };
-      try {
-        await setDoc(userDocRef, newProfile);
-        setUserProfile(newProfile);
-        return newProfile;
-      } catch (error) {
-        console.error("Error creating user profile:", error);
-        setUserProfile(null);
+        if (userDocSnap.exists()) {
+          const profileData = userDocSnap.data() as UserProfile;
+          // Ensure roles array exists, default to ['student'] if not
+          const finalProfile: UserProfile = {
+            ...profileData,
+            roles: profileData.roles && Array.isArray(profileData.roles) ? profileData.roles : ['student'],
+          };
+          setUserProfile(finalProfile);
+          return finalProfile;
+        } else {
+          console.warn(`Perfil não encontrado para UID: ${user.uid}. Criando perfil básico.`);
+          const newProfile: UserProfile = {
+            id: user.uid,
+            name: user.displayName || user.email?.split('@')[0] || 'Novo Usuário',
+            avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || user.email || 'U').charAt(0).toUpperCase()}`,
+            points: 0,
+            completedLessons: [],
+            completedExercises: [],
+            unlockedAchievements: ['ach1'],
+            completedModules: [],
+            roles: ['student'], // Default role
+          };
+          await setDoc(userDocRef, newProfile);
+          setUserProfile(newProfile);
+          return newProfile;
+        }
+    } catch (error) {
+        console.error("Erro ao buscar/criar perfil do usuário:", error);
+        setUserProfile(null); // Set to null on error
         return null;
-      }
+    } finally {
+        // setLoading(false); // Moved setting loading to false to onAuthStateChanged callback
     }
   };
 
   const refreshUserProfile = async () => {
     if (currentUser) {
+      setLoading(true); // Indicate loading during refresh
       await fetchUserProfile(currentUser);
+      setLoading(false); // Stop loading after refresh
     }
   };
   
   useEffect(() => {
+    setLoading(true); // Start loading when effect runs
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       let unsubscribeProfile: Unsubscribe | null = null;
 
       if (user) {
-        // Fetch initial profile
-        await fetchUserProfile(user);
-        
-        // Set up real-time listener for profile updates
+        // Fetch initial profile and set up listener
         const userDocRef = doc(db, 'users', user.uid);
+        
+        // Initial fetch
+        const fetchedProfile = await fetchUserProfile(user);
+        // If fetchUserProfile itself sets loading to false too early, this might be an issue.
+        // It's better to control loading state primarily from this useEffect.
+
         unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfile);
+            const profileData = docSnap.data() as UserProfile;
+            setUserProfile({
+              ...profileData,
+              roles: profileData.roles && Array.isArray(profileData.roles) ? profileData.roles : ['student'],
+            });
           } else {
-            // If doc is deleted or doesn't exist after initial fetch, create it
-            fetchUserProfile(user); 
+             // This case should ideally be handled by fetchUserProfile creating the doc if it doesn't exist
+             // If it still gets here, it means the document might have been deleted after initial fetch/creation
+             console.warn("User document disappeared, attempting to re-fetch/re-create for UID:", user.uid);
+             fetchUserProfile(user); // Attempt to re-create or fetch if somehow missed
           }
+          setLoading(false); // Set loading to false after profile is processed
         }, (error) => {
           console.error("Error listening to user profile:", error);
+          setUserProfile(null);
+          setLoading(false); // Set loading to false on listener error
         });
 
       } else {
         setUserProfile(null);
+        setLoading(false); // User is logged out, stop loading
       }
-      setLoading(false);
 
-      // Cleanup for profile listener when auth state changes or component unmounts
       return () => {
         if (unsubscribeProfile) {
           unsubscribeProfile();
@@ -101,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     });
 
-    // Cleanup for auth listener
     return () => unsubscribeAuth();
   }, []);
 
