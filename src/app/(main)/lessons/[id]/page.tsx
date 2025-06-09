@@ -1,51 +1,42 @@
 
-"use client"; // Adicionado "use client" para hooks e state
+"use client"; 
 
 import { LessonView } from '@/components/lessons/LessonView';
-import { mockLessons } from '@/lib/mockData'; // Usando dados mockados
+import { mockLessons } from '@/lib/mockData'; 
 import type { Lesson } from '@/lib/types';
-import { notFound, useParams } from 'next/navigation'; // useParams para client component
-import type { Metadata } from 'next'; // Metadata não é usada diretamente em client components dessa forma
+import { notFound, useParams } from 'next/navigation'; 
 import { useEffect, useState } from 'react';
 
-// Metadata para SEO não é gerada dinamicamente assim em client components.
-// Isso seria feito em um Server Component pai ou através de outras estratégias.
-// Por ora, manteremos a lógica de busca da lição no cliente.
-
 export default function LessonPage() {
-  const params = useParams<{ id: string }>(); // Hook para pegar params em Client Component
+  const params = useParams<{ id: string }>(); 
   const lessonId = params?.id;
-  const [lesson, setLesson] = useState<Lesson | null | undefined>(undefined); // undefined para estado inicial
+  const [lesson, setLesson] = useState<Lesson | null | undefined>(undefined); 
 
   useEffect(() => {
     if (lessonId) {
       const foundLesson = mockLessons.find(l => l.id === lessonId);
       if (foundLesson) {
         setLesson(foundLesson);
+        // Atualiza o título do documento AQUI, quando a lição é encontrada
+        document.title = `${foundLesson.title} | DevAbility Hub`;
       } else {
-        setLesson(null); // Indica que não foi encontrada
+        setLesson(null);
+        // Atualiza o título do documento AQUI, quando a lição não é encontrada
+        document.title = "Lição Não Encontrada | DevAbility Hub";
       }
+    } else {
+      // Define um título padrão ou de carregamento se não houver lessonId ainda
+      document.title = "Carregando Lição | DevAbility Hub";
     }
-  }, [lessonId]);
+  }, [lessonId]); // A dependência é lessonId, pois lesson e document.title são atualizados com base nele
 
-  if (lesson === undefined) {
-    // Ainda carregando ou ID não disponível
+  if (lesson === undefined) { 
     return <div className="text-center py-10">Carregando lição...</div>;
   }
 
-  if (lesson === null) {
-    notFound(); // Chama a página not-found do Next.js
+  if (lesson === null) { 
+    notFound(); 
   }
   
-  // Atualiza o título do documento
-  useEffect(() => {
-    if (lesson?.title) {
-      document.title = `${lesson.title} | DevAbility Hub`;
-    } else if (lesson === null) {
-      document.title = "Lição Não Encontrada | DevAbility Hub";
-    }
-  }, [lesson]);
-
-
   return <LessonView lesson={lesson} />;
 }
