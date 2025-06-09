@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo, Fragment } from 'react';
+import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
 import type { Lesson } from '@/lib/types'; 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -14,11 +14,16 @@ import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils'; 
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase'; // Import db
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; // Import firestore functions
+import { db } from '@/lib/firebase'; 
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; 
+import { useAuth } from '@/contexts/AuthContext'; // AuthContext para obter usuário
+import { useToast } from '@/hooks/use-toast'; // Toast para feedback
+import { markLessonAsCompleted } from '@/app/actions/userProgressActions'; // Server Action
+import { playSound } from '@/lib/sounds'; // Para feedback sonoro
+import { useRouter } from 'next/navigation';
 
 interface LessonViewProps {
-  lesson: Lesson; // Alterado de lessonId: string para lesson: Lesson
+  lesson: Lesson;
 }
 
 const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
@@ -131,11 +136,11 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   elements.forEach((element, elIndex) => {
     const elementKeyPrefix = `${baseKey}-el-${elIndex}`;
     if (typeof element === 'string') {
-      const textSegments = element.split(/(\\n)/g); // Regex para split em \n, mantendo-o
+      const textSegments = element.split(/(\\n)/g);
 
       textSegments.forEach((segment, segIndex) => {
         const segmentKey = `${elementKeyPrefix}-seg-${segIndex}`;
-        if (segment === '\\n' || segment === '\n') { // Considerar string literal '\n' e caractere de nova linha
+        if (segment === '\\n' || segment === '\n') { 
           if (currentParagraphAccumulator.length > 0 && currentParagraphAccumulator.some(p => (typeof p === 'string' && p.trim() !== '') || React.isValidElement(p))) {
             paragraphs.push(
               <p key={`para-${paragraphs.length}-${segmentKey}`} className="mb-4 leading-relaxed">
@@ -161,15 +166,6 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
     );
   }
   
-  // Se nenhum parágrafo foi formado mas há elementos (ex: apenas interativos sem texto ao redor), renderizá-los.
-  if (paragraphs.length === 0 && elements.length > 0) {
-    return elements.map((element, idx) => 
-        React.isValidElement(element) ? 
-        <div key={`${baseKey}-direct-${idx}`} className="my-2">{element}</div> : 
-        <p key={`${baseKey}-direct-${idx}`} className="mb-4 leading-relaxed">{renderTextWithBold(element as string, `${baseKey}-direct-text-${idx}`)}</p>
-    );
-  }
-
   if (paragraphs.length === 0) {
     if (elements.length === 0 || (elements.length === 1 && typeof elements[0] === 'string' && elements[0].trim() === '')) {
       return [<p key="empty-lesson" className="text-muted-foreground">Conteúdo da lição indisponível ou em processamento.</p>];
@@ -180,14 +176,21 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  // const [lesson, setLesson] = useState<Lesson | null>(null); // Removido, pois lesson é recebida como prop
-  // const [isLoading, setIsLoading] = useState(true); // Removido
+  const { currentUser, userProfile } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+
   const [summary, setSummary] = useState<string | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
+  
+  const isCompleted = useMemo(() => {
+    return !!userProfile?.completedLessons?.includes(lesson.id);
+  }, [userProfile, lesson.id]);
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -197,10 +200,10 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson?.content]);
 
   useEffect(() => {
-    // Resetar sumário e erro quando a lição mudar
     setSummary(null); 
     setSummaryError(null);
-    setIsLoadingSummary(false); // Garantir que o estado de carregamento seja resetado
+    setIsLoadingSummary(false);
+    setIsMarkingComplete(false); // Reset marking state when lesson changes
 
     const fetchAdjacentLessons = async () => {
       if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) {
@@ -209,10 +212,8 @@ export function LessonView({ lesson }: LessonViewProps) {
         return;
       }
 
-      // Fetch previous lesson
       const prevQuery = query(
-        collection(db, 'lessons'),
-        where('moduleId', '==', lesson.moduleId),
+        collection(db, 'roadmaps', lesson.moduleId!.split('-')[0], 'modules', lesson.moduleId!, 'lessons'), // Assumindo que moduleId tem o formato trilhaId-mod-moduleId
         where('order', '<', lesson.order),
         orderBy('order', 'desc'),
         limit(1)
@@ -220,10 +221,8 @@ export function LessonView({ lesson }: LessonViewProps) {
       const prevSnapshot = await getDocs(prevQuery);
       setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
 
-      // Fetch next lesson
       const nextQuery = query(
-        collection(db, 'lessons'),
-        where('moduleId', '==', lesson.moduleId),
+        collection(db, 'roadmaps', lesson.moduleId!.split('-')[0], 'modules', lesson.moduleId!, 'lessons'),
         where('order', '>', lesson.order),
         orderBy('order', 'asc'),
         limit(1)
@@ -233,7 +232,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     };
 
     fetchAdjacentLessons();
-  }, [lesson]); // Dependência da prop lesson
+  }, [lesson]);
 
   const handleGenerateSummary = async () => {
     if (!lesson?.content) return;
@@ -255,9 +254,48 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   };
   
-  // Removido isLoading e verificação de !lesson no início, pois a página pai já faz isso
-  // if (isLoading) { ... }
-  // if (!lesson) { ... }
+  const handleMarkAsCompleted = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Acesso Negado",
+        description: "Você precisa estar logado para marcar uma lição como concluída.",
+        variant: "destructive",
+      });
+      router.push('/login');
+      return;
+    }
+    if (isCompleted || isMarkingComplete) return;
+
+    setIsMarkingComplete(true);
+    try {
+      const result = await markLessonAsCompleted(currentUser.uid, lesson.id);
+      if (result.success) {
+        playSound('pointGain');
+        toast({
+          title: "Lição Concluída! 🎉",
+          description: result.message,
+          className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
+        });
+        // O userProfile será atualizado automaticamente pelo listener no AuthContext,
+        // o que fará `isCompleted` se tornar true e re-renderizar o botão.
+      } else {
+        toast({
+          title: "Erro",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao marcar lição:", error);
+      toast({
+        title: "Erro Inesperado",
+        description: "Não foi possível marcar a lição como concluída. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMarkingComplete(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -273,7 +311,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className="transition-transform duration-500 hover:scale-105"
                 data-ai-hint={lesson.aiHint || "visualização dados estatisticos"}
-                priority // Adicionar priority para a imagem principal
+                priority
               />
              </div>
           )}
@@ -355,7 +393,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               <Alert className="mt-4 prose dark:prose-invert max-w-none text-sm" variant="default">
                 <AlertTitle>Resultado do Resumo:</AlertTitle>
                 <AlertDescription>
-                    {summary.split('\\n').map((paragraph, index) => ( // Mudado para split por '\\n' caso a IA retorne assim
+                    {summary.split('\\\\n').map((paragraph, index) => (
                         <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                     ))}
                 </AlertDescription>
@@ -380,9 +418,21 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:w-auto flex-shrink-0 my-2 sm:my-0">
-            <Button variant="default" size="default" className="w-full sm:w-auto" disabled>
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Marcar como Concluído (em breve)
+            <Button 
+              variant={isCompleted ? "default" : "secondary"} 
+              size="lg" 
+              className={cn("w-full sm:w-auto", isCompleted ? "bg-green-500 hover:bg-green-600" : "")}
+              onClick={handleMarkAsCompleted}
+              disabled={isCompleted || isMarkingComplete}
+            >
+                {isMarkingComplete ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : isCompleted ? (
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                ) : (
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                )}
+                {isMarkingComplete ? "Marcando..." : isCompleted ? "Lição Concluída" : "Marcar como Concluída"}
             </Button>
         </div>
         
