@@ -225,11 +225,11 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                 ? "text-primary" 
                                 : "text-foreground group-hover/node-visual:text-primary";
                         
-                        const iconFillClass = node.isCompleted
-                            ? "fill-green-100 dark:fill-green-900/30"
+                        const circleFillClass = node.isCompleted
+                            ? "fill-green-500/10 dark:fill-green-700/10" // 10% opacity
                             : node.isCurrent
-                                ? "fill-primary/20"
-                                : "fill-muted/50 group-hover/node-visual:fill-primary/20";
+                                ? "fill-primary/10" // 10% opacity
+                                : "fill-muted/10 group-hover/node-visual:fill-primary/10"; // 10% opacity
 
 
                         const titleTextFillClass = node.isCompleted 
@@ -250,7 +250,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                                                           : "",
                                         node.isCompleted ? "stroke-green-500"
                                                          : "stroke-border",
-                                        iconFillClass 
+                                        circleFillClass 
                                     )}
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }}
                                 />
@@ -262,7 +262,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                         width={ICON_SIZE}
                                         height={ICON_SIZE}
                                         className={cn("select-none pointer-events-none transition-colors", iconColorClass)}
-                                        strokeWidth={1.5} // Ajuste a espessura do traço do ícone se necessário
+                                        strokeWidth={2} 
                                     />
                                 ) : node.originalStep.emoji ? ( 
                                     <text
@@ -296,7 +296,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                         y={node.nodeY - NODE_RADIUS_BASE * 0.9}
                                         width={ICON_SIZE*0.5}
                                         height={ICON_SIZE*0.5}
-                                        className="text-green-500 fill-background" // fill-background para o interior
+                                        className="text-green-500 fill-background" 
                                         strokeWidth={2}
                                      />
                                 )}
