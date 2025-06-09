@@ -12,8 +12,10 @@ interface LessonItemCardProps {
 }
 
 export function LessonItemCard({ lesson, categoryName }: LessonItemCardProps) {
-  // Remove a marcação de negrito (**) do conteúdo para o resumo
-  const cleanContentSummary = lesson.content.replace(/\*\*(.*?)\*\*/g, '$1');
+  // Primeiro remove todos os comentários HTML, incluindo os interativos
+  const contentWithoutComments = lesson.content.replace(/<!--[\s\S]*?-->/g, '');
+  // Depois remove a marcação de negrito (**) do conteúdo limpo para o resumo
+  const cleanContentSummary = contentWithoutComments.replace(/\*\*(.*?)\*\*/g, '$1');
 
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
