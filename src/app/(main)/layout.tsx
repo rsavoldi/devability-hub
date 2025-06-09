@@ -4,29 +4,14 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { useAuth, AuthProvider } from "@/contexts/AuthContext";
-// useRouter não é mais necessário aqui para redirecionamento
-// import { useRouter } from 'next/navigation'; 
-// useEffect não é mais necessário aqui para redirecionamento
-// import { useEffect } from 'react';
 import { Loader2 } from "lucide-react";
 
 function MainContentLayout({ children }: { children: React.ReactNode }) {
-  // Usamos useAuth() para obter o estado de carregamento do AuthProvider.
-  // currentUser e userProfile podem ser nulos se o usuário não estiver logado.
   const { loading } = useAuth(); 
-  // const router = useRouter(); // Removido, pois não faremos mais push para /login daqui
 
-  // REMOVIDO: O useEffect que forçava o redirecionamento para /login
-  // useEffect(() => {
-  //   if (!loading && !currentUser) {
-  //     router.push('/login'); 
-  //   }
-  // }, [currentUser, loading, router]);
-
-  // O AuthProvider já mostra um loader global.
-  // Este loader aqui dentro é para o caso de querermos um comportamento
-  // específico para o MainContentLayout enquanto useAuth() ainda está carregando.
-  // Neste caso, o loader global do AuthProvider é suficiente.
+  // Loader global enquanto o AuthProvider verifica o estado de autenticação.
+  // Após o 'loading' ser false, o conteúdo é renderizado,
+  // mesmo que currentUser seja null (usuário não logado).
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen w-screen">
@@ -36,11 +21,6 @@ function MainContentLayout({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // REMOVIDO: O bloco que impedia a renderização se não houvesse currentUser
-  // if (loading || !currentUser) { ... }
-
-  // Agora, o conteúdo principal é renderizado mesmo que currentUser seja null
-  // após o carregamento inicial do AuthProvider.
   return (
     <div className="flex min-h-screen w-full flex-col">
       <a
@@ -58,14 +38,11 @@ function MainContentLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // AuthProvider ainda é essencial para que o AppHeader e outros componentes
-  // possam saber se há um usuário logado e acessar o perfil.
   return (
     <AuthProvider>
       <MainContentLayout>{children}</MainContentLayout>

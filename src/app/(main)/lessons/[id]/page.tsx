@@ -1,84 +1,51 @@
 
+"use client"; // Adicionado "use client" para hooks e state
+
 import { LessonView } from '@/components/lessons/LessonView';
-import { db } from '@/lib/firebase';
+import { mockLessons } from '@/lib/mockData'; // Usando dados mockados
 import type { Lesson } from '@/lib/types';
-import { doc, getDoc } from 'firebase/firestore';
-import { notFound } from 'next/navigation';
-import type { Metadata, ResolvingMetadata } from 'next'
+import { notFound, useParams } from 'next/navigation'; // useParams para client component
+import type { Metadata } from 'next'; // Metadata não é usada diretamente em client components dessa forma
+import { useEffect, useState } from 'react';
 
-interface LessonPageProps {
-  params: { // Params não é mais uma Promise aqui, Next.js resolve isso para Server Components
-    id: string;
-  };
-}
+// Metadata para SEO não é gerada dinamicamente assim em client components.
+// Isso seria feito em um Server Component pai ou através de outras estratégias.
+// Por ora, manteremos a lógica de busca da lição no cliente.
 
-async function getLessonFromFirestore(lessonId: string): Promise<Lesson | null> {
-  try {
-    const lessonDocRef = doc(db, 'lessons', lessonId);
-    const lessonDocSnap = await getDoc(lessonDocRef);
+export default function LessonPage() {
+  const params = useParams<{ id: string }>(); // Hook para pegar params em Client Component
+  const lessonId = params?.id;
+  const [lesson, setLesson] = useState<Lesson | null | undefined>(undefined); // undefined para estado inicial
 
-    if (lessonDocSnap.exists()) {
-      return { id: lessonDocSnap.id, ...lessonDocSnap.data() } as Lesson;
-    } else {
-      console.warn(`Lesson with ID ${lessonId} not found in Firestore.`);
-      return null;
+  useEffect(() => {
+    if (lessonId) {
+      const foundLesson = mockLessons.find(l => l.id === lessonId);
+      if (foundLesson) {
+        setLesson(foundLesson);
+      } else {
+        setLesson(null); // Indica que não foi encontrada
+      }
     }
-  } catch (error) {
-    console.error("Error fetching lesson from Firestore:", error);
-    return null;
+  }, [lessonId]);
+
+  if (lesson === undefined) {
+    // Ainda carregando ou ID não disponível
+    return <div className="text-center py-10">Carregando lição...</div>;
   }
-}
 
-// Metadata para SEO e compartilhamento social
-export async function generateMetadata(
-  { params }: LessonPageProps,
-  parent: ResolvingMetadata
-): Promise<Metadata> {
-  const lesson = await getLessonFromFirestore(params.id);
-
-  if (!lesson) {
-    return {
-      title: 'Lição Não Encontrada',
-      description: 'A lição que você está procurando não foi encontrada.',
-    }
+  if (lesson === null) {
+    notFound(); // Chama a página not-found do Next.js
   }
   
-  const previousImages = (await parent).openGraph?.images || []
+  // Atualiza o título do documento
+  useEffect(() => {
+    if (lesson?.title) {
+      document.title = `${lesson.title} | DevAbility Hub`;
+    } else if (lesson === null) {
+      document.title = "Lição Não Encontrada | DevAbility Hub";
+    }
+  }, [lesson]);
 
-  return {
-    title: `${lesson.title} | DevAbility Hub`,
-    description: lesson.content.substring(0, 160).replace(/\*\*(.*?)\*\*/g, '$1').replace(/<!--.*?-->/g, '').trim() + "...", // Sumário simples
-    openGraph: {
-      title: lesson.title,
-      description: lesson.content.substring(0, 100).replace(/\*\*(.*?)\*\*/g, '$1').replace(/<!--.*?-->/g, '').trim() + "...",
-      images: lesson.coverImage ? [lesson.coverImage, ...previousImages] : [...previousImages],
-      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/lessons/${lesson.id}`,
-      type: 'article',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: lesson.title,
-      description: lesson.content.substring(0, 100).replace(/\*\*(.*?)\*\*/g, '$1').replace(/<!--.*?-->/g, '').trim() + "...",
-      images: lesson.coverImage ? [lesson.coverImage] : [],
-    },
-  }
+
+  return <LessonView lesson={lesson} />;
 }
-
-
-export default async function LessonPage({ params }: LessonPageProps) {
-  const lesson = await getLessonFromFirestore(params.id);
-
-  if (!lesson) {
-    notFound();
-  }
-
-  return <LessonView lesson={lesson} />; // Passa o objeto da lição completo
-}
-
-// Opcional: Gerar caminhos estáticos se você tiver um conjunto fixo de lições
-// e quiser otimizar o build. Por enquanto, manteremos dinâmico.
-// export async function generateStaticParams() {
-//   // const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
-//   // return lessonsSnapshot.docs.map(doc => ({ id: doc.id }));
-//   return [];
-// }
