@@ -1,16 +1,17 @@
 
 "use client";
 
-import { use, useEffect, useState } from 'react';
-import { mockRoadmapData, mockUserProfile } from '@/lib/mockData';
+import { use, useEffect, useState, useMemo, useCallback } from 'react'; // Adicionado useCallback
+import { mockRoadmapData } from '@/lib/mockData'; // Removido mockUserProfile, não será usado aqui
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, BookOpen, Target, ExternalLink, Loader2, Zap, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext'; // Adicionado useAuth
 
 interface ModulePageProps {
   params: Promise<{ 
@@ -21,6 +22,8 @@ interface ModulePageProps {
 export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   const actualParams = use(paramsPromise); 
   const { id: moduleId } = actualParams; 
+
+  const { userProfile, loading: authLoading } = useAuth(); // Obtém userProfile e authLoading
 
   const [module, setModule] = useState<Module | null>(null);
   const [parentTrilha, setParentTrilha] = useState<RoadmapStep | null>(null);
@@ -42,10 +45,46 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     
     setModule(foundModule);
     setParentTrilha(foundTrilha);
-    setTimeout(() => setIsLoading(false), 300);
+    setTimeout(() => setIsLoading(false), 300); // Mantém um pequeno delay para simular carregamento
   }, [moduleId]); 
 
-  if (isLoading) {
+  const isLessonCompleted = useCallback((lessonId: string) => {
+    if (authLoading || !userProfile) return false;
+    return userProfile.completedLessons.includes(lessonId);
+  }, [userProfile, authLoading]);
+  
+  const { moduleProgress, moduleIsCompleted } = useMemo(() => {
+    if (authLoading || !userProfile || !module?.lessons) {
+      return { moduleProgress: module?.progress || 0, moduleIsCompleted: module?.isCompleted || false };
+    }
+
+    // Prioriza o status de conclusão do módulo diretamente do perfil do usuário
+    if (userProfile.completedModules.includes(module.id)) {
+        const totalModuleLessons = module.lessons.length;
+        const completedLessonsCount = totalModuleLessons > 0 ? module.lessons.filter(l => userProfile.completedLessons.includes(l.id)).length : 0;
+        const progress = totalModuleLessons > 0 ? (completedLessonsCount / totalModuleLessons) * 100 : 100;
+        return { moduleProgress: progress, moduleIsCompleted: true };
+    }
+    
+    // Se não estiver explicitamente completo no perfil, calcula com base nas lições
+    const totalModuleLessons = module.lessons.length;
+    if (totalModuleLessons === 0) {
+      // Se não há lições, e não está no completedModules, considera não completo mas com 0% ou 100% se marcado manualmente no futuro
+      return { moduleProgress: 0, moduleIsCompleted: false }; 
+    }
+
+    const completedLessonsCount = module.lessons.filter(l =>
+      userProfile.completedLessons.includes(l.id)
+    ).length;
+    
+    const progress = (completedLessonsCount / totalModuleLessons) * 100;
+    const isCompletedBasedOnLessons = progress === 100;
+
+    return { moduleProgress: progress, moduleIsCompleted: isCompletedBasedOnLessons };
+  }, [module, userProfile, authLoading]);
+
+
+  if (isLoading || authLoading) { // Adicionado authLoading aqui
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -56,14 +95,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   if (!module || !parentTrilha) {
     return <div className="text-center py-10">Módulo ou trilha não encontrado.</div>;
   }
-  
-  const isLessonCompleted = (lessonId: string) => mockUserProfile.completedLessons.includes(lessonId);
-  
-  const totalModuleItems = module.lessons.length;
-  const completedModuleItems = module.lessons.filter(l => isLessonCompleted(l.id)).length;
-  const moduleProgress = totalModuleItems > 0 ? (completedModuleItems / totalModuleItems) * 100 : 0;
-  const moduleIsCompleted = moduleProgress === 100;
-
 
   return (
     <div className="container mx-auto py-8">
@@ -86,7 +117,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo</span>
-              <Badge variant={moduleIsCompleted ? "default" : "secondary"} className={moduleIsCompleted ? "bg-green-500" : ""}>
+              <Badge variant={moduleIsCompleted ? "default" : "secondary"} className={cn(moduleIsCompleted ? "bg-green-500 hover:bg-green-600" : "bg-secondary hover:bg-secondary/80")}>
                 {moduleProgress.toFixed(0)}% {moduleIsCompleted ? "Concluído" : ""}
               </Badge>
             </div>
@@ -103,7 +134,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
             {module.lessons.length > 0 ? (
               <div className="space-y-4">
                 {module.lessons.map(lesson => (
-                  <Card key={lesson.id} className="hover:shadow-md transition-shadow">
+                  <Card key={lesson.id} className={cn("hover:shadow-md transition-shadow", isLessonCompleted(lesson.id) ? "bg-green-50 dark:bg-green-900/20 border-green-500/50" : "")}>
                     <CardHeader className="flex flex-row items-center justify-between p-4">
                       <div>
                         <CardTitle className="text-lg">{lesson.title}</CardTitle>
@@ -153,7 +184,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
                 {moduleIsCompleted ? (
                     <> <CheckCircle className="mr-2 h-5 w-5"/> Módulo Concluído! </>
                 ) : (
-                    "Marcar Módulo como Concluído (não implementado)"
+                    "Marcar Módulo como Concluído (em breve)"
                 )}
              </Button>
         </CardFooter>
@@ -161,3 +192,5 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     </div>
   );
 }
+
+    
