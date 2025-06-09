@@ -12,17 +12,28 @@ function MainContentLayout({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !currentUser) {
-      router.push('/login'); // Redireciona para a página de login se não estiver logado
-    }
-  }, [currentUser, loading, router]);
+  // useEffect(() => {
+  //   if (!loading && !currentUser) {
+  //     router.push('/login'); // Redireciona para a página de login se não estiver logado
+  //   }
+  // }, [currentUser, loading, router]);
 
-  if (loading || !currentUser) { // Mostra o loader enquanto verifica ou se não estiver logado
+  // if (loading || !currentUser) { // Mostra o loader enquanto verifica ou se não estiver logado
+  //   return (
+  //     <div className="flex justify-center items-center h-screen w-screen">
+  //       <Loader2 className="h-12 w-12 animate-spin text-primary" />
+  //       <p className="ml-4 text-lg">Verificando autenticação...</p>
+  //     </div>
+  //   );
+  // }
+  
+  // O conteúdo principal agora é renderizado mesmo sem currentUser,
+  // mas o AuthProvider ainda é necessário para o AppHeader e outras funcionalidades.
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen w-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Verificando autenticação...</p>
+        <p className="ml-4 text-lg">Carregando aplicação...</p>
       </div>
     );
   }

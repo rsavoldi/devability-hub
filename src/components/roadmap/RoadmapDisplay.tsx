@@ -1,3 +1,4 @@
+
 // src/components/roadmap/RoadmapDisplay.tsx
 
 "use client";
@@ -39,7 +40,7 @@ interface ProcessedRoadmapNode {
     firstModuleId?: string;
     isCompleted: boolean;
     isCurrent: boolean;
-    order: number; // <- Garantido que seja um número
+    order: number;
 }
 
 // --- FUNÇÃO HELPER ---
@@ -97,7 +98,6 @@ export function RoadmapDisplay() {
                 setRoadmapData(completeRoadmapData);
             } catch (error) {
                 console.error("Firebase Firestore Error:", error);
-                // Você pode adicionar um estado de erro aqui para mostrar uma mensagem ao usuário
             } finally {
                 setDataLoading(false);
             }
@@ -113,9 +113,9 @@ export function RoadmapDisplay() {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        if (dataLoading || authLoading || !userProfile) return [];
+        if (dataLoading || authLoading) return []; // Aguarda authLoading também
 
-        const completedModules = new Set(userProfile.completedModules || []);
+        const completedModules = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
 
         return roadmapData.map((step, index) => {
             const localizedTitleFull = step.title;
@@ -134,7 +134,9 @@ export function RoadmapDisplay() {
             const svg_x_title = relativeNodeX + titleXShift;
             
             const firstModuleOfStep = step.modules && step.modules.length > 0 ? step.modules[0] : null;
-            const isStepCompleted = step.modules ? step.modules.every(mod => completedModules.has(mod.id)) : false;
+            
+            // Se não houver userProfile, isStepCompleted é sempre false
+            const isStepCompleted = userProfile ? (step.modules ? step.modules.every(mod => completedModules.has(mod.id)) : false) : false;
 
             return {
                 id: step.id,
@@ -148,13 +150,20 @@ export function RoadmapDisplay() {
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
                 isCompleted: isStepCompleted,
-                isCurrent: false,
-                order: step.order ?? index, // CORREÇÃO APLICADA AQUI
+                isCurrent: false, 
+                order: step.order ?? index,
             };
         }).map((node, index, allNodes) => {
-            const firstUncompletedIndex = allNodes.findIndex(n => !n.isCompleted);
-            const isCurrent = (firstUncompletedIndex !== -1) ? (index === firstUncompletedIndex) : false;
-            return { ...node, isCurrent };
+            // Se não houver userProfile, o nó "current" será o primeiro da lista.
+            // Caso contrário, usa a lógica de encontrar o primeiro não completado.
+            let isCurrentNode = false;
+            if (!userProfile) {
+                isCurrentNode = index === 0;
+            } else {
+                const firstUncompletedIndex = allNodes.findIndex(n => !n.isCompleted);
+                isCurrentNode = (firstUncompletedIndex !== -1) ? (index === firstUncompletedIndex) : (index === allNodes.length -1 && allNodes[allNodes.length-1].isCompleted);
+            }
+            return { ...node, isCurrent: isCurrentNode };
         });
     }, [roadmapData, userProfile, dataLoading, authLoading]);
 
@@ -189,13 +198,21 @@ export function RoadmapDisplay() {
     }, [processedNodes]);
     
     const emojiTargetNode = useMemo(() => {
+        if (!userProfile) { // Se não estiver logado, foguete no primeiro nó
+            return processedNodes.length > 0 ? processedNodes[0] : null;
+        }
+        // Lógica existente se estiver logado
         const currentNodes = processedNodes.filter(node => node.isCurrent && !node.isCompleted);
         if (currentNodes.length > 0) return currentNodes[0];
+        
         const firstNotCompleted = processedNodes.find(node => !node.isCompleted);
-        return firstNotCompleted || (processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null);
-    }, [processedNodes]);
+        if (firstNotCompleted) return firstNotCompleted;
 
-    if (dataLoading || authLoading) {
+        // Se todos estiverem completos, o foguete pode ficar no último ou sumir
+        return processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
+    }, [processedNodes, userProfile]);
+
+    if (dataLoading || authLoading) { // Continua aguardando authLoading para evitar piscar o conteúdo
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -216,13 +233,13 @@ export function RoadmapDisplay() {
                 <g transform={`translate(${translateX}, ${translateY})`}>
                     {paths.map(path => (<line key={path.id} x1={path.x1} y1={path.y1} x2={path.x2} y2={path.y2} strokeWidth={LINE_THICKNESS} className={cn("transition-all duration-300", path.isCompleted ? "stroke-green-500" : "stroke-border")} />))}
                     {processedNodes.map((node) => {
-                        const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado'}. Pressione Enter ou Espaço para ${node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
+                        const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : 'Não iniciado'}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
                         return (
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
                                 <title>{node.originalStep.title.replace(node.emoji || '', '').trim()}: {node.description}</title>
-                                <circle cx={node.nodeX} cy={node.nodeY} r={NODE_RADIUS_BASE} className={cn("stroke-2 transition-all duration-200 ease-in-out", "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" : "", node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" : "fill-background stroke-border")} style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} />
-                                {node.emoji && (<text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${EMOJI_FONT_SIZE_BASE}px` }} className={cn("select-none pointer-events-none transition-colors", node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary")}>{node.emoji}</text>)}
-                                <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground")}>
+                                <circle cx={node.nodeX} cy={node.nodeY} r={NODE_RADIUS_BASE} className={cn("stroke-2 transition-all duration-200 ease-in-out", "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", userProfile && node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" : "", userProfile && node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" : "fill-background stroke-border", !userProfile && node.isCurrent ? "ring-4 ring-primary/30 ring-offset-0 fill-primary/5 stroke-primary/50" : "")} style={{ filter: userProfile && node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} />
+                                {node.emoji && (<text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${EMOJI_FONT_SIZE_BASE}px` }} className={cn("select-none pointer-events-none transition-colors", userProfile && node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary")}>{node.emoji}</text>)}
+                                <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", userProfile && node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground")}>
                                     {node.titleLines.map((line, lineIndex) => (<tspan key={lineIndex} x={node.svg_x_title} dy={lineIndex === 0 ? 0 : SVG_TEXT_LINE_HEIGHT}>{line}</tspan>))}
                                 </text>
                             </g>
@@ -234,3 +251,4 @@ export function RoadmapDisplay() {
         </div>
     );
 }
+
