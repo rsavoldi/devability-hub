@@ -120,6 +120,12 @@ export default function LoginPage() {
             Crie uma aqui
           </Link>
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Ou{" "}
+          <Link href="/" className="font-medium text-primary hover:underline">
+            explore as trilhas como convidado
+          </Link>
+        </p>
       </CardFooter>
     </Card>
   );
