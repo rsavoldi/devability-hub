@@ -3,29 +3,29 @@
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppFooter } from "@/components/layout/AppFooter";
-import { useAuth, AuthProvider } from "@/contexts/AuthContext"; // Corrected import
-// import { useRouter } from 'next/navigation'; // No longer needed here for redirection
-// import { useEffect } from 'react'; // No longer needed here for redirection
-// import { Loader2 } from "lucide-react"; // No longer needed here for auth loading state
+import { useAuth, AuthProvider } from "@/contexts/AuthContext";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Loader2 } from "lucide-react";
 
 function MainContentLayout({ children }: { children: React.ReactNode }) {
-  // const { currentUser, loading } = useAuth(); // We are making content public for now
-  // const router = useRouter();
+  const { currentUser, loading } = useAuth();
+  const router = useRouter();
 
-  // useEffect(() => {
-  //   if (!loading && !currentUser) {
-  //     router.push('/login'); // Or your desired login page
-  //   }
-  // }, [currentUser, loading, router]);
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.push('/login'); // Redireciona para a página de login se não estiver logado
+    }
+  }, [currentUser, loading, router]);
 
-  // if (loading || !currentUser) { // Temporarily removed to allow access without login
-  //   return (
-  //     <div className="flex justify-center items-center h-screen w-screen">
-  //       <Loader2 className="h-12 w-12 animate-spin text-primary" />
-  //       <p className="ml-4 text-lg">Verificando autenticação...</p>
-  //     </div>
-  //   );
-  // }
+  if (loading || !currentUser) { // Mostra o loader enquanto verifica ou se não estiver logado
+    return (
+      <div className="flex justify-center items-center h-screen w-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg">Verificando autenticação...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -56,3 +56,4 @@ export default function MainLayout({
     </AuthProvider>
   );
 }
+
