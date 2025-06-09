@@ -1,6 +1,6 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
-import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick } from 'lucide-react';
+import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy } from 'lucide-react'; // BookCopy ADICIONADO AQUI
 import type { LucideIcon } from 'lucide-react';
 
 // Importações dos arquivos de dados modulares
@@ -57,7 +57,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha1',
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
-    iconName: "UsersRound", // Removido emoji, iconName é a fonte
+    iconName: "UsersRound", 
+    icon: UsersRound, // Mantendo o componente aqui para generate-data-json.ts, se ele ainda precisar
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -75,7 +76,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha2',
     title: 'Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.',
     order: 2,
-    iconName: "UserCheck", // Removido emoji, iconName é a fonte
+    iconName: "UserCheck", 
+    icon: UserCheck,
     description: 'Compreenda as particularidades do desenvolvimento, os direitos, a cidadania e as perspectivas de envelhecimento de pessoas adultas com deficiência.',
     modules: [{
       id: 'mod-trilha2-0',
@@ -93,7 +95,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha3',
     title: 'Modelos de intervenção para o favorecimento do desenvolvimento de pessoas com deficiência.',
     order: 3,
-    iconName: "ToyBrick", // Removido emoji, iconName é a fonte
+    iconName: "ToyBrick", 
+    icon: ToyBrick,
     description: 'Conheça e analise diferentes modelos de intervenção que visam promover o desenvolvimento e a inclusão de pessoas com deficiência em diversos contextos.',
     modules: [{
       id: 'mod-trilha3-0',
@@ -111,7 +114,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha4',
     title: 'Principais abordagens teóricas relativas ao desenvolvimento da pessoa com deficiência.',
     order: 4,
-    iconName: "Brain", // Removido emoji, iconName é a fonte
+    iconName: "Brain", 
+    icon: Brain,
     description: 'Aprofunde-se nas principais teorias que fundamentam a compreensão do desenvolvimento de pessoas com deficiência, desde perspectivas clássicas até contemporâneas.',
     modules: [{
       id: 'mod-trilha4-0',
@@ -129,7 +133,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha5',
     title: 'Contribuições da neuropsicologia para a compreensão dos fenômenos desenvolvimentais da Pessoa com Deficiência.',
     order: 5,
-    iconName: "Microscope", // Removido emoji, iconName é a fonte
+    iconName: "Microscope", 
+    icon: Microscope,
     description: 'Descubra como a neuropsicologia contribui para entender os processos de desenvolvimento, as funções cognitivas e os comportamentos em pessoas com deficiência.',
     modules: [{
       id: 'mod-trilha5-0',
@@ -147,7 +152,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha6',
     title: 'Fundamentos da Avaliação Psicológica e do Psicodiagnóstico da pessoa com deficiência.',
     order: 6,
-    iconName: "BarChart3", // Removido emoji, iconName é a fonte
+    iconName: "BarChart3", 
+    icon: BarChart3,
     description: 'Estude os fundamentos da avaliação psicológica e do psicodiagnóstico aplicados a pessoas com deficiência, considerando suas especificidades, instrumentos e ética.',
     modules: [{
       id: 'mod-trilha6-0',
@@ -165,7 +171,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha7',
     title: 'Pesquisa com Pessoas com Deficiência: Tópicos, Métodos e Ética.',
     order: 7,
-    iconName: "FileText", // Removido emoji, iconName é a fonte
+    iconName: "FileText", 
+    icon: FileText,
     description: 'Explore temas de pesquisa, métodos de coleta e análise de dados (qualitativos, quantitativos e mistos), e as considerações éticas envolvidas na investigação científica sobre deficiência.',
     modules: [{
       id: 'mod-trilha7-0',
@@ -183,7 +190,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha8',
     title: 'Implicações éticas da avaliação e intervenção com pessoas com deficiência.',
     order: 8,
-    iconName: "Scale", // Removido emoji, iconName é a fonte
+    iconName: "Scale", 
+    icon: Scale,
     description: 'Analise as implicações éticas relacionadas à avaliação e intervenção junto a pessoas com deficiência, promovendo práticas responsáveis e respeitosas.',
     modules: [{
       id: 'mod-trilha8-0',
@@ -201,7 +209,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha9',
     title: 'Políticas e Processos de inclusão da pessoa com deficiência nos contextos educacionais, laborais e sociais.',
     order: 9,
-    iconName: "Landmark", // Removido emoji, iconName é a fonte
+    iconName: "Landmark", 
+    icon: Landmark,
     description: 'Conheça as políticas e os processos que visam a inclusão de pessoas com deficiência em diversos contextos, como educação, trabalho e sociedade.',
     modules: [{
       id: 'mod-trilha9-0',
@@ -219,7 +228,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha10',
     title: 'Debates contemporâneos sobre processos de inclusão: desenho universal, neurodivergências, tecnologias assistivas e deficiência oculta.',
     order: 10,
-    iconName: "Accessibility", // Removido emoji, iconName é a fonte
+    iconName: "Accessibility", 
+    icon: Accessibility,
     description: 'Participe de debates atuais sobre inclusão, abordando temas como desenho universal, neurodivergência, tecnologias assistivas e deficiências ocultas.',
     modules: [{
       id: 'mod-trilha10-0',
@@ -237,7 +247,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha11',
     title: 'Acesso, permanência e participação de pessoas com deficiência no Ensino Superior.',
     order: 11,
-    iconName: "GraduationCap", // Removido emoji, iconName é a fonte
+    iconName: "GraduationCap", 
+    icon: GraduationCap,
     description: 'Discuta os desafios e os progressos relacionados ao acesso, permanência e participação de pessoas com deficiência no ensino superior.',
     modules: [{
       id: 'mod-trilha11-0',
@@ -255,7 +266,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha12',
     title: 'Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.',
     order: 12,
-    iconName: "HelpingHand", // Removido emoji, iconName é a fonte
+    iconName: "HelpingHand", 
+    icon: HelpingHand,
     description: 'Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.',
     modules: [{
       id: 'mod-trilha12-0',
@@ -298,17 +310,15 @@ export const mockModules: Module[] = mockRoadmapData.flatMap(step => step.module
 
 
 // --- Categorias de Lições e Exercícios ---
-export const lessonCategories: { name: string; iconName: string; lessons: Lesson[] }[] = mockRoadmapData.map(roadmap => ({
-  name: roadmap.modules[0]?.title || `Trilha ${roadmap.order}`, // Usa o título do primeiro módulo ou um fallback
-  iconName: roadmap.iconName || "BookOpen", // Usa o iconName da trilha
+export const lessonCategories: { name: string; iconName: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.map(roadmap => ({
+  name: roadmap.modules[0]?.title || `Trilha ${roadmap.order}`, 
+  iconName: roadmap.iconName || "BookOpen", 
   lessons: roadmap.modules.flatMap(mod => mod.lessons),
-  moduleId: roadmap.modules[0]?.id || roadmap.id, // Para o TabsTrigger
+  moduleId: roadmap.modules[0]?.id || roadmap.id, 
 }));
 
-// Filtra categorias que podem ter ficado sem lições após o flatMap, se módulos podem não ter lições
 const filteredLessonCategories = lessonCategories.filter(cat => cat.lessons.length > 0);
 
-// Se você precisar de uma categoria "Geral/Outros" caso alguma lição não se encaixe, adicione aqui.
 const allCategorizedLessonIds = new Set(filteredLessonCategories.flatMap(cat => cat.lessons.map(l => l.id)));
 const uncategorizedLessons = mockLessons.filter(l => !allCategorizedLessonIds.has(l.id));
 if (uncategorizedLessons.length > 0) {
@@ -333,7 +343,6 @@ export const exerciseCategories: { name: string; icon: LucideIcon; exercises: Ex
   { name: "Outros Tipos", icon: Puzzle, exercises: mockExercises.filter(e => !['multiple-choice', 'fill-in-the-blank', 'association', 'ordering', 'drag-and-drop', 'coding'].includes(e.type))},
 ];
 
-// Ensure unique items in categories after initial population
 exerciseCategories.forEach(cat => cat.exercises = [...new Map(cat.exercises.map(item => [item.id, item])).values()]);
 
 const allCategorizedExerciseIds = new Set(exerciseCategories.flatMap(cat => cat.exercises.map(e => e.id)));
@@ -345,7 +354,6 @@ if (outrosExercisesCategory && uncategorizedExercises.length > 0) {
 }
 
 
-// Update User Profile and Roadmap states
 mockUserProfile.completedLessons = [...new Set(mockUserProfile.completedLessons)];
 mockUserProfile.completedExercises = [...new Set(mockUserProfile.completedExercises)];
 mockUserProfile.completedModules = [...new Set(mockUserProfile.completedModules)];
