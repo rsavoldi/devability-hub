@@ -1,13 +1,19 @@
 
 // src/lib/firebase/roadmap.ts
-import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types'; // Usando ModuleType para evitar conflito
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
+import { mockRoadmapData as fallbackRoadmapData } from '@/lib/mockData'; // Importando os dados mockados
 
 export async function getRoadmapDataFromFirestore(): Promise<RoadmapStep[]> {
   try {
     const roadmapsQuery = query(collection(db, 'roadmaps'), orderBy('order', 'asc'));
     const roadmapsSnapshot = await getDocs(roadmapsQuery);
+    
+    if (roadmapsSnapshot.empty) {
+      console.warn("Nenhuma trilha encontrada no Firestore. Retornando dados mockados.");
+      return fallbackRoadmapData;
+    }
     
     const roadmapSteps: RoadmapStep[] = [];
 
@@ -19,20 +25,17 @@ export async function getRoadmapDataFromFirestore(): Promise<RoadmapStep[]> {
       
       const modules: ModuleType[] = [];
       for (const moduleDoc of modulesSnapshot.docs) {
-        // Para os módulos, estamos buscando apenas os metadados, não as lições/exercícios internos aqui.
-        // A contagem de lições/exercícios já foi salva durante a migração.
         const moduleData = moduleDoc.data() as Omit<ModuleType, 'id' | 'lessons' | 'exercises'>;
         modules.push({
           id: moduleDoc.id,
           title: moduleData.title,
           order: moduleData.order,
-          // lessonCount e exerciseCount virão do Firestore
           lessonCount: (moduleData as any).lessonCount || 0,
           exerciseCount: (moduleData as any).exerciseCount || 0,
-          lessons: [], // As lições serão carregadas na página do módulo
-          exercises: [], // Os exercícios serão carregados na página do módulo/exercícios
-          isCompleted: false, // Será determinado no cliente com base no UserProfile
-          progress: 0, // Será determinado no cliente
+          lessons: [], 
+          exercises: [], 
+          isCompleted: false, 
+          progress: 0, 
         });
       }
 
@@ -44,13 +47,18 @@ export async function getRoadmapDataFromFirestore(): Promise<RoadmapStep[]> {
         iconName: roadmapData.iconName,
         description: roadmapData.description,
         modules,
-        isCompleted: false, // Será determinado no cliente
-        isCurrent: false, // Será determinado no cliente
+        isCompleted: false, 
+        isCurrent: false, 
       });
     }
     return roadmapSteps;
   } catch (error) {
-    console.error("Error fetching roadmap data from Firestore:", error);
-    return []; // Retorna array vazio em caso de erro para não quebrar a página
+    console.error("Erro ao buscar dados do roadmap do Firestore:", error);
+    console.warn("Retornando dados mockados devido a erro na busca do Firestore.");
+    // Em caso de erro (ex: permissão negada para não logados), retorna os dados mockados.
+    // Em um ambiente de produção, você pode querer tratar isso de forma diferente
+    // ou garantir que as regras do Firestore permitam leitura pública.
+    return fallbackRoadmapData;
   }
 }
+
