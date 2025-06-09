@@ -1,8 +1,8 @@
 
 "use client";
 
-import { use, useEffect, useState, useMemo, useCallback } from 'react'; // Adicionado useCallback
-import { mockRoadmapData } from '@/lib/mockData'; // Removido mockUserProfile, não será usado aqui
+import { use, useEffect, useState, useMemo, useCallback } from 'react'; 
+import { mockRoadmapData } from '@/lib/mockData'; 
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext'; // Adicionado useAuth
+import { useAuth } from '@/contexts/AuthContext'; 
+import { cn } from '@/lib/utils'; // <-- IMPORTAÇÃO ADICIONADA AQUI
 
 interface ModulePageProps {
   params: Promise<{ 
@@ -23,7 +24,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   const actualParams = use(paramsPromise); 
   const { id: moduleId } = actualParams; 
 
-  const { userProfile, loading: authLoading } = useAuth(); // Obtém userProfile e authLoading
+  const { userProfile, loading: authLoading } = useAuth(); 
 
   const [module, setModule] = useState<Module | null>(null);
   const [parentTrilha, setParentTrilha] = useState<RoadmapStep | null>(null);
@@ -45,7 +46,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     
     setModule(foundModule);
     setParentTrilha(foundTrilha);
-    setTimeout(() => setIsLoading(false), 300); // Mantém um pequeno delay para simular carregamento
+    setTimeout(() => setIsLoading(false), 300); 
   }, [moduleId]); 
 
   const isLessonCompleted = useCallback((lessonId: string) => {
@@ -58,7 +59,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
       return { moduleProgress: module?.progress || 0, moduleIsCompleted: module?.isCompleted || false };
     }
 
-    // Prioriza o status de conclusão do módulo diretamente do perfil do usuário
     if (userProfile.completedModules.includes(module.id)) {
         const totalModuleLessons = module.lessons.length;
         const completedLessonsCount = totalModuleLessons > 0 ? module.lessons.filter(l => userProfile.completedLessons.includes(l.id)).length : 0;
@@ -66,10 +66,8 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
         return { moduleProgress: progress, moduleIsCompleted: true };
     }
     
-    // Se não estiver explicitamente completo no perfil, calcula com base nas lições
     const totalModuleLessons = module.lessons.length;
     if (totalModuleLessons === 0) {
-      // Se não há lições, e não está no completedModules, considera não completo mas com 0% ou 100% se marcado manualmente no futuro
       return { moduleProgress: 0, moduleIsCompleted: false }; 
     }
 
@@ -84,7 +82,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   }, [module, userProfile, authLoading]);
 
 
-  if (isLoading || authLoading) { // Adicionado authLoading aqui
+  if (isLoading || authLoading) { 
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -192,5 +190,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     </div>
   );
 }
+
+    
 
     
