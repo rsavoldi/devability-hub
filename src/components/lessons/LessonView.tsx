@@ -14,14 +14,15 @@ import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase'; // Necessário para Firestore
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; // Firestore imports
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
-import { LOCAL_STORAGE_KEYS } from '@/constants'; // Importar a constante
+import { LOCAL_STORAGE_KEYS } from '@/constants';
+import { mockLessons as allMockLessons, mockRoadmapData } from '@/lib/mockData'; // Para navegação de convidados
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -185,18 +186,17 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [isLocallyCompleted, setIsLocallyCompleted] = useState(false); // For guest users
+  const [isLocallyCompleted, setIsLocallyCompleted] = useState(false);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
-  // Determine if the lesson is completed based on login state
   const isCompleted = useMemo(() => {
-    if (authLoading) return false; // Assume not completed while auth is loading
+    if (authLoading && !currentUser) return isLocallyCompleted; // Show local state while auth might still be loading for guest
     if (currentUser && userProfile) {
       return userProfile.completedLessons.includes(lesson.id);
     }
-    // For guest users, check localStorage
+    // For guest users, check localStorage or isLocallyCompleted
     if (typeof window !== 'undefined') {
       const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
       if (guestProgress) {
@@ -204,8 +204,8 @@ export function LessonView({ lesson }: LessonViewProps) {
         return completedLessonIds.includes(lesson.id);
       }
     }
-    return false;
-  }, [currentUser, userProfile, lesson.id, authLoading, isLocallyCompleted]); // Added isLocallyCompleted
+    return isLocallyCompleted;
+  }, [currentUser, userProfile, lesson.id, authLoading, isLocallyCompleted]);
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -215,12 +215,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson?.content]);
 
   useEffect(() => {
-    // Reset local completion state when lesson changes or user logs in/out
-    if (!currentUser && typeof window !== 'undefined') {
-        const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
-        setIsLocallyCompleted(guestProgress ? JSON.parse(guestProgress).includes(lesson.id) : false);
+    if (typeof window !== 'undefined' && !currentUser) {
+      const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
+      setIsLocallyCompleted(guestProgress ? JSON.parse(guestProgress).includes(lesson.id) : false);
     } else {
-        setIsLocallyCompleted(false); // Reset if user is logged in
+      setIsLocallyCompleted(false);
     }
 
     setSummary(null);
@@ -228,55 +227,73 @@ export function LessonView({ lesson }: LessonViewProps) {
     setIsLoadingSummary(false);
     setIsMarkingComplete(false);
 
-    // Fetch adjacent lessons (this logic might need adjustment if lessons are not in Firestore for guests)
-    const fetchAdjacentLessons = async () => {
+    const findAdjacentMockLessons = () => {
+      if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) return;
+
+      const currentModule = mockRoadmapData
+        .flatMap(trilha => trilha.modules)
+        .find(mod => mod.id === lesson.moduleId);
+
+      if (!currentModule || !currentModule.lessons) return;
+      
+      const sortedLessonsInModule = [...currentModule.lessons].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+      const currentIndex = sortedLessonsInModule.findIndex(l => l.id === lesson.id);
+
+      if (currentIndex > -1) {
+        setPrevLesson(currentIndex > 0 ? sortedLessonsInModule[currentIndex - 1] : null);
+        setNextLesson(currentIndex < sortedLessonsInModule.length - 1 ? sortedLessonsInModule[currentIndex + 1] : null);
+      } else {
+        setPrevLesson(null);
+        setNextLesson(null);
+      }
+    };
+    
+    const fetchAdjacentFirestoreLessons = async () => {
       if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) {
         setPrevLesson(null);
         setNextLesson(null);
         return;
       }
-      // Simplified: assuming lesson.moduleId is structured as 'trilhaId-mod-moduleId'
-      // This part is for Firestore, might not apply directly to guest logic for prev/next if lessons are only in mockData
       const pathParts = lesson.moduleId.split('-mod-');
-      if (pathParts.length < 2) { // Basic check for moduleId structure
+      if (pathParts.length < 2) {
         console.warn("Module ID format unexpected for fetching adjacent lessons:", lesson.moduleId);
-        setPrevLesson(null);
-        setNextLesson(null);
+        findAdjacentMockLessons(); // Fallback to mock data if Firestore path is problematic
         return;
       }
       const trilhaId = pathParts[0];
-      const moduleId = lesson.moduleId;
+      const moduleIdForFirestore = lesson.moduleId;
 
+      try {
+        const prevQuery = query(
+          collection(db, 'roadmaps', trilhaId, 'modules', moduleIdForFirestore, 'lessons'),
+          where('order', '<', lesson.order),
+          orderBy('order', 'desc'),
+          limit(1)
+        );
+        const prevSnapshot = await getDocs(prevQuery);
+        setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
 
-      const prevQuery = query(
-        collection(db, 'roadmaps', trilhaId, 'modules', moduleId, 'lessons'),
-        where('order', '<', lesson.order),
-        orderBy('order', 'desc'),
-        limit(1)
-      );
-      const prevSnapshot = await getDocs(prevQuery);
-      setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
-
-      const nextQuery = query(
-        collection(db, 'roadmaps', trilhaId, 'modules', moduleId, 'lessons'),
-        where('order', '>', lesson.order),
-        orderBy('order', 'asc'),
-        limit(1)
-      );
-      const nextSnapshot = await getDocs(nextQuery);
-      setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
+        const nextQuery = query(
+          collection(db, 'roadmaps', trilhaId, 'modules', moduleIdForFirestore, 'lessons'),
+          where('order', '>', lesson.order),
+          orderBy('order', 'asc'),
+          limit(1)
+        );
+        const nextSnapshot = await getDocs(nextQuery);
+        setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
+      } catch (error) {
+        console.error("Error fetching adjacent lessons from Firestore, falling back to mock data:", error);
+        findAdjacentMockLessons(); // Fallback in case of Firestore error
+      }
     };
 
-    if (currentUser) { // Fetch from Firestore only if logged in
-        fetchAdjacentLessons();
+    if (currentUser) {
+      fetchAdjacentFirestoreLessons();
     } else {
-        // TODO: Implement logic for prev/next for guest users if lessons are from mockData
-        // For now, disabling prev/next for guests or making it work with mockData only
-        setPrevLesson(null);
-        setNextLesson(null);
+      findAdjacentMockLessons(); // Use mock data for guest navigation
     }
 
-  }, [lesson, currentUser]); // Added currentUser as dependency
+  }, [lesson, currentUser]);
 
   const handleGenerateSummary = async () => {
     if (!lesson?.content) return;
@@ -302,17 +319,22 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (isCompleted || isMarkingComplete) return;
     setIsMarkingComplete(true);
 
-    if (currentUser) { // User is logged in
+    if (currentUser) {
       try {
         const result = await markLessonCompletedAction(currentUser.uid, lesson.id);
         if (result.success) {
           playSound('pointGain');
+          let toastMessage = result.message;
+          if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
+            const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
+            toastMessage += ` Você desbloqueou: ${achievementTitles}!`;
+             playSound('achievementUnlock');
+          }
           toast({
             title: "Lição Concluída! 🎉",
-            description: result.message + (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0 ? ` Você desbloqueou: ${result.unlockedAchievementsDetails.map(a => a.title).join(', ')}!` : ""),
+            description: toastMessage,
             className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
           });
-          // AuthContext listener will update userProfile and thus isCompleted
         } else {
           toast({
             title: "Erro",
@@ -328,7 +350,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           variant: "destructive",
         });
       }
-    } else { // User is not logged in (guest)
+    } else { 
       if (typeof window !== 'undefined') {
         try {
           const guestProgressRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
@@ -337,8 +359,8 @@ export function LessonView({ lesson }: LessonViewProps) {
             guestCompletedLessons.push(lesson.id);
             localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS, JSON.stringify(guestCompletedLessons));
           }
-          setIsLocallyCompleted(true); // Update local state for immediate UI feedback
-          playSound('pointGain'); // Play sound even for guests
+          setIsLocallyCompleted(true);
+          playSound('pointGain');
           toast({
             title: "Lição Marcada! 🎉",
             description: "Seu progresso foi salvo localmente. Crie uma conta para salvar na nuvem!",
@@ -358,7 +380,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
 
 
-  if (authLoading && currentUser === undefined) { // Still determining auth state
+  if (authLoading && !currentUser) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -462,7 +484,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               <Alert className="mt-4 prose dark:prose-invert max-w-none text-sm" variant="default">
                 <AlertTitle>Resultado do Resumo:</AlertTitle>
                 <AlertDescription>
-                    {summary.split(/\\n|\n/g).map((paragraph, index) => ( // Split by \n or \\n
+                    {summary.split(/\\n|\n/g).map((paragraph, index) => (
                         <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                     ))}
                 </AlertDescription>
@@ -473,7 +495,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:flex-1 flex justify-center sm:justify-start">
-            {prevLesson && currentUser ? ( // Only show prev/next if logged in and available
+            {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
@@ -506,7 +528,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:flex-1 flex justify-center sm:justify-end">
-            {nextLesson && currentUser ? ( // Only show prev/next if logged in and available
+            {nextLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
@@ -522,5 +544,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
-    

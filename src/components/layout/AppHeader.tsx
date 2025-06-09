@@ -40,7 +40,7 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile } = useAuth(); // Will be null if not logged in
+  const { currentUser, userProfile } = useAuth();
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
@@ -48,10 +48,9 @@ export function AppHeader() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.push('/login'); // Redirect to login page after sign out
+      router.push('/login'); 
     } catch (error) {
       console.error("Error signing out: ", error);
-      // Handle error (e.g., show a toast notification)
     }
   };
 
@@ -171,7 +170,7 @@ export function AppHeader() {
             )}
 
 
-            {isMobile && ( // Mobile menu should appear regardless of login state for navigation
+            {isMobile && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label="Abrir menu principal" suppressHydrationWarning>
@@ -190,7 +189,7 @@ export function AppHeader() {
                       </Link>
                     </DropdownMenuItem>
                   ))}
-                   {currentUser && userProfile && ( // Only show points in mobile menu if logged in
+                   {currentUser && userProfile && ( 
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">
