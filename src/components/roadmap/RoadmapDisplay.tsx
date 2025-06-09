@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import type { RoadmapStep, Module as ModuleType, LucideIcon } from '@/lib/types';
-import { mockRoadmapData } from '@/lib/mockData'; // Usando dados mockados diretamente
+import { mockRoadmapData } from '@/lib/mockData'; 
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
 const NODE_RADIUS_BASE = 40;
-const EMOJI_FONT_SIZE_BASE = NODE_RADIUS_BASE * 0.7;
+const EMOJI_FONT_SIZE_BASE = NODE_RADIUS_BASE * 0.6; // Ligeiramente menor para ícones
 const VERTICAL_NODE_SPACING = 200;
 const HORIZONTAL_ZIGZAG_OFFSET = 120;
 const PADDING = 60;
@@ -30,8 +30,8 @@ interface ProcessedRoadmapNode {
     svg_x_title: number;
     svg_title_start_y: number;
     emoji: string | null;
-    icon?: LucideIcon; // Adicionado para usar o componente de ícone
-    iconName?: string; // Adicionado para referência, se necessário
+    icon?: LucideIcon; 
+    iconName?: string; 
     description: string;
     firstModuleId?: string;
     isCompleted: boolean;
@@ -65,9 +65,8 @@ export function RoadmapDisplay() {
     const router = useRouter();
     const { userProfile, loading: authLoading } = useAuth();
     
-    // Usaremos mockRoadmapData diretamente, sem busca no Firestore por enquanto
-    const [dataLoading, setDataLoading] = useState(false); // Não há busca de dados, então false
-    const roadmapData = mockRoadmapData; // Atribuição direta
+    const [dataLoading, setDataLoading] = useState(false); 
+    const roadmapData = mockRoadmapData; 
 
     const handleNavigation = useCallback((moduleId: string | undefined) => {
         if (moduleId) {
@@ -76,7 +75,7 @@ export function RoadmapDisplay() {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        if (authLoading) return []; // Aguarda authLoading
+        if (authLoading) return [];
 
         const completedModules = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
 
@@ -101,9 +100,9 @@ export function RoadmapDisplay() {
             const isStepCompleted = userProfile ? (step.modules ? step.modules.every(mod => completedModules.has(mod.id)) : false) : false;
 
             let isCurrentNode = false;
-            if (!userProfile) { // Se não estiver logado
-                isCurrentNode = index === 0; // Primeira trilha é a atual
-            } else { // Se estiver logado, usa a lógica de progresso
+            if (!userProfile) { 
+                isCurrentNode = index === 0; 
+            } else { 
                 const allNodesForCurrentLogic = roadmapData.map((s, idx) => ({
                     isCompleted: s.modules ? s.modules.every(m => completedModules.has(m.id)) : false,
                     order: s.order ?? idx,
@@ -113,10 +112,9 @@ export function RoadmapDisplay() {
                 if (firstUncompletedNode) {
                     isCurrentNode = (step.order ?? index) === firstUncompletedNode.order;
                 } else if (allNodesForCurrentLogic.length > 0) {
-                    // Todas completas, marca a última como atual (ou nenhuma, dependendo da preferência)
                     isCurrentNode = (step.order ?? index) === allNodesForCurrentLogic[allNodesForCurrentLogic.length -1].order;
                 } else {
-                    isCurrentNode = index === 0; // Fallback para primeira se não houver módulos
+                    isCurrentNode = index === 0; 
                 }
             }
             
@@ -129,12 +127,12 @@ export function RoadmapDisplay() {
                 svg_x_title,
                 svg_title_start_y,
                 emoji,
-                icon: step.icon, // Usando o componente de ícone diretamente do mock
+                icon: step.icon,
                 iconName: step.iconName,
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
-                isCompleted: isStepCompleted, // Sempre false para não logado
-                isCurrent: isCurrentNode, 
+                isCompleted,
+                isCurrent,
                 order: step.order ?? index,
             };
         });
@@ -146,9 +144,9 @@ export function RoadmapDisplay() {
             id: `line-${startNode.id}-${processedNodes[i+1].id}`,
             x1: startNode.nodeX, y1: startNode.nodeY,
             x2: processedNodes[i+1].nodeX, y2: processedNodes[i+1].nodeY,
-            isCompleted: startNode.isCompleted, // Linha completa se o nó de origem estiver completo (para usuários logados)
+            isCompleted: userProfile ? startNode.isCompleted : false, 
         }));
-    }, [processedNodes]);
+    }, [processedNodes, userProfile]);
 
     const { viewBoxWidth, viewBoxHeight, translateX, translateY } = useMemo(() => {
         if (processedNodes.length === 0) return { viewBoxWidth: 400, viewBoxHeight: 600, translateX: PADDING, translateY: PADDING };
@@ -184,6 +182,7 @@ export function RoadmapDisplay() {
         return processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
     }, [processedNodes, userProfile, authLoading]);
 
+
     if (authLoading || dataLoading) {
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
@@ -206,22 +205,28 @@ export function RoadmapDisplay() {
                     {paths.map(path => (<line key={path.id} x1={path.x1} y1={path.y1} x2={path.x2} y2={path.y2} strokeWidth={LINE_THICKNESS} className={cn("transition-all duration-300", path.isCompleted ? "stroke-green-500" : "stroke-border")} />))}
                     {processedNodes.map((node) => {
                         const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : (node.isCurrent ? 'Atual' : 'Não iniciado')}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
-                        const IconComponent = node.icon; // Ícone Lucide como componente
+                        const IconComponent = node.icon; 
+                        const iconFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary";
+                        const textFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground";
+
                         return (
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
                                 <title>{node.originalStep.title.replace(node.emoji || '', '').trim()}: {node.description}</title>
                                 <circle cx={node.nodeX} cy={node.nodeY} r={NODE_RADIUS_BASE} className={cn("stroke-2 transition-all duration-200 ease-in-out", "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" : "", node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" : "fill-background stroke-border")} style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} />
-                                {node.emoji && !IconComponent && (<text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${EMOJI_FONT_SIZE_BASE}px` }} className={cn("select-none pointer-events-none transition-colors", node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary")}>{node.emoji}</text>)}
-                                {IconComponent && (
+                                
+                                {IconComponent ? (
                                     <IconComponent
                                         x={node.nodeX - EMOJI_FONT_SIZE_BASE / 2}
                                         y={node.nodeY - EMOJI_FONT_SIZE_BASE / 2}
                                         width={EMOJI_FONT_SIZE_BASE}
                                         height={EMOJI_FONT_SIZE_BASE}
-                                        className={cn("select-none pointer-events-none transition-colors", node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary")}
+                                        className={cn("select-none pointer-events-none transition-colors", iconFillClass)}
                                     />
-                                )}
-                                <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground")}>
+                                ) : node.emoji ? (
+                                    <text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }} className={cn("select-none pointer-events-none transition-colors", iconFillClass)}>{node.emoji}</text>
+                                ) : null}
+
+                                <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", textFillClass)}>
                                     {node.titleLines.map((line, lineIndex) => (<tspan key={lineIndex} x={node.svg_x_title} dy={lineIndex === 0 ? 0 : SVG_TEXT_LINE_HEIGHT}>{line}</tspan>))}
                                 </text>
                             </g>
