@@ -4,14 +4,15 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
-import type { RoadmapStep, Module as ModuleType, LucideIcon } from '@/lib/types';
+import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, University, Landmark, Accessibility, GraduationCap, HelpingHand, type LucideIcon } from 'lucide-react'; // Adicione todos os ícones Lucide que você usa aqui
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
 import { mockRoadmapData } from '@/lib/mockData'; 
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
 const NODE_RADIUS_BASE = 40;
-const EMOJI_FONT_SIZE_BASE = NODE_RADIUS_BASE * 0.6; // Ligeiramente menor para ícones
+const EMOJI_FONT_SIZE_BASE = NODE_RADIUS_BASE * 0.6;
+const ICON_SIZE = NODE_RADIUS_BASE * 0.6; // Tamanho para os ícones Lucide
 const VERTICAL_NODE_SPACING = 200;
 const HORIZONTAL_ZIGZAG_OFFSET = 120;
 const PADDING = 60;
@@ -30,7 +31,6 @@ interface ProcessedRoadmapNode {
     svg_x_title: number;
     svg_title_start_y: number;
     emoji: string | null;
-    icon?: LucideIcon; 
     iconName?: string; 
     description: string;
     firstModuleId?: string;
@@ -38,6 +38,26 @@ interface ProcessedRoadmapNode {
     isCurrent: boolean;
     order: number;
 }
+
+// --- MAPA DE ÍCONES LUCIDE ---
+// !! IMPORTANTE: COMPLETE ESTE MAPA COM TODOS OS ÍCONES USADOS NAS SUAS TRILHAS !!
+const lucideIconMap: Record<string, LucideIcon> = {
+    "UsersRound": UsersRound,
+    "UserCheck": UserCheck,
+    "ToyBrick": ToyBrick,
+    "Brain": Brain,
+    "Microscope": Microscope,
+    "BarChart3": BarChart3,
+    "FileText": FileText,
+    "Scale": Scale,
+    "Landmark": Landmark,
+    "Accessibility": Accessibility,
+    "GraduationCap": GraduationCap,
+    "HandHelping": HelpingHand, 
+    // Adicione outros mapeamentos aqui conforme necessário:
+    // "NomeDoIcone": NomeDoIconeComponente,
+};
+
 
 // --- FUNÇÃO HELPER ---
 function splitTitleIntoLines(title: string | undefined, maxChars: number): string[] {
@@ -75,7 +95,7 @@ export function RoadmapDisplay() {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        if (authLoading) return [];
+        if (authLoading || dataLoading) return []; // Se autenticação ou dados estão carregando, retorna array vazio
 
         const completedModules = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
 
@@ -101,7 +121,7 @@ export function RoadmapDisplay() {
 
             let isCurrentNode = false;
             if (!userProfile) { 
-                isCurrentNode = index === 0; 
+                isCurrentNode = (step.order ?? index) === (roadmapData[0]?.order ?? 0); 
             } else { 
                 const allNodesForCurrentLogic = roadmapData.map((s, idx) => ({
                     isCompleted: s.modules ? s.modules.every(m => completedModules.has(m.id)) : false,
@@ -111,10 +131,10 @@ export function RoadmapDisplay() {
                 const firstUncompletedNode = allNodesForCurrentLogic.find(n => !n.isCompleted);
                 if (firstUncompletedNode) {
                     isCurrentNode = (step.order ?? index) === firstUncompletedNode.order;
-                } else if (allNodesForCurrentLogic.length > 0) {
+                } else if (allNodesForCurrentLogic.length > 0) { // Se todas estão completas
                     isCurrentNode = (step.order ?? index) === allNodesForCurrentLogic[allNodesForCurrentLogic.length -1].order;
-                } else {
-                    isCurrentNode = index === 0; 
+                } else { // Sem nós ou perfil (improvável aqui, mas fallback)
+                    isCurrentNode = (step.order ?? index) === (roadmapData[0]?.order ?? 0); 
                 }
             }
             
@@ -127,8 +147,7 @@ export function RoadmapDisplay() {
                 svg_x_title,
                 svg_title_start_y,
                 emoji,
-                icon: step.icon,
-                iconName: step.iconName,
+                iconName: step.iconName, // Usaremos iconName (string)
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
                 isCompleted,
@@ -136,7 +155,7 @@ export function RoadmapDisplay() {
                 order: step.order ?? index,
             };
         });
-    }, [roadmapData, userProfile, authLoading]);
+    }, [roadmapData, userProfile, authLoading, dataLoading]);
 
     const paths = useMemo(() => {
         if (processedNodes.length < 2) return [];
@@ -169,7 +188,7 @@ export function RoadmapDisplay() {
     }, [processedNodes]);
     
     const emojiTargetNode = useMemo(() => {
-        if (authLoading) return null;
+        if (authLoading || dataLoading) return null;
         if (!userProfile) { 
             return processedNodes.length > 0 ? processedNodes[0] : null;
         }
@@ -180,7 +199,7 @@ export function RoadmapDisplay() {
         if (firstNotCompleted) return firstNotCompleted;
 
         return processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
-    }, [processedNodes, userProfile, authLoading]);
+    }, [processedNodes, userProfile, authLoading, dataLoading]);
 
 
     if (authLoading || dataLoading) {
@@ -204,9 +223,11 @@ export function RoadmapDisplay() {
                 <g transform={`translate(${translateX}, ${translateY})`}>
                     {paths.map(path => (<line key={path.id} x1={path.x1} y1={path.y1} x2={path.x2} y2={path.y2} strokeWidth={LINE_THICKNESS} className={cn("transition-all duration-300", path.isCompleted ? "stroke-green-500" : "stroke-border")} />))}
                     {processedNodes.map((node) => {
-                        const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : (node.isCurrent ? 'Atual' : 'Não iniciado')}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
-                        const IconComponent = node.icon; 
-                        const iconFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-400" : "fill-foreground group-hover/node-visual:fill-primary";
+                        const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : (node.isCurrent ? 'Ponto de partida sugerido' : 'Não iniciado')}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
+                        
+                        const IconComponent = node.iconName ? lucideIconMap[node.iconName] : null;
+                        
+                        const iconFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-400 text-green-700 dark:text-green-400" : "fill-foreground group-hover/node-visual:fill-primary group-hover/node-visual:text-primary text-foreground";
                         const textFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground";
 
                         return (
@@ -216,14 +237,15 @@ export function RoadmapDisplay() {
                                 
                                 {IconComponent ? (
                                     <IconComponent
-                                        x={node.nodeX - EMOJI_FONT_SIZE_BASE / 2}
-                                        y={node.nodeY - EMOJI_FONT_SIZE_BASE / 2}
-                                        width={EMOJI_FONT_SIZE_BASE}
-                                        height={EMOJI_FONT_SIZE_BASE}
+                                        x={node.nodeX - ICON_SIZE / 2}
+                                        y={node.nodeY - ICON_SIZE / 2}
+                                        width={ICON_SIZE}
+                                        height={ICON_SIZE}
                                         className={cn("select-none pointer-events-none transition-colors", iconFillClass)}
+                                        strokeWidth={2} // Definir uma espessura de traço para ícones Lucide
                                     />
                                 ) : node.emoji ? (
-                                    <text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }} className={cn("select-none pointer-events-none transition-colors", iconFillClass)}>{node.emoji}</text>
+                                    <text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px`, fill: node.isCompleted ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))' }} className={cn("select-none pointer-events-none transition-colors", textFillClass /* Ajuste: usar textFillClass para emojis também ou uma classe específica */)}>{node.emoji}</text>
                                 ) : null}
 
                                 <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", textFillClass)}>
