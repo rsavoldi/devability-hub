@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
-import type { Lesson } from '@/lib/types'; 
+import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText } from 'lucide-react';
@@ -11,16 +11,17 @@ import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
-import { cn, shuffleArray } from '@/lib/utils'; 
+import { cn, shuffleArray } from '@/lib/utils';
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase'; 
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; 
-import { useAuth } from '@/contexts/AuthContext'; // AuthContext para obter usuário
-import { useToast } from '@/hooks/use-toast'; // Toast para feedback
-import { markLessonAsCompleted } from '@/app/actions/userProgressActions'; // Server Action
-import { playSound } from '@/lib/sounds'; // Para feedback sonoro
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
+import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
+import { LOCAL_STORAGE_KEYS } from '@/constants'; // Importar a constante
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -37,7 +38,7 @@ const boldRegex = /\*\*(.*?)\*\*/g;
 const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Element)[] => {
   const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
-  boldRegex.lastIndex = 0; 
+  boldRegex.lastIndex = 0;
   let match;
 
   while ((match = boldRegex.exec(text)) !== null) {
@@ -62,7 +63,7 @@ const parseLessonContent = (content: string): (string | JSX.Element)[] => {
   const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
 
   let match;
-  combinedRegex.lastIndex = 0; 
+  combinedRegex.lastIndex = 0;
 
   while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
     const uniqueKeyPart = match.index + (match[0]?.substring(0, 20) || '');
@@ -70,10 +71,10 @@ const parseLessonContent = (content: string): (string | JSX.Element)[] => {
       elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
     }
 
-    if (match[2]) { 
+    if (match[2]) {
       const optionsString = match[2];
       if (optionsString) {
-        const rawOptions = optionsString.split(';'); 
+        const rawOptions = optionsString.split(';');
         let correctAnswer = "";
         const parsedOptions = rawOptions.map(opt => {
           const trimmedOpt = opt.trim();
@@ -88,7 +89,7 @@ const parseLessonContent = (content: string): (string | JSX.Element)[] => {
           elements.push(
             <InteractiveWordChoice
               key={`iwc-${uniqueKeyPart}`}
-              options={shuffleArray(parsedOptions)} 
+              options={shuffleArray(parsedOptions)}
               correctAnswer={correctAnswer}
             />
           );
@@ -99,17 +100,17 @@ const parseLessonContent = (content: string): (string | JSX.Element)[] => {
       } else {
          elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
       }
-    } else if (match[4]) { 
+    } else if (match[4]) {
       const optionsString = match[4];
       if (optionsString) {
         const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
         if (allOptions.length > 0) {
-          const correctAnswerFillIn = allOptions[0]; 
+          const correctAnswerFillIn = allOptions[0];
           elements.push(
             <InteractiveFillInBlank
               key={`ifib-${uniqueKeyPart}`}
-              options={allOptions} 
-              correctAnswer={correctAnswerFillIn} 
+              options={allOptions}
+              correctAnswer={correctAnswerFillIn}
             />
           );
         } else {
@@ -140,7 +141,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
       textSegments.forEach((segment, segIndex) => {
         const segmentKey = `${elementKeyPrefix}-seg-${segIndex}`;
-        if (segment === '\\n' || segment === '\n') { 
+        if (segment === '\\n' || segment === '\n') {
           if (currentParagraphAccumulator.length > 0 && currentParagraphAccumulator.some(p => (typeof p === 'string' && p.trim() !== '') || React.isValidElement(p))) {
             paragraphs.push(
               <p key={`para-${paragraphs.length}-${segmentKey}`} className="mb-4 leading-relaxed">
@@ -165,7 +166,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       </p>
     );
   }
-  
+
   if (paragraphs.length === 0) {
     if (elements.length === 0 || (elements.length === 1 && typeof elements[0] === 'string' && elements[0].trim() === '')) {
       return [<p key="empty-lesson" className="text-muted-foreground">Conteúdo da lição indisponível ou em processamento.</p>];
@@ -176,7 +177,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -184,13 +185,27 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [isLocallyCompleted, setIsLocallyCompleted] = useState(false); // For guest users
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
-  
+
+  // Determine if the lesson is completed based on login state
   const isCompleted = useMemo(() => {
-    return !!userProfile?.completedLessons?.includes(lesson.id);
-  }, [userProfile, lesson.id]);
+    if (authLoading) return false; // Assume not completed while auth is loading
+    if (currentUser && userProfile) {
+      return userProfile.completedLessons.includes(lesson.id);
+    }
+    // For guest users, check localStorage
+    if (typeof window !== 'undefined') {
+      const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
+      if (guestProgress) {
+        const completedLessonIds: string[] = JSON.parse(guestProgress);
+        return completedLessonIds.includes(lesson.id);
+      }
+    }
+    return false;
+  }, [currentUser, userProfile, lesson.id, authLoading, isLocallyCompleted]); // Added isLocallyCompleted
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -200,20 +215,41 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson?.content]);
 
   useEffect(() => {
-    setSummary(null); 
+    // Reset local completion state when lesson changes or user logs in/out
+    if (!currentUser && typeof window !== 'undefined') {
+        const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
+        setIsLocallyCompleted(guestProgress ? JSON.parse(guestProgress).includes(lesson.id) : false);
+    } else {
+        setIsLocallyCompleted(false); // Reset if user is logged in
+    }
+
+    setSummary(null);
     setSummaryError(null);
     setIsLoadingSummary(false);
-    setIsMarkingComplete(false); // Reset marking state when lesson changes
+    setIsMarkingComplete(false);
 
+    // Fetch adjacent lessons (this logic might need adjustment if lessons are not in Firestore for guests)
     const fetchAdjacentLessons = async () => {
       if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) {
         setPrevLesson(null);
         setNextLesson(null);
         return;
       }
+      // Simplified: assuming lesson.moduleId is structured as 'trilhaId-mod-moduleId'
+      // This part is for Firestore, might not apply directly to guest logic for prev/next if lessons are only in mockData
+      const pathParts = lesson.moduleId.split('-mod-');
+      if (pathParts.length < 2) { // Basic check for moduleId structure
+        console.warn("Module ID format unexpected for fetching adjacent lessons:", lesson.moduleId);
+        setPrevLesson(null);
+        setNextLesson(null);
+        return;
+      }
+      const trilhaId = pathParts[0];
+      const moduleId = lesson.moduleId;
+
 
       const prevQuery = query(
-        collection(db, 'roadmaps', lesson.moduleId!.split('-')[0], 'modules', lesson.moduleId!, 'lessons'), // Assumindo que moduleId tem o formato trilhaId-mod-moduleId
+        collection(db, 'roadmaps', trilhaId, 'modules', moduleId, 'lessons'),
         where('order', '<', lesson.order),
         orderBy('order', 'desc'),
         limit(1)
@@ -222,7 +258,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
 
       const nextQuery = query(
-        collection(db, 'roadmaps', lesson.moduleId!.split('-')[0], 'modules', lesson.moduleId!, 'lessons'),
+        collection(db, 'roadmaps', trilhaId, 'modules', moduleId, 'lessons'),
         where('order', '>', lesson.order),
         orderBy('order', 'asc'),
         limit(1)
@@ -231,13 +267,21 @@ export function LessonView({ lesson }: LessonViewProps) {
       setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
     };
 
-    fetchAdjacentLessons();
-  }, [lesson]);
+    if (currentUser) { // Fetch from Firestore only if logged in
+        fetchAdjacentLessons();
+    } else {
+        // TODO: Implement logic for prev/next for guest users if lessons are from mockData
+        // For now, disabling prev/next for guests or making it work with mockData only
+        setPrevLesson(null);
+        setNextLesson(null);
+    }
+
+  }, [lesson, currentUser]); // Added currentUser as dependency
 
   const handleGenerateSummary = async () => {
     if (!lesson?.content) return;
     setIsLoadingSummary(true);
-    setSummary(null); 
+    setSummary(null);
     setSummaryError(null);
     try {
       const result: SummarizeLessonOutput = await summarizeLesson({ lessonContent: lesson.content });
@@ -253,49 +297,74 @@ export function LessonView({ lesson }: LessonViewProps) {
       setIsLoadingSummary(false);
     }
   };
-  
-  const handleMarkAsCompleted = async () => {
-    if (!currentUser) {
-      toast({
-        title: "Acesso Negado",
-        description: "Você precisa estar logado para marcar uma lição como concluída.",
-        variant: "destructive",
-      });
-      router.push('/login');
-      return;
-    }
-    if (isCompleted || isMarkingComplete) return;
 
+  const handleMarkAsCompleted = async () => {
+    if (isCompleted || isMarkingComplete) return;
     setIsMarkingComplete(true);
-    try {
-      const result = await markLessonAsCompleted(currentUser.uid, lesson.id);
-      if (result.success) {
-        playSound('pointGain');
+
+    if (currentUser) { // User is logged in
+      try {
+        const result = await markLessonCompletedAction(currentUser.uid, lesson.id);
+        if (result.success) {
+          playSound('pointGain');
+          toast({
+            title: "Lição Concluída! 🎉",
+            description: result.message + (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0 ? ` Você desbloqueou: ${result.unlockedAchievementsDetails.map(a => a.title).join(', ')}!` : ""),
+            className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
+          });
+          // AuthContext listener will update userProfile and thus isCompleted
+        } else {
+          toast({
+            title: "Erro",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao marcar lição (logado):", error);
         toast({
-          title: "Lição Concluída! 🎉",
-          description: result.message,
-          className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
-        });
-        // O userProfile será atualizado automaticamente pelo listener no AuthContext,
-        // o que fará `isCompleted` se tornar true e re-renderizar o botão.
-      } else {
-        toast({
-          title: "Erro",
-          description: result.message,
+          title: "Erro Inesperado",
+          description: "Não foi possível marcar a lição como concluída. Tente novamente.",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Erro ao marcar lição:", error);
-      toast({
-        title: "Erro Inesperado",
-        description: "Não foi possível marcar a lição como concluída. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsMarkingComplete(false);
+    } else { // User is not logged in (guest)
+      if (typeof window !== 'undefined') {
+        try {
+          const guestProgressRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
+          let guestCompletedLessons: string[] = guestProgressRaw ? JSON.parse(guestProgressRaw) : [];
+          if (!guestCompletedLessons.includes(lesson.id)) {
+            guestCompletedLessons.push(lesson.id);
+            localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS, JSON.stringify(guestCompletedLessons));
+          }
+          setIsLocallyCompleted(true); // Update local state for immediate UI feedback
+          playSound('pointGain'); // Play sound even for guests
+          toast({
+            title: "Lição Marcada! 🎉",
+            description: "Seu progresso foi salvo localmente. Crie uma conta para salvar na nuvem!",
+            className: "bg-blue-500 dark:bg-blue-700 text-white dark:text-white",
+          });
+        } catch (error) {
+          console.error("Erro ao marcar lição (convidado):", error);
+          toast({
+            title: "Erro ao Salvar Localmente",
+            description: "Não foi possível salvar seu progresso localmente.",
+            variant: "destructive",
+          });
+        }
+      }
     }
+    setIsMarkingComplete(false);
   };
+
+
+  if (authLoading && currentUser === undefined) { // Still determining auth state
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -326,7 +395,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         </CardHeader>
         <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
           {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
-          
+
           {lesson.references && lesson.references.length > 0 && (
             <>
               <Separator className="my-8" />
@@ -334,8 +403,8 @@ export function LessonView({ lesson }: LessonViewProps) {
                 <h3 className="text-xl font-semibold mb-4">Referências</h3>
                 <ul className="list-none p-0 space-y-2">
                   {lesson.references.map((ref, index) => (
-                    <li 
-                      key={`ref-${index}`} 
+                    <li
+                      key={`ref-${index}`}
                       className="text-sm text-muted-foreground"
                       dangerouslySetInnerHTML={{ __html: ref }}
                     />
@@ -360,8 +429,8 @@ export function LessonView({ lesson }: LessonViewProps) {
                     Clique no botão abaixo para gerar um resumo desta lição usando Inteligência Artificial.
                 </p>
             )}
-            <Button 
-                onClick={handleGenerateSummary} 
+            <Button
+                onClick={handleGenerateSummary}
                 disabled={isLoadingSummary || !lesson?.content}
                 className="w-full sm:w-auto"
             >
@@ -388,12 +457,12 @@ export function LessonView({ lesson }: LessonViewProps) {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             {summary && !isLoadingSummary && !summaryError && (
               <Alert className="mt-4 prose dark:prose-invert max-w-none text-sm" variant="default">
                 <AlertTitle>Resultado do Resumo:</AlertTitle>
                 <AlertDescription>
-                    {summary.split('\\\\n').map((paragraph, index) => (
+                    {summary.split(/\\n|\n/g).map((paragraph, index) => ( // Split by \n or \\n
                         <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                     ))}
                 </AlertDescription>
@@ -404,7 +473,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:flex-1 flex justify-center sm:justify-start">
-            {prevLesson ? (
+            {prevLesson && currentUser ? ( // Only show prev/next if logged in and available
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
@@ -414,13 +483,13 @@ export function LessonView({ lesson }: LessonViewProps) {
                   </span>
                 </Link>
             </Button>
-            ) : <div className="hidden sm:block sm:flex-1"></div>} 
+            ) : <div className="hidden sm:block sm:flex-1"></div>}
         </div>
 
         <div className="w-full sm:w-auto flex-shrink-0 my-2 sm:my-0">
-            <Button 
-              variant={isCompleted ? "default" : "secondary"} 
-              size="lg" 
+            <Button
+              variant={isCompleted ? "default" : "secondary"}
+              size="lg"
               className={cn("w-full sm:w-auto", isCompleted ? "bg-green-500 hover:bg-green-600" : "")}
               onClick={handleMarkAsCompleted}
               disabled={isCompleted || isMarkingComplete}
@@ -435,9 +504,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                 {isMarkingComplete ? "Marcando..." : isCompleted ? "Lição Concluída" : "Marcar como Concluída"}
             </Button>
         </div>
-        
+
         <div className="w-full sm:flex-1 flex justify-center sm:justify-end">
-            {nextLesson ? (
+            {nextLesson && currentUser ? ( // Only show prev/next if logged in and available
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
@@ -447,9 +516,11 @@ export function LessonView({ lesson }: LessonViewProps) {
                   </span>
                 </Link>
             </Button>
-            ) : <div className="hidden sm:block sm:flex-1"></div>} 
+            ) : <div className="hidden sm:block sm:flex-1"></div>}
         </div>
       </CardFooter>
     </div>
   );
 }
+
+    
