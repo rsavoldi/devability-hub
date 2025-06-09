@@ -51,7 +51,7 @@ const lucideIconMap: Record<string, LucideIcon> = {
     "Landmark": Landmark,
     "Accessibility": Accessibility,
     "GraduationCap": GraduationCap,
-    "HandHelping": HelpingHand,
+    "HelpingHand": HelpingHand, // Corrigido de "HandHelping" para "HelpingHand" se esse for o nome correto do ícone
     "BookOpen": BookOpen,
     "PackageSearch": PackageSearch,
     "PersonStanding": PersonStanding,
@@ -88,9 +88,6 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
     const router = useRouter();
     const { userProfile, loading: authLoading } = useAuth();
     
-    // Não precisamos mais de dataLoading, pois os dados vêm via props
-    // e a página pai (Server Component) já lidou com o carregamento deles.
-
     const handleNavigation = useCallback((moduleId: string | undefined) => {
         if (moduleId) {
             router.push(`/modules/${moduleId}`);
@@ -98,7 +95,6 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        // Se authLoading for true, ou se initialRoadmapData não estiver pronto, retorna array vazio para evitar erros
         if (authLoading || !initialRoadmapData || initialRoadmapData.length === 0) return [];
 
         const completedModules = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
@@ -107,7 +103,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
 
         return sortedInitialData.map((step, index) => {
             const localizedTitleFull = step.title;
-            const emoji = step.emoji; // Já é string ou undefined
+            const emoji = step.emoji; 
             const displayTitleWithoutEmoji = emoji ? localizedTitleFull.replace(emoji, '').trim() : localizedTitleFull.trim();
             const titleLines = splitTitleIntoLines(displayTitleWithoutEmoji, MAX_CHARS_PER_LINE_TITLE);
             const titleBlockHeight = titleLines.length * SVG_TEXT_LINE_HEIGHT;
@@ -127,36 +123,34 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
 
             let isCurrentNode = false;
             if (!userProfile) { 
-                isCurrentNode = index === 0; // Primeira trilha é a atual para não logados
+                isCurrentNode = index === 0;
             } else { 
                 const allNodesForCurrentLogic = sortedInitialData.map((s, idx) => ({
                     id: s.id,
                     isCompleted: s.modules ? s.modules.every(m => completedModules.has(m.id)) : false,
-                    order: s.order ?? idx, // Usa a ordem vinda do Firestore/mock, ou o índice como fallback
-                })).sort((a,b) => a.order - b.order); // Garante a ordem correta
+                    order: s.order ?? idx, 
+                })).sort((a,b) => a.order - b.order);
 
                 const firstUncompletedNode = allNodesForCurrentLogic.find(n => !n.isCompleted);
                 if (firstUncompletedNode) {
                     isCurrentNode = step.id === firstUncompletedNode.id;
                 } else if (allNodesForCurrentLogic.length > 0) { 
-                    // Se todas estão completas, a "atual" pode ser a última
                     isCurrentNode = step.id === allNodesForCurrentLogic[allNodesForCurrentLogic.length -1].id;
                 } else { 
-                     // Caso raro: sem nós ou perfil sem progresso em nenhum
                     isCurrentNode = index === 0;
                 }
             }
             
             return {
                 id: step.id,
-                originalStep: step, // Mantém a referência ao dado original
+                originalStep: step, 
                 nodeX: relativeNodeX,
                 nodeY: relativeNodeY,
                 titleLines,
                 svg_x_title,
                 svg_title_start_y,
                 emoji,
-                iconName: step.iconName, // Usaremos este para buscar no lucideIconMap
+                iconName: step.iconName,
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
                 isCompleted: isStepCompleted,
@@ -180,14 +174,14 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         if (processedNodes.length === 0) return { viewBoxWidth: 400, viewBoxHeight: 600, translateX: PADDING, translateY: PADDING };
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         processedNodes.forEach(pos => {
-            const textWidthApprox = MAX_CHARS_PER_LINE_TITLE * 8; // Estimativa
+            const textWidthApprox = MAX_CHARS_PER_LINE_TITLE * 8; 
             minX = Math.min(minX, pos.nodeX - NODE_RADIUS_BASE, pos.svg_x_title - textWidthApprox / 2);
             maxX = Math.max(maxX, pos.nodeX + NODE_RADIUS_BASE, pos.svg_x_title + textWidthApprox / 2);
-            minY = Math.min(minY, pos.svg_title_start_y); // Considera a altura do título
+            minY = Math.min(minY, pos.svg_title_start_y); 
             maxY = Math.max(maxY, pos.nodeY + NODE_RADIUS_BASE);
         });
-        const contentWidth = Math.max(maxX - minX, 300); // Garante uma largura mínima
-        const contentHeight = Math.max(maxY - minY, 500); // Garante uma altura mínima
+        const contentWidth = Math.max(maxX - minX, 300); 
+        const contentHeight = Math.max(maxY - minY, 500); 
         return {
             viewBoxWidth: contentWidth + PADDING * 2,
             viewBoxHeight: contentHeight + PADDING * 2,
@@ -210,8 +204,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         return processedNodes.length > 0 ? processedNodes[processedNodes.length - 1] : null;
     }, [processedNodes, userProfile, authLoading]);
 
-
-    if (authLoading) { // Mostra loader enquanto o AuthContext carrega
+    if (authLoading) { 
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -220,7 +213,6 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         );
     }
     
-    // Se initialRoadmapData estiver vazio após o carregamento da página, pode indicar erro no fetch do server ou dados vazios no DB
     if (initialRoadmapData.length === 0 && !authLoading) {
          return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
@@ -245,13 +237,31 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                         
                         const IconComponent = node.iconName ? lucideIconMap[node.iconName] : null;
                         
-                        const iconFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-400 text-green-700 dark:text-green-400" : "fill-foreground group-hover/node-visual:fill-primary group-hover/node-visual:text-primary text-foreground";
-                        const textFillClass = node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground";
+                        const iconOrEmojiFillClass = node.isCompleted 
+                            ? "fill-green-700 dark:fill-green-400 text-green-700 dark:text-green-400" 
+                            : "fill-foreground group-hover/node-visual:fill-primary group-hover/node-visual:text-primary text-foreground";
+                        
+                        const titleTextFillClass = node.isCompleted 
+                            ? "fill-green-700 dark:fill-green-300" 
+                            : "fill-foreground";
 
                         return (
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
                                 <title>{node.originalStep.title.replace(node.emoji || '', '').trim()}: {node.description}</title>
-                                <circle cx={node.nodeX} cy={node.nodeY} r={NODE_RADIUS_BASE} className={cn("stroke-2 transition-all duration-200 ease-in-out", "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" : "", node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" : "fill-background stroke-border")} style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} />
+                                <circle 
+                                    cx={node.nodeX} 
+                                    cy={node.nodeY} 
+                                    r={NODE_RADIUS_BASE} 
+                                    className={cn(
+                                        "stroke-2 transition-all duration-200 ease-in-out", 
+                                        "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90", 
+                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20" 
+                                                                          : "", 
+                                        node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500" 
+                                                         : "fill-background stroke-border"
+                                    )} 
+                                    style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} 
+                                />
                                 
                                 {IconComponent ? (
                                     <IconComponent
@@ -259,14 +269,37 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                         y={node.nodeY - ICON_SIZE / 2}
                                         width={ICON_SIZE}
                                         height={ICON_SIZE}
-                                        className={cn("select-none pointer-events-none transition-colors", iconFillClass)}
+                                        className={cn("select-none pointer-events-none transition-colors", iconOrEmojiFillClass)}
                                         strokeWidth={2} 
                                     />
                                 ) : node.emoji ? (
-                                    <text x={node.nodeX} y={node.nodeY} textAnchor="middle" dominantBaseline="central" style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }} className={cn("select-none pointer-events-none transition-colors", textFillClass, iconFillClass)}>{node.emoji}</text>
+                                    <text 
+                                        x={node.nodeX} 
+                                        y={node.nodeY} 
+                                        textAnchor="middle" 
+                                        dominantBaseline="central" 
+                                        style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }} 
+                                        className={cn(
+                                            "select-none pointer-events-none transition-colors",
+                                            // Emojis should inherit text color, not a shape fill
+                                            node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground"
+                                        )}
+                                    >
+                                        {node.emoji}
+                                    </text>
                                 ) : null}
 
-                                <text x={node.svg_x_title} y={node.svg_title_start_y} textAnchor="middle" dominantBaseline="hanging" className={cn("text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none", "group-hover/node-visual:fill-primary", textFillClass)}>
+                                <text 
+                                    x={node.svg_x_title} 
+                                    y={node.svg_title_start_y} 
+                                    textAnchor="middle" 
+                                    dominantBaseline="hanging" 
+                                    className={cn(
+                                        "text-[11px] md:text-[13px] font-semibold select-none transition-colors duration-200 ease-in-out pointer-events-none stroke-none",
+                                        "group-hover/node-visual:fill-primary", 
+                                        titleTextFillClass
+                                    )}
+                                >
                                     {node.titleLines.map((line, lineIndex) => (<tspan key={lineIndex} x={node.svg_x_title} dy={lineIndex === 0 ? 0 : SVG_TEXT_LINE_HEIGHT}>{line}</tspan>))}
                                 </text>
                             </g>

@@ -2,13 +2,19 @@
   {
     "id": "trilha1",
     "title": "🧒 Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.",
+    "order": 1,
     "emoji": "🧒",
-    "icon": "UsersRound",
+    "iconName": "UsersRound",
     "description": "Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.",
+    "isCompleted": false,
+    "isCurrent": true,
     "modules": [
       {
         "id": "mod-trilha1-0",
         "title": "Compreendendo o Desenvolvimento Infanto-Juvenil com Deficiência",
+        "order": 1,
+        "isCompleted": false,
+        "progress": 6,
         "lessons": [
           {
             "id": "m1-l1",
@@ -1154,23 +1160,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 6
+        "lessonCount": 4,
+        "exerciseCount": 32
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": true
+    ]
   },
   {
     "id": "trilha2",
     "title": "🧑 Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.",
+    "order": 2,
     "emoji": "🧑",
-    "icon": "UserCheck",
+    "iconName": "UserCheck",
     "description": "Compreenda as particularidades do desenvolvimento, os direitos, a cidadania e as perspectivas de envelhecimento de pessoas adultas com deficiência.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha2-0",
         "title": "A Pessoa Adulta com Deficiência: Trajetórias e Desafios",
+        "order": 2,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m2-l1",
@@ -1846,23 +1856,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 7,
+        "exerciseCount": 15
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha3",
     "title": "🧩 Modelos de intervenção para o favorecimento do desenvolvimento de pessoas com deficiência.",
+    "order": 3,
     "emoji": "🧩",
-    "icon": "ToyBrick",
+    "iconName": "ToyBrick",
     "description": "Conheça e analise diferentes modelos de intervenção que visam promover o desenvolvimento e a inclusão de pessoas com deficiência em diversos contextos.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha3-0",
         "title": "Explorando Modelos de Intervenção em Deficiência",
+        "order": 3,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m3-l1",
@@ -2526,23 +2540,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 8,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha4",
     "title": "🧠 Principais abordagens teóricas relativas ao desenvolvimento da pessoa com deficiência.",
+    "order": 4,
     "emoji": "🧠",
-    "icon": "Brain",
+    "iconName": "Brain",
     "description": "Aprofunde-se nas principais teorias que fundamentam a compreensão do desenvolvimento de pessoas com deficiência, desde perspectivas clássicas até contemporâneas.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha4-0",
         "title": "Fundamentos Teóricos do Desenvolvimento na Deficiência",
+        "order": 4,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m4-l1",
@@ -3241,23 +3259,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 10,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha5",
     "title": "🔬 Contribuições da neuropsicologia para a compreensão dos fenômenos desenvolvimentais da Pessoa com Deficiência.",
+    "order": 5,
     "emoji": "🔬",
-    "icon": "Microscope",
+    "iconName": "Microscope",
     "description": "Descubra como a neuropsicologia contribui para entender os processos de desenvolvimento, as funções cognitivas e os comportamentos em pessoas com deficiência.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha5-0",
         "title": "Neuropsicologia Aplicada à Deficiência: Compreensão e Intervenção",
+        "order": 5,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m5-l1",
@@ -3837,23 +3859,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 6,
+        "exerciseCount": 13
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha6",
     "title": "📊 Fundamentos da Avaliação Psicológica e do Psicodiagnóstico da pessoa com deficiência.",
+    "order": 6,
     "emoji": "📊",
-    "icon": "ChartColumn",
+    "iconName": "BarChart3",
     "description": "Estude os fundamentos da avaliação psicológica e do psicodiagnóstico aplicados a pessoas com deficiência, considerando suas especificidades, instrumentos e ética.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha6-0",
-        "title": "Avaliação Psicológica e Psicodiagnóstico na Deficiência",
+        "title": "Avaliação Psicológica e Psicodiagnóstico em Pessoas com Deficiência",
+        "order": 6,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m6-l1",
@@ -4495,23 +4521,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 7,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha7",
     "title": "📝 Pesquisa com Pessoas com Deficiência: Tópicos, Métodos e Ética.",
+    "order": 7,
     "emoji": "📝",
-    "icon": "FileText",
+    "iconName": "FileText",
     "description": "Explore temas de pesquisa, métodos de coleta e análise de dados (qualitativos, quantitativos e mistos), e as considerações éticas envolvidas na investigação científica sobre deficiência.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha7-0",
         "title": "Pesquisa Científica em Deficiência: Métodos e Ética",
+        "order": 7,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m7-l1",
@@ -5158,23 +5188,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 7,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha8",
     "title": "⚖️ Implicações éticas da avaliação e intervenção com pessoas com deficiência.",
+    "order": 8,
     "emoji": "⚖️",
-    "icon": "Scale",
+    "iconName": "Scale",
     "description": "Analise as implicações éticas relacionadas à avaliação e intervenção junto a pessoas com deficiência, promovendo práticas responsáveis e respeitosas.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha8-0",
         "title": "Ética Profissional na Atuação com Pessoas com Deficiência",
+        "order": 8,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m8-l1",
@@ -5807,23 +5841,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 7,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha9",
     "title": "🏛️ Políticas e Processos de inclusão da pessoa com deficiência nos contextos educacionais, laborais e sociais.",
+    "order": 9,
     "emoji": "🏛️",
-    "icon": "Landmark",
+    "iconName": "Landmark",
     "description": "Conheça as políticas e os processos que visam a inclusão de pessoas com deficiência em diversos contextos, como educação, trabalho e sociedade.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha9-0",
         "title": "Políticas e Práticas de Inclusão: Educação, Trabalho e Sociedade",
+        "order": 9,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m9-l1",
@@ -6434,23 +6472,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 6,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha10",
     "title": "♿ Debates contemporâneos sobre processos de inclusão: desenho universal, neurodivergências, tecnologias assistivas e deficiência oculta.",
+    "order": 10,
     "emoji": "♿",
-    "icon": "Accessibility",
+    "iconName": "Accessibility",
     "description": "Participe de debates atuais sobre inclusão, abordando temas como desenho universal, neurodivergência, tecnologias assistivas e deficiências ocultas.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha10-0",
         "title": "Temas Emergentes em Inclusão, Acessibilidade e Neurodiversidade",
+        "order": 10,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m10-l1",
@@ -7048,23 +7090,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 5,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha11",
     "title": "🎓 Acesso, permanência e participação de pessoas com deficiência no Ensino Superior.",
+    "order": 11,
     "emoji": "🎓",
-    "icon": "GraduationCap",
+    "iconName": "GraduationCap",
     "description": "Discuta os desafios e os progressos relacionados ao acesso, permanência e participação de pessoas com deficiência no ensino superior.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha11-0",
         "title": "Inclusão e Acessibilidade no Contexto do Ensino Superior",
+        "order": 11,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m11-l1",
@@ -7677,23 +7723,27 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 6,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   },
   {
     "id": "trilha12",
     "title": "❤️‍🩹 Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.",
+    "order": 12,
     "emoji": "❤️‍🩹",
-    "icon": "HandHelping",
+    "iconName": "HelpingHand",
     "description": "Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.",
+    "isCompleted": false,
+    "isCurrent": false,
     "modules": [
       {
         "id": "mod-trilha12-0",
         "title": "Envelhecimento, Deficiência, Direitos e Combate ao Etarismo",
+        "order": 12,
+        "isCompleted": false,
+        "progress": 0,
         "lessons": [
           {
             "id": "m12-l1",
@@ -8290,11 +8340,9 @@
             "estimatedTime": "3 mins"
           }
         ],
-        "isCompleted": false,
-        "progress": 0
+        "lessonCount": 6,
+        "exerciseCount": 14
       }
-    ],
-    "isCompleted": false,
-    "isCurrent": false
+    ]
   }
 ]
