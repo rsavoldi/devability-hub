@@ -1,6 +1,6 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
-import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy } from 'lucide-react'; // BookCopy ADICIONADO AQUI
+import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Importações dos arquivos de dados modulares
@@ -58,7 +58,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
     iconName: "UsersRound", 
-    icon: UsersRound, // Mantendo o componente aqui para generate-data-json.ts, se ele ainda precisar
+    icon: UsersRound,
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -310,26 +310,42 @@ export const mockModules: Module[] = mockRoadmapData.flatMap(step => step.module
 
 
 // --- Categorias de Lições e Exercícios ---
-export const lessonCategories: { name: string; iconName: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.map(roadmap => ({
-  name: roadmap.modules[0]?.title || `Trilha ${roadmap.order}`, 
-  iconName: roadmap.iconName || "BookOpen", 
-  lessons: roadmap.modules.flatMap(mod => mod.lessons),
-  moduleId: roadmap.modules[0]?.id || roadmap.id, 
-}));
+// Esta variável é usada pela página de Lições para agrupar por módulo/trilha.
+// Ela agora usa iconName diretamente.
+export const finalLessonCategories: { name: string; iconName: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.reduce((acc, roadmap) => {
+  if (roadmap.modules && roadmap.modules.length > 0) {
+    // Agrupa todas as lições de todos os módulos de uma trilha sob o título do primeiro módulo como nome da categoria.
+    // Usa o iconName da trilha.
+    const allLessonsInRoadmap = roadmap.modules.flatMap(mod => mod.lessons);
+    if (allLessonsInRoadmap.length > 0) {
+      acc.push({
+        name: roadmap.modules[0].title || `Trilha ${roadmap.order}`, // Nome da categoria é o título do primeiro módulo
+        iconName: roadmap.iconName || "BookOpen", // Usa o iconName da trilha
+        lessons: [...new Map(allLessonsInRoadmap.map(item => [item.id, item])).values()],
+        moduleId: roadmap.modules[0].id || roadmap.id, // ID da categoria para a aba
+      });
+    }
+  }
+  return acc;
+}, [] as { name: string; iconName: string; lessons: Lesson[]; moduleId: string; }[]);
 
-const filteredLessonCategories = lessonCategories.filter(cat => cat.lessons.length > 0);
 
-const allCategorizedLessonIds = new Set(filteredLessonCategories.flatMap(cat => cat.lessons.map(l => l.id)));
+const allCategorizedLessonIds = new Set(finalLessonCategories.flatMap(cat => cat.lessons.map(l => l.id)));
 const uncategorizedLessons = mockLessons.filter(l => !allCategorizedLessonIds.has(l.id));
 if (uncategorizedLessons.length > 0) {
-  filteredLessonCategories.push({
-    name: "Geral/Outros",
-    iconName: "PackageSearch",
-    lessons: [...new Map(uncategorizedLessons.map(item => [item.id, item])).values()],
-    moduleId: "geral-outros"
-  });
+  const geralCategory = finalLessonCategories.find(cat => cat.moduleId === "geral-outros");
+  if (geralCategory) {
+    geralCategory.lessons.push(...uncategorizedLessons);
+    geralCategory.lessons = [...new Map(geralCategory.lessons.map(item => [item.id, item])).values()];
+  } else {
+    finalLessonCategories.push({
+      name: "Geral/Outros",
+      iconName: "PackageSearch",
+      lessons: [...new Map(uncategorizedLessons.map(item => [item.id, item])).values()],
+      moduleId: "geral-outros"
+    });
+  }
 }
-export const finalLessonCategories = filteredLessonCategories;
 
 
 export const exerciseCategories: { name: string; icon: LucideIcon; exercises: Exercise[] }[] = [
@@ -378,6 +394,8 @@ mockRoadmapData.forEach(trilha => {
       if (totalModuleItems > 0) {
         module.isCompleted = module.progress === 100;
       } else {
+        // Se não há itens, considera completo se o módulo estiver na lista de completados do usuário
+        // ou se não há itens E já estava marcado como completo (para persistir um estado manual se necessário)
         module.isCompleted = mockUserProfile.completedModules.includes(module.id);
       }
       
@@ -387,7 +405,8 @@ mockRoadmapData.forEach(trilha => {
     });
     trilha.isCompleted = allModulesInTrilhaCompleted;
   } else {
-    trilha.isCompleted = true; 
+    // Trilha sem módulos é considerada não completa por padrão, a menos que queiramos outra lógica
+    trilha.isCompleted = false; 
   }
 
   if (!trilha.isCompleted && !firstUncompletedTrilhaFound) {
@@ -399,16 +418,23 @@ mockRoadmapData.forEach(trilha => {
 });
 
 if (mockRoadmapData.length > 0 && mockRoadmapData.every(t => t.isCompleted)) {
+    // Se todas as trilhas estão completas, nenhuma é "atual"
     mockRoadmapData.forEach(t => t.isCurrent = false); 
 } else if (!firstUncompletedTrilhaFound && mockRoadmapData.length > 0) { 
+    // Se nenhuma "atual" foi encontrada (ex: todas não completas mas nenhuma explicitamente marcada como atual)
+    // e há trilhas, marca a primeira não completa como atual.
+    // Se todas estiverem completas, este bloco não é executado, mas o anterior já tratou disso.
+    // Se todas foram marcadas como completas exceto a última, e a última não foi marcada como atual, este bloco corrige.
     const firstNotDone = mockRoadmapData.find(t => !t.isCompleted);
     if (firstNotDone) {
         firstNotDone.isCurrent = true;
     } else {
+        // Caso de fallback extremo: se não há trilhas não completas, mas o loop não marcou
+        // nenhuma como current (o que não deveria acontecer se houver trilhas),
+        // marca a primeira como current, assumindo que não está completa.
+        // Esta lógica pode ser redundante com a de cima.
         if (mockRoadmapData.length > 0 && !mockRoadmapData[0].isCompleted && !mockRoadmapData.some(t => t.isCurrent)) {
              mockRoadmapData[0].isCurrent = true;
         }
     }
 }
-
-    
