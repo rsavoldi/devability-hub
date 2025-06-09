@@ -4,13 +4,13 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, type LucideIcon, BookOpen, PackageSearch, PersonStanding, Rocket } from 'lucide-react'; 
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types'; // Usando ModuleType
+import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, BookOpen, PackageSearch, PersonStanding, Rocket, type LucideIcon, CheckCircle } from 'lucide-react'; 
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
 const NODE_RADIUS_BASE = 40;
-const EMOJI_FONT_SIZE_BASE = NODE_RADIUS_BASE * 0.6;
+// EMOJI_FONT_SIZE_BASE não é mais necessário se não usarmos emojis diretamente no SVG
 const ICON_SIZE = NODE_RADIUS_BASE * 0.6; 
 const VERTICAL_NODE_SPACING = 200;
 const HORIZONTAL_ZIGZAG_OFFSET = 120;
@@ -23,14 +23,13 @@ const LINE_THICKNESS = 3;
 
 interface ProcessedRoadmapNode {
     id: string;
-    originalStep: RoadmapStep; // Mantém a estrutura original para referência
+    originalStep: RoadmapStep;
     nodeX: number;
     nodeY: number;
     titleLines: string[];
     svg_x_title: number;
     svg_title_start_y: number;
-    emoji: string | undefined; // Tornar emoji opcional
-    iconName?: string; 
+    iconName: string; // Agora é obrigatório e sempre string
     description: string;
     firstModuleId?: string;
     isCompleted: boolean;
@@ -39,7 +38,7 @@ interface ProcessedRoadmapNode {
 }
 
 // Mapa para converter nome do ícone (string) para o componente Lucide
-const lucideIconMap: Record<string, LucideIcon> = {
+export const lucideIconMap: Record<string, LucideIcon> = {
     "UsersRound": UsersRound,
     "UserCheck": UserCheck,
     "ToyBrick": ToyBrick,
@@ -51,21 +50,25 @@ const lucideIconMap: Record<string, LucideIcon> = {
     "Landmark": Landmark,
     "Accessibility": Accessibility,
     "GraduationCap": GraduationCap,
-    "HelpingHand": HelpingHand, // Corrigido de "HandHelping" para "HelpingHand" se esse for o nome correto do ícone
+    "HelpingHand": HelpingHand,
     "BookOpen": BookOpen,
     "PackageSearch": PackageSearch,
     "PersonStanding": PersonStanding,
-    // Adicione todos os ícones que você utiliza em mockData.ts aqui
+    "Rocket": Rocket, // Adicionado Rocket, se for usado
+    // Adicione outros ícones usados aqui
 };
 
 interface RoadmapDisplayProps {
-  initialRoadmapData: RoadmapStep[]; // Recebe os dados do Firestore via props
+  initialRoadmapData: RoadmapStep[];
 }
 
 // --- FUNÇÃO HELPER ---
 function splitTitleIntoLines(title: string | undefined, maxChars: number): string[] {
     if (!title) return [''];
-    const words = title.split(' ');
+    // Remove o emoji do título antes de dividir, se ele ainda estiver lá por algum motivo
+    // A remoção do emoji deve acontecer na origem dos dados (mockData.ts)
+    const cleanTitle = title.replace(/([\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F700}-\u{1F77F}]|[\u{1F780}-\u{1F7FF}]|[\u{1F800}-\u{1F8FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/gu, '').trim();
+    const words = cleanTitle.split(' ');
     const lines: string[] = [];
     let currentLine = "";
 
@@ -103,9 +106,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
 
         return sortedInitialData.map((step, index) => {
             const localizedTitleFull = step.title;
-            const emoji = step.emoji; 
-            const displayTitleWithoutEmoji = emoji ? localizedTitleFull.replace(emoji, '').trim() : localizedTitleFull.trim();
-            const titleLines = splitTitleIntoLines(displayTitleWithoutEmoji, MAX_CHARS_PER_LINE_TITLE);
+            // O emoji foi removido de step.title em mockData.ts, então displayTitleWithoutEmoji é o próprio step.title
+            const titleLines = splitTitleIntoLines(localizedTitleFull, MAX_CHARS_PER_LINE_TITLE);
             const titleBlockHeight = titleLines.length * SVG_TEXT_LINE_HEIGHT;
 
             const relativeNodeX = (index % 2 === 0 ? 0 : HORIZONTAL_ZIGZAG_OFFSET);
@@ -149,8 +151,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                 titleLines,
                 svg_x_title,
                 svg_title_start_y,
-                emoji,
-                iconName: step.iconName,
+                iconName: step.iconName || "BookOpen", // Fallback para BookOpen se iconName não estiver definido
                 description: step.description,
                 firstModuleId: firstModuleOfStep?.id,
                 isCompleted: isStepCompleted,
@@ -233,13 +234,15 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                 <g transform={`translate(${translateX}, ${translateY})`}>
                     {paths.map(path => (<line key={path.id} x1={path.x1} y1={path.y1} x2={path.x2} y2={path.y2} strokeWidth={LINE_THICKNESS} className={cn("transition-all duration-300", path.isCompleted ? "stroke-green-500" : "stroke-border")} />))}
                     {processedNodes.map((node) => {
-                        const nodeAriaLabel = `Trilha: ${node.originalStep.title.replace(node.emoji || '', '').trim()}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : (node.isCurrent ? 'Ponto de partida sugerido' : 'Não iniciado')}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
+                        const nodeAriaLabel = `Trilha: ${node.originalStep.title}. Status: ${userProfile ? (node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado') : (node.isCurrent ? 'Ponto de partida sugerido' : 'Não iniciado')}. Pressione Enter ou Espaço para ${userProfile && node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
                         
-                        const IconComponent = node.iconName ? lucideIconMap[node.iconName] : null;
+                        const IconComponent = lucideIconMap[node.iconName] || BookOpen; // Fallback para BookOpen
                         
-                        const iconOrEmojiFillClass = node.isCompleted 
-                            ? "fill-green-700 dark:fill-green-400 text-green-700 dark:text-green-400" 
-                            : "fill-foreground group-hover/node-visual:fill-primary group-hover/node-visual:text-primary text-foreground";
+                        const iconColorClass = node.isCompleted 
+                            ? "text-green-600 dark:text-green-400" 
+                            : node.isCurrent
+                                ? "text-primary"
+                                : "text-muted-foreground group-hover/node-visual:text-primary";
                         
                         const titleTextFillClass = node.isCompleted 
                             ? "fill-green-700 dark:fill-green-300" 
@@ -247,7 +250,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
 
                         return (
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
-                                <title>{node.originalStep.title.replace(node.emoji || '', '').trim()}: {node.description}</title>
+                                <title>{node.originalStep.title}: {node.description}</title>
                                 <circle 
                                     cx={node.nodeX} 
                                     cy={node.nodeY} 
@@ -263,32 +266,15 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }} 
                                 />
                                 
-                                {IconComponent ? (
-                                    <IconComponent
-                                        x={node.nodeX - ICON_SIZE / 2}
-                                        y={node.nodeY - ICON_SIZE / 2}
-                                        width={ICON_SIZE}
-                                        height={ICON_SIZE}
-                                        className={cn("select-none pointer-events-none transition-colors", iconOrEmojiFillClass)}
-                                        strokeWidth={2} 
-                                    />
-                                ) : node.emoji ? (
-                                    <text 
-                                        x={node.nodeX} 
-                                        y={node.nodeY} 
-                                        textAnchor="middle" 
-                                        dominantBaseline="central" 
-                                        style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }} 
-                                        className={cn(
-                                            "select-none pointer-events-none transition-colors",
-                                            // Emojis should inherit text color, not a shape fill
-                                            node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground"
-                                        )}
-                                    >
-                                        {node.emoji}
-                                    </text>
-                                ) : null}
-
+                                <IconComponent
+                                    x={node.nodeX - ICON_SIZE / 2}
+                                    y={node.nodeY - ICON_SIZE / 2}
+                                    width={ICON_SIZE}
+                                    height={ICON_SIZE}
+                                    className={cn("select-none pointer-events-none transition-colors duration-200", iconColorClass)}
+                                    strokeWidth={2.5} // Aumentar um pouco a espessura para melhor visibilidade
+                                />
+                                
                                 <text 
                                     x={node.svg_x_title} 
                                     y={node.svg_title_start_y} 
@@ -302,6 +288,15 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                 >
                                     {node.titleLines.map((line, lineIndex) => (<tspan key={lineIndex} x={node.svg_x_title} dy={lineIndex === 0 ? 0 : SVG_TEXT_LINE_HEIGHT}>{line}</tspan>))}
                                 </text>
+                                {node.isCompleted && (
+                                     <CheckCircle 
+                                        x={node.nodeX + NODE_RADIUS_BASE * 0.6} 
+                                        y={node.nodeY - NODE_RADIUS_BASE * 0.9} 
+                                        width={ICON_SIZE*0.5} 
+                                        height={ICON_SIZE*0.5} 
+                                        className="text-green-500 fill-background"
+                                     />
+                                )}
                             </g>
                         );
                     })}
@@ -322,3 +317,5 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         </div>
     );
 }
+
+    

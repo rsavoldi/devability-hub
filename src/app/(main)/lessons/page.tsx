@@ -1,62 +1,53 @@
 
-"use client"; // Adicionado "use client" para hooks
+"use client"; 
 
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
-import { mockRoadmapData, mockLessons } from '@/lib/mockData'; // Usando dados mockados
+import { mockRoadmapData, mockLessons } from '@/lib/mockData'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, ListFilter, ListChecks, type LucideIcon } from 'lucide-react'; 
+import { BookOpen, ListFilter, ListChecks, type LucideIcon, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, PackageSearch } from 'lucide-react'; 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import type { Lesson, Module as ModuleType } from '@/lib/types';
-import { useMemo, useState } from 'react'; // Importado useState
+import type { Lesson, Module as ModuleType, RoadmapStep } from '@/lib/types';
+import { useMemo, useState, useEffect } from 'react'; 
+import { lucideIconMap } from '@/components/roadmap/RoadmapDisplay'; // Importar o mapa de ícones
 
 interface LessonCategory {
   name: string;
-  icon: LucideIcon;
+  iconName: string; // Alterado para iconName (string)
   lessons: Lesson[];
   moduleId: string;
 }
 
-// Não precisamos mais buscar do Firestore por enquanto
-// async function getLessonsFromFirestore(): Promise<Lesson[]> { ... }
-// async function getAllModulesFromFirestore(): Promise<(ModuleType & { roadmapTitle: string, roadmapIcon?: LucideIcon })[]> { ... }
-
 export default function LessonsPage() {
-  // Utilizando os dados mockados diretamente
   const allLessons = mockLessons;
-  const allModulesFromMockData = mockRoadmapData.flatMap(roadmap => 
-    roadmap.modules.map(module => ({
-      ...module,
-      id: module.id,
-      roadmapTitle: roadmap.title,
-      roadmapIcon: roadmap.icon || BookOpen, 
-    }))
-  );
-
+  
+  // Mapear os dados das trilhas para as categorias de lições, usando iconName
   const lessonCategories: LessonCategory[] = useMemo(() => {
-    return allModulesFromMockData.map(module => ({
-      name: module.title,
-      icon: module.roadmapIcon || BookOpen,
-      lessons: allLessons.filter(lesson => lesson.moduleId === module.id),
-      moduleId: module.id
+    return mockRoadmapData.map(roadmap => ({
+      name: roadmap.modules[0]?.title || `Trilha ${roadmap.order}`,
+      iconName: roadmap.iconName || "BookOpen", // Usar iconName da trilha
+      lessons: roadmap.modules.flatMap(mod => 
+        allLessons.filter(lesson => lesson.moduleId === mod.id)
+      ),
+      moduleId: roadmap.modules[0]?.id || roadmap.id,
     }));
-  }, [allModulesFromMockData, allLessons]);
+  }, [allLessons]); // mockRoadmapData é constante, então não precisa estar na dependência
   
   const categoriesWithLessons = lessonCategories.filter(cat => cat.lessons.length > 0);
   const defaultTabValue = categoriesWithLessons[0]?.moduleId || 'all';
 
-  // Estado para a aba ativa, para garantir consistência na renderização inicial no cliente
   const [activeTab, setActiveTab] = useState(defaultTabValue);
   
-  // Efeito para definir a aba ativa após a montagem, se necessário
-  // useEffect(() => {
-  //   if (categoriesWithLessons.length > 0 && !activeTab) {
-  //     setActiveTab(categoriesWithLessons[0].moduleId);
-  //   } else if (categoriesWithLessons.length === 0 && activeTab !== 'all') {
-  //     setActiveTab('all');
-  //   }
-  // }, [categoriesWithLessons, activeTab]);
+  useEffect(() => {
+    // Se a aba ativa não tem lições e não é 'all', tenta mudar para a primeira com lições ou 'all'
+    const currentCategoryHasLessons = categoriesWithLessons.some(cat => cat.moduleId === activeTab);
+    if (activeTab !== 'all' && !currentCategoryHasLessons && categoriesWithLessons.length > 0) {
+      setActiveTab(categoriesWithLessons[0].moduleId);
+    } else if (categoriesWithLessons.length === 0 && activeTab !== 'all') {
+      setActiveTab('all');
+    }
+  }, [categoriesWithLessons, activeTab]);
 
 
   return (
@@ -64,7 +55,7 @@ export default function LessonsPage() {
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
           <BookOpen className="w-10 h-10 mr-3 text-primary" />
-          Explore as Lições <span role="img" aria-label="livros">📚</span>
+          Explore as Lições
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
           Mergulhe em diversos tópicos e aprimore suas habilidades de desenvolvimento e inclusão.
@@ -104,7 +95,7 @@ export default function LessonsPage() {
               </Tooltip>
 
               {categoriesWithLessons.map((category) => {
-                const CategoryIcon = category.icon;
+                const CategoryIcon = lucideIconMap[category.iconName] || BookOpen; // Usa o mapa para obter o componente
                 return (
                   <Tooltip key={category.moduleId}>
                     <TooltipTrigger asChild>
@@ -147,7 +138,7 @@ export default function LessonsPage() {
           </TabsContent>
 
           {categoriesWithLessons.map((category) => {
-            const CategoryIcon = category.icon;
+            const CategoryIcon = lucideIconMap[category.iconName] || BookOpen; // Usa o mapa
             return (
             <TabsContent key={category.moduleId} value={category.moduleId}>
               <h2 className="text-2xl font-semibold mb-6 mt-4 flex items-center">
@@ -171,3 +162,5 @@ export default function LessonsPage() {
     </div>
   );
 }
+
+    
