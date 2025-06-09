@@ -1,0 +1,61 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Roadmaps e seus conteúdos (módulos, lições, exercícios)
+    // Permitir leitura pública para que todos possam ver o conteúdo.
+    // A escrita (criação, atualização, deleção) deve ser restrita.
+    // Exemplo: apenas administradores (não implementado aqui, mas um placeholder).
+    // Para simplificar, vamos permitir escrita apenas para usuários autenticados por enquanto.
+    // Em um app real, você provavelmente teria papéis (roles) para definir quem pode escrever.
+    match /roadmaps/{roadmapId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Apenas usuários autenticados podem escrever (ajuste conforme necessário)
+
+      match /modules/{moduleId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+
+        match /lessons/{lessonId} {
+          allow read: if true;
+          allow write: if request.auth != null;
+        }
+
+        match /exercises/{exerciseId} {
+          allow read: if true;
+          allow write: if request.auth != null;
+        }
+      }
+    }
+
+    // Perfis de Usuário
+    // Cada usuário pode ler e escrever em seu próprio documento de perfil.
+    // Ninguém mais pode ler ou escrever no perfil de outro usuário (exceto via regras de admin, não mostradas aqui).
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Para criar o perfil inicialmente (no registro):
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Dicionário - permitir leitura pública
+    match /dictionary/{termId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Apenas autenticados para adicionar/editar (exemplo)
+    }
+
+    // Conquistas (definições) - permitir leitura pública
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow write: if request.auth != null; // Apenas autenticados para adicionar/editar (exemplo)
+    }
+    
+    // Adicione regras para outras coleções conforme necessário.
+    // Exemplo:
+    // match /someOtherCollection/{docId} {
+    //   allow read: if true; // Se for pública
+    //   allow write: if request.auth != null; // Se escrita autenticada
+    // }
+  }
+}
