@@ -124,17 +124,15 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                 };
             });
         
-        // Lógica para definir isCurrent
-        if (authLoading) { // Se autenticação está carregando, não faz nada de especial, espera
+        if (authLoading) { 
             return tempProcessedNodes;
         }
 
         let currentFound = false;
         const finalNodes = tempProcessedNodes.map(node => {
-            if (!userProfile) { // Não logado, primeira é atual
+            if (!userProfile) { 
                 return { ...node, isCurrent: node.order === 1 || (node.order === 0 && tempProcessedNodes.length ===1) };
             }
-            // Logado
             if (!node.isCompleted && !currentFound) {
                 currentFound = true;
                 return { ...node, isCurrent: true };
@@ -142,15 +140,12 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
             return { ...node, isCurrent: false };
         });
 
-        // Se todas estiverem completas e logado, marca a última como atual (para o foguete)
         if (userProfile && !currentFound && finalNodes.length > 0) {
             finalNodes[finalNodes.length - 1].isCurrent = true;
         } else if (!userProfile && finalNodes.length > 0 && !finalNodes.some(n => n.isCurrent)) {
-            // Garante que a primeira seja atual se não estiver logado e nenhuma foi marcada (caso de order não começar em 1)
              const minOrderNode = finalNodes.reduce((prev, curr) => (prev.order < curr.order ? prev : curr));
              minOrderNode.isCurrent = true;
         }
-
 
         return finalNodes;
 
@@ -162,7 +157,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
             id: `line-${startNode.id}-${processedNodes[i+1].id}`,
             x1: startNode.nodeX, y1: startNode.nodeY,
             x2: processedNodes[i+1].nodeX, y2: processedNodes[i+1].nodeY,
-            isCompleted: startNode.isCompleted, // Linha completa se o nó de origem estiver completo
+            isCompleted: startNode.isCompleted, 
         }));
     }, [processedNodes]);
 
@@ -224,11 +219,18 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                         const nodeAriaLabel = `Trilha: ${node.originalStep.title}. Status: ${node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado'}. Pressione Enter ou Espaço para ${node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
                         const IconComponent = lucideIconMap[node.iconName] || BookOpen;
                         
-                        const iconOrEmojiFillClass = node.isCompleted
-                            ? "fill-green-700 dark:fill-green-400 text-green-700 dark:text-green-400" // Ícones Lucide completos
+                        const iconColorClass = node.isCompleted
+                            ? "text-green-600 dark:text-green-500" 
                             : node.isCurrent 
-                                ? "fill-primary text-primary" // Ícone Lucide atual
-                                : "fill-foreground text-foreground group-hover/node-visual:fill-primary group-hover/node-visual:text-primary"; // Padrão e hover
+                                ? "text-primary" 
+                                : "text-foreground group-hover/node-visual:text-primary";
+                        
+                        const iconFillClass = node.isCompleted
+                            ? "fill-green-100 dark:fill-green-900/30"
+                            : node.isCurrent
+                                ? "fill-primary/20"
+                                : "fill-muted/50 group-hover/node-visual:fill-primary/20";
+
 
                         const titleTextFillClass = node.isCompleted 
                             ? "fill-green-700 dark:fill-green-300" 
@@ -244,10 +246,11 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                     className={cn(
                                         "stroke-2 transition-all duration-200 ease-in-out",
                                         "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90",
-                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 fill-primary/10 stroke-primary dark:ring-primary/70 dark:fill-primary/20"
+                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 stroke-primary dark:ring-primary/70"
                                                                           : "",
-                                        node.isCompleted ? "fill-green-100 dark:fill-green-900 stroke-green-500"
-                                                         : "fill-background stroke-border"
+                                        node.isCompleted ? "stroke-green-500"
+                                                         : "stroke-border",
+                                        iconFillClass 
                                     )}
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }}
                                 />
@@ -258,10 +261,10 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                         y={node.nodeY - ICON_SIZE / 2}
                                         width={ICON_SIZE}
                                         height={ICON_SIZE}
-                                        className={cn("select-none pointer-events-none transition-colors", iconOrEmojiFillClass)}
-                                        strokeWidth={2}
+                                        className={cn("select-none pointer-events-none transition-colors", iconColorClass)}
+                                        strokeWidth={1.5} // Ajuste a espessura do traço do ícone se necessário
                                     />
-                                ) : node.originalStep.emoji ? ( // Fallback se iconName não for encontrado
+                                ) : node.originalStep.emoji ? ( 
                                     <text
                                         x={node.nodeX}
                                         y={node.nodeY}
@@ -293,7 +296,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                         y={node.nodeY - NODE_RADIUS_BASE * 0.9}
                                         width={ICON_SIZE*0.5}
                                         height={ICON_SIZE*0.5}
-                                        className="text-green-500 fill-background"
+                                        className="text-green-500 fill-background" // fill-background para o interior
+                                        strokeWidth={2}
                                      />
                                 )}
                             </g>
