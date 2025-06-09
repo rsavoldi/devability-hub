@@ -1,14 +1,17 @@
+
 // src/app/actions/userProgressActions.ts
 "use server";
 
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
-import type { UserProfile } from "@/lib/types";
+import { doc, updateDoc, arrayUnion, getDoc, Timestamp } from "firebase/firestore";
+import type { UserProfile, Achievement } from "@/lib/types";
+import { mockAchievements } from "@/lib/mockData"; // Para obter os detalhes da conquista
 
 interface MarkLessonCompletedResult {
   success: boolean;
   message: string;
-  updatedProfile?: UserProfile | null; // Opcional, para feedback imediato se necessário
+  updatedProfile?: UserProfile | null;
+  unlockedAchievementsDetails?: Achievement[];
 }
 
 export async function markLessonAsCompleted(
@@ -16,48 +19,87 @@ export async function markLessonAsCompleted(
   lessonId: string
 ): Promise<MarkLessonCompletedResult> {
   if (!userId || !lessonId) {
-    return { success: false, message: "ID do usuário ou da lição ausente." };
+    return { success: false, message: "ID do usuário ou da lição ausente.", unlockedAchievementsDetails: [] };
   }
 
   const userDocRef = doc(db, "users", userId);
 
   try {
-    // Primeiro, verifica se a lição já foi completada para evitar operações desnecessárias
-    // e para manter a pontuação correta (se formos adicionar pontos aqui depois)
     const userDocSnap = await getDoc(userDocRef);
-    if (userDocSnap.exists()) {
-      const userProfile = userDocSnap.data() as UserProfile;
-      if (userProfile.completedLessons && userProfile.completedLessons.includes(lessonId)) {
-        return { success: true, message: "Lição já marcada como concluída anteriormente." };
-      }
-    } else {
-      return { success: false, message: "Perfil do usuário não encontrado." };
+    if (!userDocSnap.exists()) {
+      return { success: false, message: "Perfil do usuário não encontrado.", unlockedAchievementsDetails: [] };
     }
 
-    // Adiciona a lição ao array de lições completas
-    await updateDoc(userDocRef, {
-      completedLessons: arrayUnion(lessonId),
-      // Futuramente, aqui poderíamos adicionar a lógica para:
-      // - Incrementar userProfile.points
-      // - Verificar e adicionar achievements
-      // - Verificar se o módulo/trilha foi concluído e atualizar completedModules/completedRoadmaps
-    });
+    const userProfile = userDocSnap.data() as UserProfile;
+    const currentCompletedLessons = userProfile.completedLessons || [];
+    const currentUnlockedAchievements = userProfile.unlockedAchievements || [];
+    const currentPoints = userProfile.points || 0;
 
-    // Opcional: buscar e retornar o perfil atualizado se a UI precisar de feedback imediato
-    // que não possa esperar o listener do AuthContext. Por ora, não é estritamente necessário.
-    // const updatedDocSnap = await getDoc(userDocRef);
-    // const updatedProfile = updatedDocSnap.exists() ? (updatedDocSnap.data() as UserProfile) : null;
+    let pointsToAdd = 0;
+    const newAchievementsToUnlock: string[] = [];
+    const unlockedAchievementsDetails: Achievement[] = [];
+
+    // Se a lição ainda não foi completada
+    if (!currentCompletedLessons.includes(lessonId)) {
+      pointsToAdd = 10; // Pontos pela conclusão da lição
+
+      // Conquista "Leitor Assíduo" (ach3) - Primeira lição concluída
+      if (!currentUnlockedAchievements.includes('ach3') && currentCompletedLessons.length === 0) {
+        newAchievementsToUnlock.push('ach3');
+        const achDetails = mockAchievements.find(a => a.id === 'ach3');
+        if (achDetails) unlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
+      }
+      
+      // Conquista "Explorador de Trilhas" (ach2) - Pode ser a primeira lição de todas, ou poderíamos refinar
+      // Por simplicidade, se ach3 for desbloqueada, ach2 também é (se não tiver sido antes)
+      if (newAchievementsToUnlock.includes('ach3') && !currentUnlockedAchievements.includes('ach2')) {
+        newAchievementsToUnlock.push('ach2');
+         const achDetails = mockAchievements.find(a => a.id === 'ach2');
+        if (achDetails) unlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
+      }
+    }
+
+    const updatedCompletedLessons = arrayUnion(lessonId);
+    const updatedUnlockedAchievements = newAchievementsToUnlock.length > 0 ? arrayUnion(...newAchievementsToUnlock) : currentUnlockedAchievements; // Mantém o array se não houver novas
+
+    await updateDoc(userDocRef, {
+      completedLessons: updatedCompletedLessons,
+      points: currentPoints + pointsToAdd,
+      unlockedAchievements: updatedUnlockedAchievements,
+    });
+    
+    // Para feedback imediato, podemos simular o perfil atualizado
+    // Em uma aplicação real, você pode querer refetch o perfil ou usar o listener do AuthContext
+     const simulatedUpdatedProfile: UserProfile = {
+      ...userProfile,
+      completedLessons: [...new Set([...currentCompletedLessons, lessonId])],
+      points: currentPoints + pointsToAdd,
+      unlockedAchievements: [...new Set([...currentUnlockedAchievements, ...newAchievementsToUnlock])],
+    };
 
     return {
       success: true,
       message: "Lição marcada como concluída com sucesso!",
-      // updatedProfile: updatedProfile // Descomente se for retornar
+      updatedProfile: simulatedUpdatedProfile, // Para feedback otimista na UI se necessário
+      unlockedAchievementsDetails,
     };
-  } catch (error) {
-    console.error("Erro ao marcar lição como concluída:", error);
+  } catch (error: any) {
+    console.error("Erro detalhado ao marcar lição como concluída:", error);
+    console.error("Detalhes do erro:", {
+      message: error.message,
+      stack: error.stack,
+      userId,
+      lessonId
+    });
     return {
       success: false,
       message: "Erro ao marcar lição como concluída. Tente novamente.",
+      unlockedAchievementsDetails: [],
     };
   }
+}
+
+// Futura action para exercícios (exemplo)
+export async function markExerciseAsCompleted(userId: string, exerciseId: string, pointsAwarded: number) {
+  // Lógica similar à markLessonAsCompleted
 }
