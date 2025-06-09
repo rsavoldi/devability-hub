@@ -3,7 +3,8 @@
 import * as admin from 'firebase-admin';
 // LEIA O ARQUIVO JSON PURO GERADO ANTERIORMENTE
 import migrationData from './data-for-migration.json'; 
-import type { RoadmapStep, Module as ModuleType } from '../src/lib/types'; // Tipos ainda podem ser úteis para type assertion
+// Tipos são usados para dar forma aos dados lidos do JSON, mas não para importar componentes
+import type { RoadmapStep as AppRoadmapStep, Module as AppModuleType } from '../src/lib/types'; 
 
 // Configuração do Firebase Admin (ajuste o caminho para seu arquivo de credenciais)
 const serviceAccount = require('../devability-hub-ppi4m-firebase-adminsdk-fbsvc-5ce82fb95b.json');
@@ -25,6 +26,32 @@ try {
 const db = admin.firestore();
 const BATCH_LIMIT = 400;
 
+// Define interfaces locais que refletem a estrutura esperada do JSON
+interface JsonRoadmapStep {
+  id: string;
+  title: string;
+  order?: number;
+  emoji?: string;
+  iconName?: string; // Esperamos que o JSON tenha iconName como string
+  description: string;
+  modules: JsonModule[];
+  isCompleted?: boolean;
+  isCurrent?: boolean;
+}
+
+interface JsonModule {
+  id: string;
+  title: string;
+  order?: number;
+  lessonCount?: number;
+  exerciseCount?: number;
+  lessons: any[]; // Não precisamos do tipo completo de Lesson aqui
+  exercises: any[]; // Não precisamos do tipo completo de Exercise aqui
+  isCompleted?: boolean;
+  progress?: number;
+}
+
+
 async function migrateRoadmaps() {
   console.log('Iniciando migração de Trilhas (Roadmaps) e Módulos a partir do JSON...');
 
@@ -42,44 +69,41 @@ async function migrateRoadmaps() {
   };
 
   // Os dados do JSON já devem estar na ordem correta se generate-data-json.ts respeitou 'order'
-  // Se não, podemos ordenar aqui também:
-  const sortedRoadmapData = [...(migrationData as RoadmapStep[])].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+  // Se não, podemos ordenar aqui também.
+  // O TypeScript agora entende que migrationData é um array de 'any' por padrão ao ler JSON.
+  // Fazemos um type assertion para JsonRoadmapStep[]
+  const typedMigrationData = migrationData as JsonRoadmapStep[];
+  const sortedRoadmapData = [...typedMigrationData].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
 
 
   for (const roadmap of sortedRoadmapData) {
     const roadmapRef = db.collection('roadmaps').doc(roadmap.id);
     
-    // A estrutura do roadmap vindo do JSON já é "pura"
-    // e o script generate-data-json.ts deve ter tratado a transformação do ícone.
-    // O 'iconName' já deve ser uma string no roadmap.
-    // Removendo modules para salvar o documento principal da trilha
-    const { modules, icon, ...roadmapDataToSave } = roadmap; 
+    // Desestrutura 'modules' e 'iconName' para salvar o resto dos dados da trilha
+    // 'iconName' já é uma string do JSON. O campo 'icon' (componente) não deve mais estar no JSON.
+    const { modules, iconName: roadmapIconName, ...roadmapDataToSave } = roadmap; 
 
     batch.set(roadmapRef, {
-      ...roadmapDataToSave,
-      iconName: roadmap.iconName || roadmap.icon, // Prioriza iconName, mas usa icon se iconName não estiver lá (fallback)
-      order: roadmap.order ?? 0,
+      ...roadmapDataToSave, // title, description, emoji, order, etc.
+      iconName: roadmapIconName || "", // Salva a string do nome do ícone, ou string vazia se não existir
     });
     operationsInBatch++;
     stats.roadmaps++;
     await commitBatchIfNeeded();
 
     if (modules && Array.isArray(modules)) {
-      const sortedModules = [...(modules as ModuleType[])].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+      const typedModules = modules as JsonModule[];
+      const sortedModules = [...typedModules].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
 
       for (const module of sortedModules) {
         const moduleRef = roadmapRef.collection('modules').doc(module.id);
-        // O módulo vindo do JSON também deve ser "puro"
-        const { lessons, exercises, roadmapIcon, ...moduleDataToSave } = module;
+        // Desestrutura para remover lessons e exercises que não serão salvos no documento do módulo
+        const { lessons, exercises, ...moduleDataToSave } = module;
         
-        const lessonCount = lessons ? lessons.length : 0;
-        const exerciseCount = exercises ? exercises.length : 0;
-
         batch.set(moduleRef, {
-          ...moduleDataToSave,
-          lessonCount,
-          exerciseCount,
-          order: module.order ?? 0,
+          ...moduleDataToSave, // title, order, etc.
+          lessonCount: module.lessonCount || 0, // Usa o valor do JSON ou 0
+          exerciseCount: module.exerciseCount || 0, // Usa o valor do JSON ou 0
         });
         operationsInBatch++;
         stats.modules++;
