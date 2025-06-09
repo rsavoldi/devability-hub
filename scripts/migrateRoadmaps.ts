@@ -1,11 +1,12 @@
 
 // scripts/migrateRoadmaps.ts
 import * as admin from 'firebase-admin';
-import { mockRoadmapData } from '../src/lib/mockData'; // Ajuste o caminho se necessário
-import type { RoadmapStep, Module as ModuleType } from '../src/lib/types';
+// LEIA O ARQUIVO JSON PURO GERADO ANTERIORMENTE
+import migrationData from './data-for-migration.json'; 
+import type { RoadmapStep, Module as ModuleType } from '../src/lib/types'; // Tipos ainda podem ser úteis para type assertion
 
 // Configuração do Firebase Admin (ajuste o caminho para seu arquivo de credenciais)
-const serviceAccount = require('../../devability-hub-ppi4m-firebase-adminsdk-fbsvc-5ce82fb95b.json');
+const serviceAccount = require('../devability-hub-ppi4m-firebase-adminsdk-fbsvc-5ce82fb95b.json');
 
 try {
   if (!admin.apps.length) {
@@ -25,7 +26,7 @@ const db = admin.firestore();
 const BATCH_LIMIT = 400;
 
 async function migrateRoadmaps() {
-  console.log('Iniciando migração de Trilhas (Roadmaps) e Módulos...');
+  console.log('Iniciando migração de Trilhas (Roadmaps) e Módulos a partir do JSON...');
 
   let batch = db.batch();
   let operationsInBatch = 0;
@@ -40,31 +41,35 @@ async function migrateRoadmaps() {
     }
   };
 
-  // Ordena as trilhas pela propriedade 'order' antes de migrar
-  const sortedRoadmapData = [...mockRoadmapData].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+  // Os dados do JSON já devem estar na ordem correta se generate-data-json.ts respeitou 'order'
+  // Se não, podemos ordenar aqui também:
+  const sortedRoadmapData = [...(migrationData as RoadmapStep[])].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+
 
   for (const roadmap of sortedRoadmapData) {
     const roadmapRef = db.collection('roadmaps').doc(roadmap.id);
-    // Excluímos 'modules' e 'icon' (o componente React) dos dados da trilha a serem salvos.
-    // Garantimos que 'iconName' e 'order' estejam presentes.
-    const { modules, icon, ...roadmapDataToSave } = roadmap; 
     
+    // A estrutura do roadmap vindo do JSON já é "pura"
+    // e o script generate-data-json.ts deve ter tratado a transformação do ícone.
+    // O 'iconName' já deve ser uma string no roadmap.
+    // Removendo modules para salvar o documento principal da trilha
+    const { modules, icon, ...roadmapDataToSave } = roadmap; 
+
     batch.set(roadmapRef, {
       ...roadmapDataToSave,
-      iconName: roadmap.iconName || '', // Garante que iconName seja salvo
-      order: roadmap.order ?? 0, // Garante que order seja salvo
+      iconName: roadmap.iconName || roadmap.icon, // Prioriza iconName, mas usa icon se iconName não estiver lá (fallback)
+      order: roadmap.order ?? 0,
     });
     operationsInBatch++;
     stats.roadmaps++;
     await commitBatchIfNeeded();
 
     if (modules && Array.isArray(modules)) {
-      // Ordena os módulos pela propriedade 'order' antes de migrar
-      const sortedModules = [...modules].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+      const sortedModules = [...(modules as ModuleType[])].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
 
       for (const module of sortedModules) {
         const moduleRef = roadmapRef.collection('modules').doc(module.id);
-        // Excluímos 'lessons', 'exercises' e 'roadmapIcon' (se existir) dos dados do módulo.
+        // O módulo vindo do JSON também deve ser "puro"
         const { lessons, exercises, roadmapIcon, ...moduleDataToSave } = module;
         
         const lessonCount = lessons ? lessons.length : 0;
@@ -74,7 +79,7 @@ async function migrateRoadmaps() {
           ...moduleDataToSave,
           lessonCount,
           exerciseCount,
-          order: module.order ?? 0, // Garante que order seja salvo
+          order: module.order ?? 0,
         });
         operationsInBatch++;
         stats.modules++;

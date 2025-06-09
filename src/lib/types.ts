@@ -21,6 +21,7 @@ export interface Module {
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
+  roadmapIcon?: any;
   progress?: number; // 0-100
 }
 
