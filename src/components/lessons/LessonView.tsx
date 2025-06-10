@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
-import type { Lesson, Achievement, UserProfile } from '@/lib/types'; // UserProfile adicionado
+import type { Lesson, UserProfile } from '@/lib/types'; // UserProfile adicionado
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
@@ -20,7 +20,7 @@ import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/action
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockRoadmapData, mockAchievements } from '@/lib/mockData';
+import { mockLessons as allMockLessons } from '@/lib/mockData'; // Importando todas as lições
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -72,34 +72,33 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
   elements.forEach((element, elementIdx) => {
     if (typeof element === 'string') {
-      const textLines = element.split(/(\n|\\n)/g); 
+      const textLines = element.split(/(\\n|\n)/g); // Trata ambas as formas de quebra de linha
 
       textLines.forEach((line, lineIdx) => {
         if (line === '\n' || line === '\\n') {
-          finalizeParagraph();
-        } else if (line.trim() !== '') {
+          finalizeParagraph(); 
+        } else if (line && line.trim() !== '') { // Adicionado verificação de 'line'
           currentParagraphChildren.push(
             ...renderTextWithBold(line, `${baseKey}-txt-${elementIdx}-${lineIdx}`)
           );
         }
       });
-    } else {
-      currentParagraphChildren.push(React.cloneElement(element as React.ReactElement, { key: `${baseKey}-jsx-${elementIdx}` }));
+    } else if (React.isValidElement(element)) { // Verifica se é um elemento React válido
+      currentParagraphChildren.push(React.cloneElement(element, { key: `${baseKey}-jsx-${elementIdx}` }));
     }
   });
 
   finalizeParagraph(); 
 
-  if (outputParagraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
-    return [
-      <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
-        {elements.map((el, i) => 
-          typeof el === 'string' 
-            ? <Fragment key={`${baseKey}-sfrag-${i}`}>{renderTextWithBold(el, `${baseKey}-sfrag-txt-${i}`)}</Fragment> 
-            : React.cloneElement(el as React.ReactElement, { key: `${baseKey}-sfrag-jsx-${i}` })
-        )}
-      </p>
-    ];
+  // Caso especial: se todos os elementos foram para um único parágrafo e não houve quebra de linha explícita
+  if (outputParagraphs.length === 0 && elements.length > 0 && elements.every(el => typeof el !== 'string' || !(el.includes('\n') || el.includes('\\n')))) {
+      if (currentParagraphChildren.length > 0) { // Verifica se há algo para renderizar
+        return [
+          <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
+            {currentParagraphChildren}
+          </p>
+        ];
+      }
   }
   return outputParagraphs;
 };
@@ -207,9 +206,11 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lastIndex < contentWithoutGeneralComments.length) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
-    setTotalInteractiveElements(interactionCounter); // Mover para cá garante que seja chamado
+    // Esta chamada foi movida para o useEffect que depende de processedContentElements
+    // para garantir que o total seja contado apenas uma vez após o processamento.
+    // setTotalInteractiveElements(interactionCounter); 
     return elements;
-  }, [lesson?.id, handleInteractionCorrect]); // Adicionado lesson.id como dependência
+  }, [lesson?.id, handleInteractionCorrect]);
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -217,6 +218,18 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return [];
   }, [lesson?.content, parseLessonContentAndCountInteractions]);
+  
+  // Contar elementos interativos após o processamento
+  useEffect(() => {
+      let count = 0;
+      processedContentElements.forEach(el => {
+          if (React.isValidElement(el) && (el.type === InteractiveWordChoice || el.type === InteractiveFillInBlank)) {
+              count++;
+          }
+      });
+      setTotalInteractiveElements(count);
+  }, [processedContentElements]);
+
 
   const allInteractionsCompleted = useMemo(() => {
     return totalInteractiveElements === 0 || completedInteractionIds.size === totalInteractiveElements;
@@ -242,24 +255,23 @@ export function LessonView({ lesson }: LessonViewProps) {
                 if (Array.isArray(parsedInteractions)) {
                     setCompletedInteractionIds(new Set(parsedInteractions));
                 } else {
-                    setCompletedInteractionIds(new Set());
+                    setCompletedInteractionIds(new Set()); // Reseta se o formato for inválido
                 }
             } catch (error) {
                 console.error("Error parsing stored interactions:", error);
-                setCompletedInteractionIds(new Set());
+                setCompletedInteractionIds(new Set()); // Reseta em caso de erro de parse
             }
         } else {
-            setCompletedInteractionIds(new Set());
+            setCompletedInteractionIds(new Set()); // Inicia vazio se não houver nada armazenado
         }
     }
-
-    setIsMarkingComplete(false);
+    setIsMarkingComplete(false); // Reseta o estado de carregamento do botão
 
     // Lógica para encontrar lições adjacentes
     if (lesson?.moduleId && allMockLessons.length > 0) {
       const lessonsInModule = allMockLessons
         .filter(l => l.moduleId === lesson.moduleId)
-        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)); // Garante ordenação
 
       const currentIndex = lessonsInModule.findIndex(l => l.id === lesson.id);
 
@@ -267,6 +279,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         setPrevLesson(currentIndex > 0 ? lessonsInModule[currentIndex - 1] : null);
         setNextLesson(currentIndex < lessonsInModule.length - 1 ? lessonsInModule[currentIndex + 1] : null);
       } else {
+        // Se a lição atual não for encontrada no módulo (improvável, mas por segurança)
         setPrevLesson(null);
         setNextLesson(null);
       }
@@ -274,11 +287,11 @@ export function LessonView({ lesson }: LessonViewProps) {
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [lesson]);
+  }, [lesson]); // Depende apenas da `lesson` atual para recalcular as adjacentes
 
 
   const handleMarkAsCompleted = async () => {
-    if (isCompleted || isMarkingComplete || !allInteractionsCompleted || !lesson) return;
+    if (isCompleted || isMarkingComplete || !allInteractionsCompleted || !lesson || !userProfile) return;
     setIsMarkingComplete(true);
 
     const result = await markLessonCompletedAction(userProfile, lesson.id);
@@ -377,26 +390,25 @@ export function LessonView({ lesson }: LessonViewProps) {
       </Card>
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
-        <div className="w-full sm:w-1/3 flex justify-center sm:justify-start">
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-start">
             {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
                     <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="truncate hidden sm:inline">Anterior</span>
-                    <span className="sm:hidden">Anterior</span>
+                    <span className="truncate">Anterior</span>
                   </span>
                 </Link>
             </Button>
-            ) : <div className="w-full sm:w-auto">&nbsp;</div>} {/* Placeholder for alignment */}
+            ) : <div className="w-full sm:w-auto min-w-[88px]">&nbsp;</div>} {/* Ajuste para manter espaço */}
         </div>
 
-        <div className="w-full sm:w-1/3 flex-shrink-0 my-2 sm:my-0 flex justify-center">
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0">
             <Button
               variant={isCompleted ? "default" : "secondary"}
               size="lg"
               className={cn(
-                "w-full max-w-xs sm:w-auto", // Limit width on small screens
+                "w-full max-w-xs sm:w-auto",
                 isCompleted ? "bg-green-500 hover:bg-green-600" :
                 (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
@@ -421,18 +433,17 @@ export function LessonView({ lesson }: LessonViewProps) {
             </Button>
         </div>
 
-        <div className="w-full sm:w-1/3 flex justify-center sm:justify-end">
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
             {nextLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
-                    <span className="truncate hidden sm:inline">Próxima</span>
-                    <span className="sm:hidden">Próxima</span>
+                    <span className="truncate">Próxima</span>
                     <ArrowRight className="h-4 w-4 ml-1 sm:ml-2" />
                   </span>
                 </Link>
             </Button>
-            ) : <div className="w-full sm:w-auto">&nbsp;</div>} {/* Placeholder for alignment */}
+            ) : <div className="w-full sm:w-auto min-w-[88px]">&nbsp;</div>} {/* Ajuste para manter espaço */}
         </div>
       </CardFooter>
     </div>
