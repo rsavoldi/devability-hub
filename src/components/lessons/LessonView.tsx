@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
@@ -14,15 +14,15 @@ import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase'; // Necessário para Firestore
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; // Firestore imports
+import { db } from '@/lib/firebase'; 
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockRoadmapData } from '@/lib/mockData'; // Para navegação de convidados
+import { mockLessons as allMockLessons, mockRoadmapData } from '@/lib/mockData';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -56,127 +56,6 @@ const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Elemen
   return parts;
 };
 
-const parseLessonContent = (content: string): (string | JSX.Element)[] => {
-  const elements: (string | JSX.Element)[] = [];
-  let lastIndex = 0;
-
-  const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
-  const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
-
-  let match;
-  combinedRegex.lastIndex = 0;
-
-  while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
-    const uniqueKeyPart = match.index + (match[0]?.substring(0, 20) || '');
-    if (match.index > lastIndex) {
-      elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
-    }
-
-    if (match[2]) {
-      const optionsString = match[2];
-      if (optionsString) {
-        const rawOptions = optionsString.split(';');
-        let correctAnswer = "";
-        const parsedOptions = rawOptions.map(opt => {
-          const trimmedOpt = opt.trim();
-          if (trimmedOpt.startsWith('*')) {
-            correctAnswer = trimmedOpt.substring(1).trim();
-            return trimmedOpt.substring(1).trim();
-          }
-          return trimmedOpt;
-        }).filter(opt => opt.length > 0);
-
-        if (parsedOptions.length > 0 && correctAnswer) {
-          elements.push(
-            <InteractiveWordChoice
-              key={`iwc-${uniqueKeyPart}`}
-              options={shuffleArray(parsedOptions)}
-              correctAnswer={correctAnswer}
-            />
-          );
-        } else {
-          console.warn("Error parsing INTERACTIVE_WORD_CHOICE in lesson content, check format (needs options separated by ';' and a *correctAnswer):", match[0]);
-          elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
-        }
-      } else {
-         elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
-      }
-    } else if (match[4]) {
-      const optionsString = match[4];
-      if (optionsString) {
-        const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
-        if (allOptions.length > 0) {
-          const correctAnswerFillIn = allOptions[0];
-          elements.push(
-            <InteractiveFillInBlank
-              key={`ifib-${uniqueKeyPart}`}
-              options={allOptions}
-              correctAnswer={correctAnswerFillIn}
-            />
-          );
-        } else {
-          console.warn("Error parsing INTERACTIVE_FILL_IN_BLANK in lesson content, check format (needs options separated by | with first being correct):", match[0]);
-           elements.push(`<!-- FB PARSE ERROR: ${match[0]} -->`);
-        }
-      } else {
-        elements.push(`<!-- FB PARSE ERROR (no options string): ${match[0]} -->`);
-      }
-    }
-    lastIndex = combinedRegex.lastIndex;
-  }
-
-  if (lastIndex < contentWithoutGeneralComments.length) {
-    elements.push(contentWithoutGeneralComments.substring(lastIndex));
-  }
-  return elements;
-};
-
-const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
-  const paragraphs: JSX.Element[] = [];
-  let currentParagraphAccumulator: (string | JSX.Element)[] = [];
-
-  elements.forEach((element, elIndex) => {
-    const elementKeyPrefix = `${baseKey}-el-${elIndex}`;
-    if (typeof element === 'string') {
-      const textSegments = element.split(/(\\n)/g);
-
-      textSegments.forEach((segment, segIndex) => {
-        const segmentKey = `${elementKeyPrefix}-seg-${segIndex}`;
-        if (segment === '\\n' || segment === '\n') {
-          if (currentParagraphAccumulator.length > 0 && currentParagraphAccumulator.some(p => (typeof p === 'string' && p.trim() !== '') || React.isValidElement(p))) {
-            paragraphs.push(
-              <p key={`para-${paragraphs.length}-${segmentKey}`} className="mb-4 leading-relaxed">
-                {currentParagraphAccumulator.map((part, idx) => <Fragment key={idx}>{part}</Fragment>)}
-              </p>
-            );
-          }
-          currentParagraphAccumulator = [];
-        } else if (segment) {
-          currentParagraphAccumulator.push(...renderTextWithBold(segment, segmentKey));
-        }
-      });
-    } else if (React.isValidElement(element)) {
-      currentParagraphAccumulator.push(React.cloneElement(element, { key: `${elementKeyPrefix}-interactive-${elIndex}` }));
-    }
-  });
-
-  if (currentParagraphAccumulator.length > 0 && currentParagraphAccumulator.some(p => (typeof p === 'string' && p.trim() !== '') || React.isValidElement(p))) {
-    paragraphs.push(
-      <p key={`para-last-${paragraphs.length}-${baseKey}`} className="mb-4 leading-relaxed">
-        {currentParagraphAccumulator.map((part, idx) => <Fragment key={idx}>{part}</Fragment>)}
-      </p>
-    );
-  }
-
-  if (paragraphs.length === 0) {
-    if (elements.length === 0 || (elements.length === 1 && typeof elements[0] === 'string' && elements[0].trim() === '')) {
-      return [<p key="empty-lesson" className="text-muted-foreground">Conteúdo da lição indisponível ou em processamento.</p>];
-    }
-  }
-  return paragraphs;
-};
-
-
 export function LessonView({ lesson }: LessonViewProps) {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -191,12 +70,114 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
+  // Novos estados para o progresso das interações
+  const [totalInteractiveElements, setTotalInteractiveElements] = useState(0);
+  const [completedInteractionIds, setCompletedInteractionIds] = useState<Set<string>>(new Set());
+
+  const handleInteractionCorrect = useCallback((interactionId: string) => {
+    setCompletedInteractionIds(prev => new Set(prev).add(interactionId));
+  }, []);
+
+  const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
+    const elements: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let interactionCounter = 0;
+
+    const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
+    const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
+
+    let match;
+    combinedRegex.lastIndex = 0;
+
+    while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
+      const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
+      interactionCounter++;
+
+      if (match.index > lastIndex) {
+        elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
+      }
+
+      if (match[2]) { // INTERACTIVE_WORD_CHOICE
+        const optionsString = match[2];
+        if (optionsString) {
+          const rawOptions = optionsString.split(';');
+          let correctAnswer = "";
+          const parsedOptions = rawOptions.map(opt => {
+            const trimmedOpt = opt.trim();
+            if (trimmedOpt.startsWith('*')) {
+              correctAnswer = trimmedOpt.substring(1).trim();
+              return trimmedOpt.substring(1).trim();
+            }
+            return trimmedOpt;
+          }).filter(opt => opt.length > 0);
+
+          if (parsedOptions.length > 0 && correctAnswer) {
+            elements.push(
+              <InteractiveWordChoice
+                key={interactionId}
+                interactionId={interactionId}
+                options={shuffleArray(parsedOptions)}
+                correctAnswer={correctAnswer}
+                onCorrect={handleInteractionCorrect}
+              />
+            );
+          } else {
+            console.warn("Error parsing INTERACTIVE_WORD_CHOICE:", match[0]);
+            elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
+          }
+        } else {
+           elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
+        }
+      } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
+        const optionsString = match[4];
+        if (optionsString) {
+          const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
+          if (allOptions.length > 0) {
+            const correctAnswerFillIn = allOptions[0];
+            elements.push(
+              <InteractiveFillInBlank
+                key={interactionId}
+                interactionId={interactionId}
+                options={allOptions}
+                correctAnswer={correctAnswerFillIn}
+                onCorrect={handleInteractionCorrect}
+              />
+            );
+          } else {
+            console.warn("Error parsing INTERACTIVE_FILL_IN_BLANK:", match[0]);
+             elements.push(`<!-- FB PARSE ERROR: ${match[0]} -->`);
+          }
+        } else {
+          elements.push(`<!-- FB PARSE ERROR (no options string): ${match[0]} -->`);
+        }
+      }
+      lastIndex = combinedRegex.lastIndex;
+    }
+
+    if (lastIndex < contentWithoutGeneralComments.length) {
+      elements.push(contentWithoutGeneralComments.substring(lastIndex));
+    }
+    setTotalInteractiveElements(interactionCounter);
+    return elements;
+  }, [lesson.id, handleInteractionCorrect]);
+
+
+  const processedContentElements = useMemo(() => {
+    if (lesson?.content) {
+      return parseLessonContentAndCountInteractions(lesson.content);
+    }
+    return [];
+  }, [lesson?.content, parseLessonContentAndCountInteractions]);
+
+  const allInteractionsCompleted = useMemo(() => {
+    return totalInteractiveElements > 0 && completedInteractionIds.size === totalInteractiveElements;
+  }, [totalInteractiveElements, completedInteractionIds]);
+
   const isCompleted = useMemo(() => {
-    if (authLoading && !currentUser) return isLocallyCompleted; // Show local state while auth might still be loading for guest
+    if (authLoading && !currentUser) return isLocallyCompleted;
     if (currentUser && userProfile) {
       return userProfile.completedLessons.includes(lesson.id);
     }
-    // For guest users, check localStorage or isLocallyCompleted
     if (typeof window !== 'undefined') {
       const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
       if (guestProgress) {
@@ -207,14 +188,13 @@ export function LessonView({ lesson }: LessonViewProps) {
     return isLocallyCompleted;
   }, [currentUser, userProfile, lesson.id, authLoading, isLocallyCompleted]);
 
-  const processedContentElements = useMemo(() => {
-    if (lesson?.content) {
-      return parseLessonContent(lesson.content);
-    }
-    return [];
-  }, [lesson?.content]);
 
   useEffect(() => {
+    // Resetar estado de interações quando a lição muda
+    setCompletedInteractionIds(new Set());
+    // A contagem total é refeita pelo parseLessonContentAndCountInteractions no useMemo acima
+    // e setTotalInteractiveElements é chamado lá dentro.
+
     if (typeof window !== 'undefined' && !currentUser) {
       const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
       setIsLocallyCompleted(guestProgress ? JSON.parse(guestProgress).includes(lesson.id) : false);
@@ -254,10 +234,10 @@ export function LessonView({ lesson }: LessonViewProps) {
         setNextLesson(null);
         return;
       }
-      const pathParts = lesson.moduleId.split('-mod-');
+      const pathParts = lesson.moduleId.split('-mod-'); // Assume o formato 'trilhaId-mod-moduleIndex'
       if (pathParts.length < 2) {
-        console.warn("Module ID format unexpected for fetching adjacent lessons:", lesson.moduleId);
-        findAdjacentMockLessons(); // Fallback to mock data if Firestore path is problematic
+        console.warn("Module ID format unexpected for fetching adjacent lessons from Firestore:", lesson.moduleId);
+        findAdjacentMockLessons();
         return;
       }
       const trilhaId = pathParts[0];
@@ -283,14 +263,14 @@ export function LessonView({ lesson }: LessonViewProps) {
         setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
       } catch (error) {
         console.error("Error fetching adjacent lessons from Firestore, falling back to mock data:", error);
-        findAdjacentMockLessons(); // Fallback in case of Firestore error
+        findAdjacentMockLessons();
       }
     };
 
     if (currentUser) {
       fetchAdjacentFirestoreLessons();
     } else {
-      findAdjacentMockLessons(); // Use mock data for guest navigation
+      findAdjacentMockLessons();
     }
 
   }, [lesson, currentUser]);
@@ -316,7 +296,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
 
   const handleMarkAsCompleted = async () => {
-    if (isCompleted || isMarkingComplete) return;
+    if (isCompleted || isMarkingComplete || !allInteractionsCompleted) return;
     setIsMarkingComplete(true);
 
     if (currentUser) {
@@ -379,7 +359,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     setIsMarkingComplete(false);
   };
 
-
   if (authLoading && !currentUser) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -387,6 +366,10 @@ export function LessonView({ lesson }: LessonViewProps) {
       </div>
     );
   }
+
+  const interactionsProgressText = totalInteractiveElements > 0 
+    ? `Interações concluídas: ${completedInteractionIds.size} de ${totalInteractiveElements}`
+    : "Nenhuma interação nesta lição.";
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -414,6 +397,12 @@ export function LessonView({ lesson }: LessonViewProps) {
             </div>
             <span className="capitalize">Tipo: {lesson.type}</span>
           </div>
+           {totalInteractiveElements > 0 && (
+            <div className="mt-3 text-sm text-primary flex items-center">
+                <Info className="h-4 w-4 mr-1.5 shrink-0" /> 
+                <span>{interactionsProgressText}</span>
+            </div>
+           )}
         </CardHeader>
         <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
           {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
@@ -512,9 +501,13 @@ export function LessonView({ lesson }: LessonViewProps) {
             <Button
               variant={isCompleted ? "default" : "secondary"}
               size="lg"
-              className={cn("w-full sm:w-auto", isCompleted ? "bg-green-500 hover:bg-green-600" : "")}
+              className={cn(
+                "w-full sm:w-auto",
+                isCompleted ? "bg-green-500 hover:bg-green-600" : 
+                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+              )}
               onClick={handleMarkAsCompleted}
-              disabled={isCompleted || isMarkingComplete}
+              disabled={isCompleted || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
                 {isMarkingComplete ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -523,7 +516,14 @@ export function LessonView({ lesson }: LessonViewProps) {
                 ) : (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 )}
-                {isMarkingComplete ? "Marcando..." : isCompleted ? "Lição Concluída" : "Marcar como Concluída"}
+                {isMarkingComplete 
+                    ? "Marcando..." 
+                    : isCompleted 
+                        ? "Lição Concluída" 
+                        : (!allInteractionsCompleted && totalInteractiveElements > 0)
+                            ? "Complete as interações"
+                            : "Marcar como Concluída"
+                }
             </Button>
         </div>
 
@@ -544,3 +544,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
