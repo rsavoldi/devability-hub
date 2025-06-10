@@ -38,7 +38,7 @@ const renderTextWithBold = (text: string, baseKey: string): React.ReactNode[] =>
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
-  boldRegexGlobal.lastIndex = 0; // Resetar o lastIndex da regex global
+  boldRegexGlobal.lastIndex = 0; 
 
   while ((match = boldRegexGlobal.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -54,16 +54,15 @@ const renderTextWithBold = (text: string, baseKey: string): React.ReactNode[] =>
   return parts;
 };
 
-
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
   const outputParagraphs: JSX.Element[] = [];
   let currentParagraphChildren: React.ReactNode[] = [];
-  let paragraphIndex = 0;
+  let paragraphKeyCounter = 0;
 
   const finalizeParagraph = () => {
     if (currentParagraphChildren.length > 0) {
       outputParagraphs.push(
-        <p key={`${baseKey}-p-${paragraphIndex++}`} className="mb-4 last:mb-0">
+        <p key={`${baseKey}-p-${paragraphKeyCounter++}`} className="mb-4 last:mb-0">
           {currentParagraphChildren}
         </p>
       );
@@ -73,32 +72,24 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
   elements.forEach((element, elementIdx) => {
     if (typeof element === 'string') {
-      const textLines = element.split(/(\n|\\n)/g); // Split by newline, keeping the delimiter
+      const textLines = element.split(/(\n|\\n)/g); 
 
       textLines.forEach((line, lineIdx) => {
         if (line === '\n' || line === '\\n') {
-          // If it's a newline character, finalize the current paragraph (if it has content)
-          // and prepare for a new one (which will start if there's subsequent text).
           finalizeParagraph();
         } else if (line.trim() !== '') {
-          // If it's actual text, process for bold and add to current paragraph children
           currentParagraphChildren.push(
             ...renderTextWithBold(line, `${baseKey}-txt-${elementIdx}-${lineIdx}`)
           );
         }
-        // Empty strings resulting from split (e.g., between consecutive \n) are ignored unless they are the newline itself
       });
     } else {
-      // If it's a JSX element (interactive component), add it to the current paragraph children
       currentParagraphChildren.push(React.cloneElement(element as React.ReactElement, { key: `${baseKey}-jsx-${elementIdx}` }));
     }
   });
 
-  // Finalize any remaining paragraph content
-  finalizeParagraph();
-  
-  // If after all processing, no paragraphs were created but there were elements,
-  // wrap everything in a single paragraph (edge case).
+  finalizeParagraph(); 
+
   if (outputParagraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
     return [
       <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
@@ -110,13 +101,12 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       </p>
     ];
   }
-
   return outputParagraphs;
 };
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, updateUserProfile, refreshUserProfile } = useAuth();
+  const { userProfile, loading: authLoading, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -132,13 +122,13 @@ export function LessonView({ lesson }: LessonViewProps) {
     setCompletedInteractionIds(prev => {
       const newSet = new Set(prev);
       newSet.add(interactionId);
-      if (typeof window !== 'undefined') {
-          const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
+      if (typeof window !== 'undefined' && lesson) {
+          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}`;
           localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
       }
       return newSet;
     });
-  }, [lesson.id]);
+  }, [lesson]);
 
   const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
     const elements: (string | JSX.Element)[] = [];
@@ -217,9 +207,9 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lastIndex < contentWithoutGeneralComments.length) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
-    setTotalInteractiveElements(interactionCounter);
+    setTotalInteractiveElements(interactionCounter); // Mover para cá garante que seja chamado
     return elements;
-  }, [lesson.id, handleInteractionCorrect]);
+  }, [lesson?.id, handleInteractionCorrect]); // Adicionado lesson.id como dependência
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -235,19 +225,29 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const isCompleted = useMemo(() => {
     if (authLoading) return false;
-    if (userProfile) {
+    if (userProfile && lesson) {
       return userProfile.completedLessons.includes(lesson.id);
     }
     return false;
-  }, [userProfile, lesson.id, authLoading]);
+  }, [userProfile, lesson, authLoading]);
 
 
   useEffect(() => {
     if (typeof window !== 'undefined' && lesson) {
-        const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
+        const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
         if (storedInteractions) {
-            setCompletedInteractionIds(new Set(JSON.parse(storedInteractions)));
+            try {
+                const parsedInteractions = JSON.parse(storedInteractions);
+                if (Array.isArray(parsedInteractions)) {
+                    setCompletedInteractionIds(new Set(parsedInteractions));
+                } else {
+                    setCompletedInteractionIds(new Set());
+                }
+            } catch (error) {
+                console.error("Error parsing stored interactions:", error);
+                setCompletedInteractionIds(new Set());
+            }
         } else {
             setCompletedInteractionIds(new Set());
         }
@@ -255,34 +255,30 @@ export function LessonView({ lesson }: LessonViewProps) {
 
     setIsMarkingComplete(false);
 
-    const findAdjacentMockLessons = () => {
-      if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) return;
+    // Lógica para encontrar lições adjacentes
+    if (lesson?.moduleId && allMockLessons.length > 0) {
+      const lessonsInModule = allMockLessons
+        .filter(l => l.moduleId === lesson.moduleId)
+        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
 
-      const currentModule = mockRoadmapData
-        .flatMap(trilha => trilha.modules)
-        .find(mod => mod.id === lesson.moduleId);
-
-      if (!currentModule || !currentModule.lessons) return;
-      
-      const sortedLessonsInModule = [...currentModule.lessons].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
-      const currentIndex = sortedLessonsInModule.findIndex(l => l.id === lesson.id);
+      const currentIndex = lessonsInModule.findIndex(l => l.id === lesson.id);
 
       if (currentIndex > -1) {
-        setPrevLesson(currentIndex > 0 ? sortedLessonsInModule[currentIndex - 1] : null);
-        setNextLesson(currentIndex < sortedLessonsInModule.length - 1 ? sortedLessonsInModule[currentIndex + 1] : null);
+        setPrevLesson(currentIndex > 0 ? lessonsInModule[currentIndex - 1] : null);
+        setNextLesson(currentIndex < lessonsInModule.length - 1 ? lessonsInModule[currentIndex + 1] : null);
       } else {
         setPrevLesson(null);
         setNextLesson(null);
       }
-    };
-    
-    findAdjacentMockLessons();
-
+    } else {
+      setPrevLesson(null);
+      setNextLesson(null);
+    }
   }, [lesson]);
 
 
   const handleMarkAsCompleted = async () => {
-    if (isCompleted || isMarkingComplete || !allInteractionsCompleted) return;
+    if (isCompleted || isMarkingComplete || !allInteractionsCompleted || !lesson) return;
     setIsMarkingComplete(true);
 
     const result = await markLessonCompletedAction(userProfile, lesson.id);
@@ -290,7 +286,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (result.success && result.updatedProfile) {
       updateUserProfile(result.updatedProfile); 
       playSound('pointGain');
-      let toastMessage = "Lição marcada como concluída localmente!";
+      let toastMessage = "Lição marcada como concluída!";
       if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
         const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
         toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
@@ -311,7 +307,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     setIsMarkingComplete(false);
   };
 
-  if (authLoading) { 
+  if (authLoading || !lesson) { 
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -381,26 +377,26 @@ export function LessonView({ lesson }: LessonViewProps) {
       </Card>
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
-        <div className="w-full sm:flex-1 flex justify-center sm:justify-start">
+        <div className="w-full sm:w-1/3 flex justify-center sm:justify-start">
             {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
                     <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="truncate hidden sm:inline">Anterior: {prevLesson.title.length > 15 ? prevLesson.title.substring(0,15) + '...' : prevLesson.title}</span>
+                    <span className="truncate hidden sm:inline">Anterior</span>
                     <span className="sm:hidden">Anterior</span>
                   </span>
                 </Link>
             </Button>
-            ) : <div className="hidden sm:block sm:flex-1"></div>}
+            ) : <div className="w-full sm:w-auto">&nbsp;</div>} {/* Placeholder for alignment */}
         </div>
 
-        <div className="w-full sm:w-auto flex-shrink-0 my-2 sm:my-0">
+        <div className="w-full sm:w-1/3 flex-shrink-0 my-2 sm:my-0 flex justify-center">
             <Button
               variant={isCompleted ? "default" : "secondary"}
               size="lg"
               className={cn(
-                "w-full sm:w-auto",
+                "w-full max-w-xs sm:w-auto", // Limit width on small screens
                 isCompleted ? "bg-green-500 hover:bg-green-600" :
                 (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
@@ -417,30 +413,28 @@ export function LessonView({ lesson }: LessonViewProps) {
                 {isMarkingComplete
                     ? "Marcando..."
                     : isCompleted
-                        ? "Lição Concluída"
+                        ? "Concluída"
                         : (!allInteractionsCompleted && totalInteractiveElements > 0)
-                            ? "Complete as interações"
-                            : "Marcar como Concluída"
+                            ? "Complete Interações"
+                            : "Marcar Concluída"
                 }
             </Button>
         </div>
 
-        <div className="w-full sm:flex-1 flex justify-center sm:justify-end">
+        <div className="w-full sm:w-1/3 flex justify-center sm:justify-end">
             {nextLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`}>
                   <span className="flex items-center justify-center w-full">
-                    <span className="truncate hidden sm:inline">Próxima: {nextLesson.title.length > 15 ? nextLesson.title.substring(0,15) + '...' : nextLesson.title}</span>
+                    <span className="truncate hidden sm:inline">Próxima</span>
                     <span className="sm:hidden">Próxima</span>
                     <ArrowRight className="h-4 w-4 ml-1 sm:ml-2" />
                   </span>
                 </Link>
             </Button>
-            ) : <div className="hidden sm:block sm:flex-1"></div>}
+            ) : <div className="w-full sm:w-auto">&nbsp;</div>} {/* Placeholder for alignment */}
         </div>
       </CardFooter>
     </div>
   );
 }
-
-    
