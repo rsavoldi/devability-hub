@@ -1,3 +1,4 @@
+
 // src/components/lessons/LessonView.tsx
 "use client";
 
@@ -33,11 +34,11 @@ const combinedRegex = new RegExp(
 );
 const boldRegexGlobal = /\*\*(.*?)\*\*/g;
 
-const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Element)[] => {
-  const parts: (string | JSX.Element)[] = [];
+const renderTextWithBold = (text: string, baseKey: string): React.ReactNode[] => {
+  const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
-  boldRegexGlobal.lastIndex = 0;
+  boldRegexGlobal.lastIndex = 0; // Resetar o lastIndex da regex global
 
   while ((match = boldRegexGlobal.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -53,54 +54,64 @@ const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Elemen
   return parts;
 };
 
-const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string) => {
-  const paragraphs: JSX.Element[] = [];
-  let currentParagraphContent: (string | JSX.Element)[] = [];
 
-  elements.forEach((element, index) => {
+const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
+  const outputParagraphs: JSX.Element[] = [];
+  let currentParagraphChildren: React.ReactNode[] = [];
+  let paragraphIndex = 0;
+
+  const finalizeParagraph = () => {
+    if (currentParagraphChildren.length > 0) {
+      outputParagraphs.push(
+        <p key={`${baseKey}-p-${paragraphIndex++}`} className="mb-4 last:mb-0">
+          {currentParagraphChildren}
+        </p>
+      );
+      currentParagraphChildren = [];
+    }
+  };
+
+  elements.forEach((element, elementIdx) => {
     if (typeof element === 'string') {
-      const stringParts = element.split(/\\n|\n/g);
-      stringParts.forEach((part, partIndex) => {
-        if (part.trim() !== "") {
-          currentParagraphContent.push(...renderTextWithBold(part, `${baseKey}-p${paragraphs.length}-s${index}-pt${partIndex}`));
+      const textLines = element.split(/(\n|\\n)/g); // Split by newline, keeping the delimiter
+
+      textLines.forEach((line, lineIdx) => {
+        if (line === '\n' || line === '\\n') {
+          // If it's a newline character, finalize the current paragraph (if it has content)
+          // and prepare for a new one (which will start if there's subsequent text).
+          finalizeParagraph();
+        } else if (line.trim() !== '') {
+          // If it's actual text, process for bold and add to current paragraph children
+          currentParagraphChildren.push(
+            ...renderTextWithBold(line, `${baseKey}-txt-${elementIdx}-${lineIdx}`)
+          );
         }
-        if (partIndex < stringParts.length - 1 || (part.trim() !== "" && index === elements.length -1 && stringParts.length === 1 && !elements[index+1])) {
-          if (currentParagraphContent.length > 0) {
-            paragraphs.push(
-              <p key={`${baseKey}-p${paragraphs.length}`} className="mb-4 last:mb-0">
-                {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
-              </p>
-            );
-            currentParagraphContent = [];
-          }
-        }
+        // Empty strings resulting from split (e.g., between consecutive \n) are ignored unless they are the newline itself
       });
     } else {
-      if (currentParagraphContent.length > 0) {
-        paragraphs.push(
-          <p key={`${baseKey}-p${paragraphs.length}-text`} className="mb-4 last:mb-0">
-            {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
-          </p>
-        );
-        currentParagraphContent = [];
-      }
-      paragraphs.push(<span key={`${baseKey}-jsx-${index}`} className="inline">{element}</span>);
+      // If it's a JSX element (interactive component), add it to the current paragraph children
+      currentParagraphChildren.push(React.cloneElement(element as React.ReactElement, { key: `${baseKey}-jsx-${elementIdx}` }));
     }
   });
 
-  if (currentParagraphContent.length > 0) {
-    paragraphs.push(
-      <p key={`${baseKey}-p${paragraphs.length}-final`} className="mb-4 last:mb-0">
-        {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
+  // Finalize any remaining paragraph content
+  finalizeParagraph();
+  
+  // If after all processing, no paragraphs were created but there were elements,
+  // wrap everything in a single paragraph (edge case).
+  if (outputParagraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
+    return [
+      <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
+        {elements.map((el, i) => 
+          typeof el === 'string' 
+            ? <Fragment key={`${baseKey}-sfrag-${i}`}>{renderTextWithBold(el, `${baseKey}-sfrag-txt-${i}`)}</Fragment> 
+            : React.cloneElement(el as React.ReactElement, { key: `${baseKey}-sfrag-jsx-${i}` })
+        )}
       </p>
-    );
+    ];
   }
 
-  if (paragraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
-     return <p>{elements.map((el, i) => <Fragment key={i}>{el}</Fragment>)}</p>;
-  }
-
-  return paragraphs;
+  return outputParagraphs;
 };
 
 
@@ -121,7 +132,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     setCompletedInteractionIds(prev => {
       const newSet = new Set(prev);
       newSet.add(interactionId);
-      // Salvar progresso das interações no localStorage
       if (typeof window !== 'undefined') {
           const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
           localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
@@ -224,29 +234,27 @@ export function LessonView({ lesson }: LessonViewProps) {
 
 
   const isCompleted = useMemo(() => {
-    if (authLoading) return false; // Espera o auth carregar
-    if (userProfile) { // Se tem perfil (mesmo que convidado)
+    if (authLoading) return false;
+    if (userProfile) {
       return userProfile.completedLessons.includes(lesson.id);
     }
-    return false; // Default se não houver perfil
+    return false;
   }, [userProfile, lesson.id, authLoading]);
 
 
   useEffect(() => {
-    // Carregar progresso das interações do localStorage ao montar a lição
     if (typeof window !== 'undefined' && lesson) {
         const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
         if (storedInteractions) {
             setCompletedInteractionIds(new Set(JSON.parse(storedInteractions)));
         } else {
-            setCompletedInteractionIds(new Set()); // Reset se não houver nada salvo
+            setCompletedInteractionIds(new Set());
         }
     }
 
     setIsMarkingComplete(false);
 
-    // Lógica para encontrar lições adjacentes (mantida, pois usa mockData)
     const findAdjacentMockLessons = () => {
       if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) return;
 
@@ -277,11 +285,10 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (isCompleted || isMarkingComplete || !allInteractionsCompleted) return;
     setIsMarkingComplete(true);
 
-    // Chamar a action (que agora deve retornar o perfil atualizado para o cliente)
     const result = await markLessonCompletedAction(userProfile, lesson.id);
 
     if (result.success && result.updatedProfile) {
-      updateUserProfile(result.updatedProfile); // Atualiza o contexto E localStorage
+      updateUserProfile(result.updatedProfile); 
       playSound('pointGain');
       let toastMessage = "Lição marcada como concluída localmente!";
       if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
@@ -294,7 +301,6 @@ export function LessonView({ lesson }: LessonViewProps) {
         description: toastMessage,
         className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
       });
-      // refreshUserProfile(); // Chamado dentro de updateUserProfile implicitamente ou explicitamente
     } else {
       toast({
         title: "Erro",
@@ -305,7 +311,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     setIsMarkingComplete(false);
   };
 
-  if (authLoading) { // Verifica authLoading em vez de !currentUser (que agora é sempre guest ou user)
+  if (authLoading) { 
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -352,25 +358,26 @@ export function LessonView({ lesson }: LessonViewProps) {
         </CardHeader>
         <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
           {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
-
+        </CardContent>
           {lesson.references && lesson.references.length > 0 && (
             <>
-              <Separator className="my-8" />
-              <div className="not-prose">
-                <h3 className="text-xl font-semibold mb-4">Referências</h3>
-                <ul className="list-none p-0 space-y-2">
-                  {lesson.references.map((ref, index) => (
-                    <li
-                      key={`ref-${index}`}
-                      className="text-sm text-muted-foreground"
-                      dangerouslySetInnerHTML={{ __html: ref }}
-                    />
-                  ))}
-                </ul>
+              <div className="px-6 pb-6">
+                  <Separator className="my-6" />
+                  <div className="not-prose">
+                      <h3 className="text-xl font-semibold mb-4 text-foreground">Referências</h3>
+                      <ul className="list-none p-0 space-y-2">
+                      {lesson.references.map((ref, index) => (
+                          <li
+                          key={`ref-${index}`}
+                          className="text-sm text-muted-foreground"
+                          dangerouslySetInnerHTML={{ __html: ref }}
+                          />
+                      ))}
+                      </ul>
+                  </div>
               </div>
             </>
           )}
-        </CardContent>
       </Card>
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
@@ -435,3 +442,5 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
+    
