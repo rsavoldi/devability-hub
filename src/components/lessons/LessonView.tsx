@@ -6,14 +6,15 @@ import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
-import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
+import { generateLessonQA, type GenerateLessonQAOutput } from '@/ai/flows/generate-lesson-qa';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,14 +35,12 @@ const combinedRegex = new RegExp(
   `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
   "g"
 );
-const boldRegexGlobal = /\*\*(.*?)\*\*/g; 
+const boldRegexGlobal = /\*\*(.*?)\*\*/g;
 
-// Helper function to render text with bold formatting
 const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Element)[] => {
   const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
   let match;
-  // Reset lastIndex for global regex
   boldRegexGlobal.lastIndex = 0;
 
   while ((match = boldRegexGlobal.exec(text)) !== null) {
@@ -58,20 +57,18 @@ const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Elemen
   return parts;
 };
 
-// Helper function to render processed content elements into paragraphs
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string) => {
   const paragraphs: JSX.Element[] = [];
   let currentParagraphContent: (string | JSX.Element)[] = [];
 
   elements.forEach((element, index) => {
     if (typeof element === 'string') {
-      const stringParts = element.split(/\\n|\n/g); 
+      const stringParts = element.split(/\\n|\n/g);
       stringParts.forEach((part, partIndex) => {
-        if (part.trim() !== "") { 
+        if (part.trim() !== "") {
           currentParagraphContent.push(...renderTextWithBold(part, `${baseKey}-p${paragraphs.length}-s${index}-pt${partIndex}`));
         }
-        if (partIndex < stringParts.length - 1 || (part.trim() !== "" && index === elements.length -1 && stringParts.length === 1 && !elements[index+1])) { 
-          
+        if (partIndex < stringParts.length - 1 || (part.trim() !== "" && index === elements.length -1 && stringParts.length === 1 && !elements[index+1])) {
           if (currentParagraphContent.length > 0) {
             paragraphs.push(
               <p key={`${baseKey}-p${paragraphs.length}`} className="mb-4 last:mb-0">
@@ -82,7 +79,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
           }
         }
       });
-    } else { 
+    } else {
       if (currentParagraphContent.length > 0) {
         paragraphs.push(
           <p key={`${baseKey}-p${paragraphs.length}-text`} className="mb-4 last:mb-0">
@@ -91,11 +88,10 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
         );
         currentParagraphContent = [];
       }
-      paragraphs.push(<span key={`${baseKey}-jsx-${index}`} className="inline">{element}</span>); 
+      paragraphs.push(<span key={`${baseKey}-jsx-${index}`} className="inline">{element}</span>);
     }
   });
 
-  
   if (currentParagraphContent.length > 0) {
     paragraphs.push(
       <p key={`${baseKey}-p${paragraphs.length}-final`} className="mb-4 last:mb-0">
@@ -103,8 +99,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       </p>
     );
   }
-  
-  
+
   if (paragraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
      return <p>{elements.map((el, i) => <Fragment key={i}>{el}</Fragment>)}</p>;
   }
@@ -114,13 +109,14 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { currentUser, userProfile, loading: authLoading } = useAuth();
+  const { currentUser, userProfile, loading: authLoading, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
-  const [summary, setSummary] = useState<string | null>(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [lessonQA, setLessonQA] = useState<{ question: string; answer: string }[] | null>(null);
+  const [isLoadingQA, setIsLoadingQA] = useState(false);
+  const [qaError, setQAError] = useState<string | null>(null);
+
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isLocallyCompleted, setIsLocallyCompleted] = useState(false);
 
@@ -147,7 +143,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
 
     let match;
-    combinedRegex.lastIndex = 0; 
+    combinedRegex.lastIndex = 0;
 
     while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
       const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
@@ -157,7 +153,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
       }
 
-      if (match[2]) { 
+      if (match[2]) {
         const optionsString = match[2];
         if (optionsString) {
           const rawOptions = optionsString.split(';');
@@ -188,7 +184,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         } else {
            elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
         }
-      } else if (match[4]) { 
+      } else if (match[4]) {
         const optionsString = match[4];
         if (optionsString) {
           const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
@@ -217,7 +213,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lastIndex < contentWithoutGeneralComments.length) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
-    setTotalInteractiveElements(interactionCounter); 
+    setTotalInteractiveElements(interactionCounter);
     return elements;
   }, [lesson.id, handleInteractionCorrect]);
 
@@ -259,9 +255,9 @@ export function LessonView({ lesson }: LessonViewProps) {
       setIsLocallyCompleted(false);
     }
 
-    setSummary(null);
-    setSummaryError(null);
-    setIsLoadingSummary(false);
+    setLessonQA(null);
+    setQAError(null);
+    setIsLoadingQA(false);
     setIsMarkingComplete(false);
 
     const findAdjacentMockLessons = () => {
@@ -291,7 +287,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         setNextLesson(null);
         return;
       }
-      const pathParts = lesson.moduleId.split('-mod-'); 
+      const pathParts = lesson.moduleId.split('-mod-');
       if (pathParts.length < 2) {
         console.warn("Module ID format unexpected for fetching adjacent lessons from Firestore:", lesson.moduleId);
         findAdjacentMockLessons();
@@ -332,24 +328,26 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   }, [lesson, currentUser]);
 
-  const handleGenerateSummary = async () => {
+  const handleGenerateQA = async () => {
     if (!lesson?.content) return;
-    setIsLoadingSummary(true);
-    setSummary(null);
-    setSummaryError(null);
+    setIsLoadingQA(true);
+    setLessonQA(null);
+    setQAError(null);
     try {
-      const result: SummarizeLessonOutput = await summarizeLesson({ lessonContent: lesson.content });
-      setSummary(result.summary);
+      const result: GenerateLessonQAOutput = await generateLessonQA({
+        lessonContent: lesson.content,
+        numberOfPairs: 3,
+      });
+      setLessonQA(result.qaPairs);
     } catch (error) {
-      console.error("Failed to generate summary:", error);
+      console.error("Failed to generate Q&A:", error);
       if (error instanceof Error) {
-        // Corrected line:
-        setSummaryError("Desculpe, não foi possível gerar o resumo. Erro: " + error.message);
+        setQAError('Desculpe, não foi possível gerar o resumo. Erro: ' + error.message);
       } else {
-        setSummaryError("Desculpe, não foi possível gerar o resumo no momento devido a um erro desconhecido. Tente novamente mais tarde.");
+        setQAError("Desculpe, não foi possível gerar o resumo no momento devido a um erro desconhecido. Tente novamente mais tarde.");
       }
     } finally {
-      setIsLoadingSummary(false);
+      setIsLoadingQA(false);
     }
   };
 
@@ -365,7 +363,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           let toastMessage = result.message;
           if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
             const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-            toastMessage += \` Você desbloqueou: \${achievementTitles}!\`;
+            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
              playSound('achievementUnlock');
           }
           toast({
@@ -373,6 +371,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             description: toastMessage,
             className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
           });
+          refreshUserProfile(); // Atualiza o perfil para refletir as mudanças
         } else {
           toast({
             title: "Erro",
@@ -388,7 +387,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           variant: "destructive",
         });
       }
-    } else { 
+    } else {
       if (typeof window !== 'undefined') {
         try {
           const guestProgressRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
@@ -425,8 +424,8 @@ export function LessonView({ lesson }: LessonViewProps) {
     );
   }
 
-  const interactionsProgressText = totalInteractiveElements > 0 
-    ? \`Interações concluídas: \${completedInteractionIds.size} de \${totalInteractiveElements}\`
+  const interactionsProgressText = totalInteractiveElements > 0
+    ? `Interações concluídas: ${completedInteractionIds.size} de ${totalInteractiveElements}`
     : "Nenhuma interação nesta lição.";
 
   return (
@@ -457,7 +456,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           </div>
            {totalInteractiveElements > 0 && (
             <div className="mt-3 text-sm text-primary flex items-center">
-                <Info className="h-4 w-4 mr-1.5 shrink-0" /> 
+                <Info className="h-4 w-4 mr-1.5 shrink-0" />
                 <span>{interactionsProgressText}</span>
             </div>
            )}
@@ -488,54 +487,61 @@ export function LessonView({ lesson }: LessonViewProps) {
       <Card className="mt-6 shadow-lg">
         <CardHeader>
             <CardTitle className="text-xl flex items-center">
-                <FileText className="mr-2 h-5 w-5 text-primary" />
-                Resumo da Lição (IA)
+                <HelpCircle className="mr-2 h-5 w-5 text-primary" />
+                Perguntas e Respostas (IA)
             </CardTitle>
         </CardHeader>
         <CardContent>
-            {(!summary && !summaryError) && !isLoadingSummary && (
+            {(!lessonQA && !qaError) && !isLoadingQA && (
                  <p className="text-sm text-muted-foreground mb-4">
-                    Clique no botão abaixo para gerar um resumo desta lição usando Inteligência Artificial.
+                    Clique no botão abaixo para gerar perguntas e respostas sobre esta lição usando Inteligência Artificial.
                 </p>
             )}
             <Button
-                onClick={handleGenerateSummary}
-                disabled={isLoadingSummary || !lesson?.content}
+                onClick={handleGenerateQA}
+                disabled={isLoadingQA || !lesson?.content}
                 className="w-full sm:w-auto"
             >
-              {isLoadingSummary ? (
+              {isLoadingQA ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <FileText className="mr-2 h-4 w-4" />
+                <HelpCircle className="mr-2 h-4 w-4" />
               )}
-              {(summary || summaryError) ? "Gerar Novo Resumo" : "Gerar Resumo"}
+              {(lessonQA || qaError) ? "Gerar Novas P&R" : "Gerar P&R"}
             </Button>
 
-            {isLoadingSummary && (
+            {isLoadingQA && (
               <div className="mt-4 flex items-center text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Gerando resumo...</span>
+                <span>Gerando P&R...</span>
               </div>
             )}
 
-            {summaryError && !isLoadingSummary && (
+            {qaError && !isLoadingQA && (
               <Alert className="mt-4" variant="destructive">
-                <AlertTitle>Erro ao Gerar Resumo</AlertTitle>
+                <AlertTitle>Erro ao Gerar P&R</AlertTitle>
                 <AlertDescription>
-                    {summaryError}
+                    {qaError}
                 </AlertDescription>
               </Alert>
             )}
 
-            {summary && !isLoadingSummary && !summaryError && (
-              <Alert className="mt-4 prose dark:prose-invert max-w-none text-sm" variant="default">
-                <AlertTitle>Resultado do Resumo:</AlertTitle>
-                <AlertDescription>
-                    {summary.split(/\\n|\n/g).map((paragraph, index) => (
-                        <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
-                    ))}
-                </AlertDescription>
-              </Alert>
+            {lessonQA && lessonQA.length > 0 && !isLoadingQA && !qaError && (
+              <Accordion type="single" collapsible className="w-full mt-4 space-y-2">
+                {lessonQA.map((pair, index) => (
+                  <AccordionItem value={`item-${index}`} key={index} className="border rounded-md">
+                    <AccordionTrigger className="p-4 text-left hover:no-underline">
+                      <span className="font-medium">{index + 1}. {pair.question}</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                      <p className="text-sm text-muted-foreground">{pair.answer}</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            )}
+            {lessonQA && lessonQA.length === 0 && !isLoadingQA && !qaError && (
+                <p className="mt-4 text-sm text-muted-foreground">Nenhuma pergunta e resposta foi gerada.</p>
             )}
         </CardContent>
       </Card>
@@ -561,7 +567,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               size="lg"
               className={cn(
                 "w-full sm:w-auto",
-                isCompleted ? "bg-green-500 hover:bg-green-600" : 
+                isCompleted ? "bg-green-500 hover:bg-green-600" :
                 (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
               onClick={handleMarkAsCompleted}
@@ -574,10 +580,10 @@ export function LessonView({ lesson }: LessonViewProps) {
                 ) : (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 )}
-                {isMarkingComplete 
-                    ? "Marcando..." 
-                    : isCompleted 
-                        ? "Lição Concluída" 
+                {isMarkingComplete
+                    ? "Marcando..."
+                    : isCompleted
+                        ? "Lição Concluída"
                         : (!allInteractionsCompleted && totalInteractiveElements > 0)
                             ? "Complete as interações"
                             : "Marcar como Concluída"
@@ -604,4 +610,3 @@ export function LessonView({ lesson }: LessonViewProps) {
 }
 
     
-
