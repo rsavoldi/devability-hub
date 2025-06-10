@@ -1,3 +1,4 @@
+
 import type { Lesson } from '@/lib/types';
 
 export const lessonM1L2: Lesson = {
@@ -141,13 +142,13 @@ O foco deve ser sempre na <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*pessoa e suas 
 
 A transformação da sociedade para uma que verdadeiramente inclui e valoriza a diversidade corporal e neurológica é uma responsabilidade coletiva que exige <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*ação política e mudança estrutural;apenas boa vontade individual;tempo e paciência] --> de todos os setores da sociedade.
 `,
-  estimatedTime: '35-45 mins',
+  estimatedTime: '35-45 mins', // Aumentado para refletir a expansão.
   coverImage: '/images/Dev1.2.png',
   aiHint: 'criança movimento corpo paralisia cerebral anticapacitismo estudos da deficiência política diversidade neuroplasticidade autonomia',
   references: [
     "<a href='https://doi.org/10.1016/1054-139x(93)90143-d' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Blum, R. W., Garell, D., Hodgman, C. H., Jorissen, T. W., Okinow, N. A., Orr, D. P., & Slap, G. B. (1993). Transition from child-centered to adult health-care systems for adolescents with chronic conditions. Journal of Adolescent Health, 14(7), 570-576.</a>",
-    "Diniz, D. (2007). *O que é deficiência*. Brasiliense.",
-    "Gesser, M., Böck, G. L. K., & Lopes, P. H. (Orgs.). (2020). *Estudos da deficiência: anticapacitismo e emancipação social*. Curitiba: CRV.",
+    "Diniz, D. (2007). *O que é deficiência*. Brasiliense.", // Adicionado
+    "Gesser, M., Böck, G. L. K., & Lopes, P. H. (Orgs.). (2020). *Estudos da deficiência: anticapacitismo e emancipação social*. Curitiba: CRV.", // Adicionado
     "Goldfeld, M. (2002). A criança surda: linguagem e cognição numa perspectiva sociointeracionista. São Paulo: Plexus.",
     "<a href='https://doi.org/10.1590/s0004-282x2002000300024' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Mancini, M. C., Fiúza, P. M., Rebelo, J. M., Magalhães, L. C., Coelho, Z. A. C., Paixão, M. L., ... & Gontijo, A. P. B. (2002). Comparação do desempenho de atividades funcionais em crianças com desenvolvimento normal e crianças com paralisia cerebral. Arquivos de Neuro-psiquiatria, 60(2B), 446-452.</a>",
     "Nunes, S. S., & Lomônaco, J. F. B. (2010). O aluno cego: um olhar sobre seu desenvolvimento e aprendizagem. In S. S. Nunes & J. F. B. Lomônaco (Orgs.), Aluno cego: desenvolvimento e aprendizagem (pp. 19-44). Jundiaí: Paco Editorial.",
