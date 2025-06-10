@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn, shuffleArray } from '@/lib/utils'; // shuffleArray importado
+import { cn, shuffleArray } from '@/lib/utils'; 
 import { Check, X, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Popover,
@@ -12,15 +12,17 @@ import {
 } from "@/components/ui/popover";
 
 interface InteractiveFillInBlankProps {
-  options: string[]; // Todas as opções, incluindo a correta
+  options: string[]; 
   correctAnswer: string;
-  // onAttempt?: (isCorrect: boolean) => void; // For future gamification
+  interactionId: string; // Nova prop
+  onCorrect: (interactionId: string) => void; // Nova prop
 }
 
 export function InteractiveFillInBlank({
   options,
   correctAnswer,
-  // onAttempt,
+  interactionId, // Nova prop
+  onCorrect, // Nova prop
 }: InteractiveFillInBlankProps) {
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -31,7 +33,6 @@ export function InteractiveFillInBlank({
   const blankPlaceholder = "______";
 
   useEffect(() => {
-    // Embaralha as opções quando o componente é montado ou as opções mudam
     setShuffledDisplayOptions(shuffleArray(options));
   }, [options]);
 
@@ -45,9 +46,7 @@ export function InteractiveFillInBlank({
 
     if (currentIsCorrect) {
       setIsSubmitted(true); 
-      // onAttempt?.(true);
-    } else {
-      // onAttempt?.(false);
+      onCorrect(interactionId); // Chama o callback quando correto
     }
   };
   
@@ -66,45 +65,47 @@ export function InteractiveFillInBlank({
       setFilledAnswer(null);
       setIsCorrect(null);
     }
+    // Sempre alterna o popover se não estiver submetido corretamente
+    setIsPopoverOpen(o => !o); 
   };
 
   let triggerContent;
-  let icon = <Edit2 className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />;
+  let icon = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />;
   let textColorClass = "text-primary hover:text-primary/80 dark:text-primary-foreground/70 dark:hover:text-primary-foreground/90";
   let borderColorClass = "border-primary/50 hover:border-primary";
   let cursorClass = "cursor-pointer";
+  let mainText = blankPlaceholder;
+  let prefixIcon = <Edit2 className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />;
 
-  if (isSubmitted) { 
-    triggerContent = (
-       <>
-         <Check className="h-3 w-3 mr-1" />
-         {filledAnswer}
-       </>
-    );
+
+  if (isSubmitted) { // Após submissão correta
+    prefixIcon = <Check className="h-3 w-3 mr-1" />;
+    mainText = filledAnswer || correctAnswer; // Mostra a resposta correta
     textColorClass = "text-green-700 dark:text-green-200";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800";
     cursorClass = "cursor-default";
-  } else if (filledAnswer && isCorrect === false) {
-    triggerContent = (
-        <>
-            <X className="h-3 w-3" />
-            <span className="line-through">{filledAnswer}</span>
-        </>
-    );
+    icon = null; // Sem ícone de dropdown
+  } else if (filledAnswer && isCorrect === false) { // Tentativa incorreta
+    prefixIcon = <X className="h-3 w-3 mr-0.5" />;
+    mainText = filledAnswer; // Mostra a tentativa incorreta, sem riscar
     textColorClass = "text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900";
     borderColorClass = "border-red-500 dark:border-red-600";
-  } else {
-     triggerContent = (
-        <>
-            {icon}
-            <span>{blankPlaceholder}</span>
-            {isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
-        </>
-     );
+  } else if (filledAnswer && isCorrect === null) { // Selecionou, mas ainda não verificou (ou limpou incorreta)
+     mainText = filledAnswer;
+     prefixIcon = null; // Sem ícone de lápis se algo já foi preenchido e não é erro
   }
 
+
+  triggerContent = (
+      <>
+          {prefixIcon}
+          <span>{mainText}</span>
+          {icon}
+      </>
+  );
+
   return (
-    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+    <Popover open={isPopoverOpen && !isSubmitted} onOpenChange={(openState) => { if (!isSubmitted) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isSubmitted}>
         <span
             role="button"
@@ -115,7 +116,6 @@ export function InteractiveFillInBlank({
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     handleTriggerClick(); 
-                    setIsPopoverOpen(o => !o); 
                 }
             }}
             className={cn(
@@ -123,11 +123,11 @@ export function InteractiveFillInBlank({
             borderColorClass,
             textColorClass,
             cursorClass,
-            isSubmitted ? "" : "border border-dashed", 
+            isSubmitted ? "border" : "border border-dashed", 
             !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ minWidth: buttonWidth }}
-            aria-expanded={isPopoverOpen}
+            aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
             {triggerContent}
