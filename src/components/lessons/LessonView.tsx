@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
-import type { Lesson, UserProfile } from '@/lib/types'; // UserProfile adicionado
+import type { Lesson, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
@@ -20,7 +20,7 @@ import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/action
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons } from '@/lib/mockData'; // Importando todas as lições
+import { mockLessons as allMockLessons, mockRoadmapData, mockAchievements } from '@/lib/mockData'; // Importando todas as lições
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -69,36 +69,32 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       currentParagraphChildren = [];
     }
   };
-
+  
   elements.forEach((element, elementIdx) => {
     if (typeof element === 'string') {
-      const textLines = element.split(/(\\n|\n)/g); // Trata ambas as formas de quebra de linha
-
-      textLines.forEach((line, lineIdx) => {
-        if (line === '\n' || line === '\\n') {
-          finalizeParagraph(); 
-        } else if (line && line.trim() !== '') { // Adicionado verificação de 'line'
+      const textSegments = element.split(/(\n|\\n)/g); // Split by \n or \\n, keeping delimiters
+      textSegments.forEach((segment, segmentIdx) => {
+        if (segment === '\n' || segment === '\\n') {
+          finalizeParagraph();
+        } else if (segment && segment.trim() !== '') {
           currentParagraphChildren.push(
-            ...renderTextWithBold(line, `${baseKey}-txt-${elementIdx}-${lineIdx}`)
+            ...renderTextWithBold(segment, `${baseKey}-txt-${elementIdx}-${segmentIdx}`)
           );
         }
       });
-    } else if (React.isValidElement(element)) { // Verifica se é um elemento React válido
+    } else if (React.isValidElement(element)) {
       currentParagraphChildren.push(React.cloneElement(element, { key: `${baseKey}-jsx-${elementIdx}` }));
     }
   });
 
-  finalizeParagraph(); 
+  finalizeParagraph();
 
-  // Caso especial: se todos os elementos foram para um único parágrafo e não houve quebra de linha explícita
-  if (outputParagraphs.length === 0 && elements.length > 0 && elements.every(el => typeof el !== 'string' || !(el.includes('\n') || el.includes('\\n')))) {
-      if (currentParagraphChildren.length > 0) { // Verifica se há algo para renderizar
-        return [
-          <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
-            {currentParagraphChildren}
-          </p>
-        ];
-      }
+  if (outputParagraphs.length === 0 && elements.length > 0 && currentParagraphChildren.length > 0) {
+    outputParagraphs.push(
+      <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
+        {currentParagraphChildren}
+      </p>
+    );
   }
   return outputParagraphs;
 };
@@ -206,9 +202,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lastIndex < contentWithoutGeneralComments.length) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
-    // Esta chamada foi movida para o useEffect que depende de processedContentElements
-    // para garantir que o total seja contado apenas uma vez após o processamento.
-    // setTotalInteractiveElements(interactionCounter); 
     return elements;
   }, [lesson?.id, handleInteractionCorrect]);
 
@@ -219,7 +212,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     return [];
   }, [lesson?.content, parseLessonContentAndCountInteractions]);
   
-  // Contar elementos interativos após o processamento
   useEffect(() => {
       let count = 0;
       processedContentElements.forEach(el => {
@@ -244,8 +236,13 @@ export function LessonView({ lesson }: LessonViewProps) {
     return false;
   }, [userProfile, lesson, authLoading]);
 
-
   useEffect(() => {
+    // Resetting states for new lesson
+    setCompletedInteractionIds(new Set());
+    setPrevLesson(null);
+    setNextLesson(null);
+    setIsMarkingComplete(false);
+
     if (typeof window !== 'undefined' && lesson) {
         const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
@@ -254,40 +251,59 @@ export function LessonView({ lesson }: LessonViewProps) {
                 const parsedInteractions = JSON.parse(storedInteractions);
                 if (Array.isArray(parsedInteractions)) {
                     setCompletedInteractionIds(new Set(parsedInteractions));
-                } else {
-                    setCompletedInteractionIds(new Set()); // Reseta se o formato for inválido
                 }
             } catch (error) {
-                console.error("Error parsing stored interactions:", error);
-                setCompletedInteractionIds(new Set()); // Reseta em caso de erro de parse
+                console.error("Error parsing stored interactions for new lesson:", error);
             }
-        } else {
-            setCompletedInteractionIds(new Set()); // Inicia vazio se não houver nada armazenado
         }
     }
-    setIsMarkingComplete(false); // Reseta o estado de carregamento do botão
 
-    // Lógica para encontrar lições adjacentes
-    if (lesson?.moduleId && allMockLessons.length > 0) {
+    // Logic for finding adjacent lessons
+    console.log("Current lesson:", lesson);
+    console.log("All mock lessons available:", allMockLessons.length);
+
+    if (lesson?.moduleId && allMockLessons?.length > 0) {
+      console.log(`Finding lessons for moduleId: ${lesson.moduleId}`);
       const lessonsInModule = allMockLessons
-        .filter(l => l.moduleId === lesson.moduleId)
-        .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)); // Garante ordenação
+        .filter(l => {
+          // console.log(`Checking lesson ${l.id}, moduleId: ${l.moduleId}`);
+          return l.moduleId === lesson.moduleId;
+        })
+        .sort((a, b) => {
+          const orderA = a.order ?? Infinity;
+          const orderB = b.order ?? Infinity;
+          if (orderA === Infinity && orderB === Infinity) {
+            // Fallback to original index in allMockLessons if order is undefined for both
+            // This is tricky because filter creates a new array. A better fallback might be ID string sort.
+            return allMockLessons.indexOf(a) - allMockLessons.indexOf(b);
+          }
+          return orderA - orderB;
+        });
+
+      console.log(`Lessons found in module ${lesson.moduleId}:`, lessonsInModule.map(l => ({id: l.id, order: l.order, title: l.title })));
 
       const currentIndex = lessonsInModule.findIndex(l => l.id === lesson.id);
+      console.log(`Current lesson index in module: ${currentIndex}`);
 
       if (currentIndex > -1) {
-        setPrevLesson(currentIndex > 0 ? lessonsInModule[currentIndex - 1] : null);
-        setNextLesson(currentIndex < lessonsInModule.length - 1 ? lessonsInModule[currentIndex + 1] : null);
+        const prev = currentIndex > 0 ? lessonsInModule[currentIndex - 1] : null;
+        const next = currentIndex < lessonsInModule.length - 1 ? lessonsInModule[currentIndex + 1] : null;
+        setPrevLesson(prev);
+        setNextLesson(next);
+        console.log("Previous lesson:", prev?.id);
+        console.log("Next lesson:", next?.id);
       } else {
-        // Se a lição atual não for encontrada no módulo (improvável, mas por segurança)
+        console.error(`Current lesson ${lesson.id} not found in its module ${lesson.moduleId} after filtering and sorting.`);
         setPrevLesson(null);
         setNextLesson(null);
       }
     } else {
+      if (!lesson?.moduleId) console.warn("Current lesson has no moduleId.");
+      if (!allMockLessons || allMockLessons.length === 0) console.warn("allMockLessons is empty or not available.");
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [lesson]); // Depende apenas da `lesson` atual para recalcular as adjacentes
+  }, [lesson]);
 
 
   const handleMarkAsCompleted = async () => {
@@ -400,7 +416,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   </span>
                 </Link>
             </Button>
-            ) : <div className="w-full sm:w-auto min-w-[88px]">&nbsp;</div>} {/* Ajuste para manter espaço */}
+            ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0">
@@ -443,9 +459,11 @@ export function LessonView({ lesson }: LessonViewProps) {
                   </span>
                 </Link>
             </Button>
-            ) : <div className="w-full sm:w-auto min-w-[88px]">&nbsp;</div>} {/* Ajuste para manter espaço */}
+            ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
       </CardFooter>
     </div>
   );
 }
+
+    
