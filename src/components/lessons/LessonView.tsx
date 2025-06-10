@@ -14,8 +14,8 @@ import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
 import { summarizeLesson, type SummarizeLessonOutput } from '@/ai/flows/summarize-lesson';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase'; 
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'; 
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
@@ -34,20 +34,22 @@ const combinedRegex = new RegExp(
   `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
   "g"
 );
-const boldRegex = /\*\*(.*?)\*\*/g;
+const boldRegexGlobal = /\*\*(.*?)\*\*/g; 
 
+// Helper function to render text with bold formatting
 const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Element)[] => {
   const parts: (string | JSX.Element)[] = [];
   let lastIndex = 0;
-  boldRegex.lastIndex = 0;
   let match;
+  // Reset lastIndex for global regex
+  boldRegexGlobal.lastIndex = 0;
 
-  while ((match = boldRegex.exec(text)) !== null) {
+  while ((match = boldRegexGlobal.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
     parts.push(<strong key={`${baseKey}-bold-${match.index}`}>{match[1]}</strong>);
-    lastIndex = boldRegex.lastIndex;
+    lastIndex = boldRegexGlobal.lastIndex;
   }
 
   if (lastIndex < text.length) {
@@ -55,6 +57,61 @@ const renderTextWithBold = (text: string, baseKey: string): (string | JSX.Elemen
   }
   return parts;
 };
+
+// Helper function to render processed content elements into paragraphs
+const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string) => {
+  const paragraphs: JSX.Element[] = [];
+  let currentParagraphContent: (string | JSX.Element)[] = [];
+
+  elements.forEach((element, index) => {
+    if (typeof element === 'string') {
+      const stringParts = element.split(/\\n|\n/g); 
+      stringParts.forEach((part, partIndex) => {
+        if (part.trim() !== "") { 
+          currentParagraphContent.push(...renderTextWithBold(part, `${baseKey}-p${paragraphs.length}-s${index}-pt${partIndex}`));
+        }
+        if (partIndex < stringParts.length - 1 || (part.trim() !== "" && index === elements.length -1 && stringParts.length === 1 && !elements[index+1])) { 
+          
+          if (currentParagraphContent.length > 0) {
+            paragraphs.push(
+              <p key={`${baseKey}-p${paragraphs.length}`} className="mb-4 last:mb-0">
+                {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
+              </p>
+            );
+            currentParagraphContent = [];
+          }
+        }
+      });
+    } else { 
+      if (currentParagraphContent.length > 0) {
+        paragraphs.push(
+          <p key={`${baseKey}-p${paragraphs.length}-text`} className="mb-4 last:mb-0">
+            {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
+          </p>
+        );
+        currentParagraphContent = [];
+      }
+      paragraphs.push(<span key={`${baseKey}-jsx-${index}`} className="inline">{element}</span>); 
+    }
+  });
+
+  
+  if (currentParagraphContent.length > 0) {
+    paragraphs.push(
+      <p key={`${baseKey}-p${paragraphs.length}-final`} className="mb-4 last:mb-0">
+        {currentParagraphContent.map((content, i) => <Fragment key={i}>{content}</Fragment>)}
+      </p>
+    );
+  }
+  
+  
+  if (paragraphs.length === 0 && elements.some(el => (typeof el === 'string' && el.trim() !== '') || React.isValidElement(el))) {
+     return <p>{elements.map((el, i) => <Fragment key={i}>{el}</Fragment>)}</p>;
+  }
+
+  return paragraphs;
+};
+
 
 export function LessonView({ lesson }: LessonViewProps) {
   const { currentUser, userProfile, loading: authLoading } = useAuth();
@@ -70,12 +127,15 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
-  // Novos estados para o progresso das interações
   const [totalInteractiveElements, setTotalInteractiveElements] = useState(0);
   const [completedInteractionIds, setCompletedInteractionIds] = useState<Set<string>>(new Set());
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
-    setCompletedInteractionIds(prev => new Set(prev).add(interactionId));
+    setCompletedInteractionIds(prev => {
+      const newSet = new Set(prev);
+      newSet.add(interactionId);
+      return newSet;
+    });
   }, []);
 
   const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
@@ -87,7 +147,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
 
     let match;
-    combinedRegex.lastIndex = 0;
+    combinedRegex.lastIndex = 0; 
 
     while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
       const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
@@ -97,7 +157,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
       }
 
-      if (match[2]) { // INTERACTIVE_WORD_CHOICE
+      if (match[2]) { 
         const optionsString = match[2];
         if (optionsString) {
           const rawOptions = optionsString.split(';');
@@ -128,7 +188,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         } else {
            elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
         }
-      } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
+      } else if (match[4]) { 
         const optionsString = match[4];
         if (optionsString) {
           const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
@@ -157,7 +217,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lastIndex < contentWithoutGeneralComments.length) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
-    setTotalInteractiveElements(interactionCounter);
+    setTotalInteractiveElements(interactionCounter); 
     return elements;
   }, [lesson.id, handleInteractionCorrect]);
 
@@ -190,10 +250,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
 
   useEffect(() => {
-    // Resetar estado de interações quando a lição muda
     setCompletedInteractionIds(new Set());
-    // A contagem total é refeita pelo parseLessonContentAndCountInteractions no useMemo acima
-    // e setTotalInteractiveElements é chamado lá dentro.
 
     if (typeof window !== 'undefined' && !currentUser) {
       const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
@@ -234,7 +291,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         setNextLesson(null);
         return;
       }
-      const pathParts = lesson.moduleId.split('-mod-'); // Assume o formato 'trilhaId-mod-moduleIndex'
+      const pathParts = lesson.moduleId.split('-mod-'); 
       if (pathParts.length < 2) {
         console.warn("Module ID format unexpected for fetching adjacent lessons from Firestore:", lesson.moduleId);
         findAdjacentMockLessons();
@@ -286,7 +343,8 @@ export function LessonView({ lesson }: LessonViewProps) {
     } catch (error) {
       console.error("Failed to generate summary:", error);
       if (error instanceof Error) {
-        setSummaryError(`Desculpe, não foi possível gerar o resumo. Erro: ${error.message}`);
+        // Corrected line:
+        setSummaryError("Desculpe, não foi possível gerar o resumo. Erro: " + error.message);
       } else {
         setSummaryError("Desculpe, não foi possível gerar o resumo no momento devido a um erro desconhecido. Tente novamente mais tarde.");
       }
@@ -307,7 +365,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           let toastMessage = result.message;
           if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
             const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-            toastMessage += ` Você desbloqueou: ${achievementTitles}!`;
+            toastMessage += \` Você desbloqueou: \${achievementTitles}!\`;
              playSound('achievementUnlock');
           }
           toast({
@@ -368,7 +426,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   }
 
   const interactionsProgressText = totalInteractiveElements > 0 
-    ? `Interações concluídas: ${completedInteractionIds.size} de ${totalInteractiveElements}`
+    ? \`Interações concluídas: \${completedInteractionIds.size} de \${totalInteractiveElements}\`
     : "Nenhuma interação nesta lição.";
 
   return (
@@ -544,4 +602,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
+    
 
