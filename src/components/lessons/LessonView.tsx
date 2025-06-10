@@ -6,15 +6,17 @@ import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info, HelpCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react'; // Removido HelpCircle
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
-import { generateLessonQA, type GenerateLessonQAOutput } from '../../../ai/flows/generate-lesson-qa.ts'; // CORRIGIDO AQUI
+// Removida importação de generateLessonQA e GenerateLessonQAOutput
+// import { generateLessonQA, type GenerateLessonQAOutput } from '../../../ai/flows/generate-lesson-qa.ts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+// Removida importação de Accordion se não for mais usado
+// import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -113,9 +115,10 @@ export function LessonView({ lesson }: LessonViewProps) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [lessonQA, setLessonQA] = useState<{ question: string; answer: string }[] | null>(null);
-  const [isLoadingQA, setIsLoadingQA] = useState(false);
-  const [qaError, setQAError] = useState<string | null>(null);
+  // Estados para Q&A removidos
+  // const [lessonQA, setLessonQA] = useState<{ question: string; answer: string }[] | null>(null);
+  // const [isLoadingQA, setIsLoadingQA] = useState(false);
+  // const [qaError, setQAError] = useState<string | null>(null);
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isLocallyCompleted, setIsLocallyCompleted] = useState(false);
@@ -255,9 +258,10 @@ export function LessonView({ lesson }: LessonViewProps) {
       setIsLocallyCompleted(false);
     }
 
-    setLessonQA(null);
-    setQAError(null);
-    setIsLoadingQA(false);
+    // Reset dos estados de Q&A removido
+    // setLessonQA(null);
+    // setQAError(null);
+    // setIsLoadingQA(false);
     setIsMarkingComplete(false);
 
     const findAdjacentMockLessons = () => {
@@ -328,28 +332,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   }, [lesson, currentUser]);
 
-  const handleGenerateQA = async () => {
-    if (!lesson?.content) return;
-    setIsLoadingQA(true);
-    setLessonQA(null);
-    setQAError(null);
-    try {
-      const result: GenerateLessonQAOutput = await generateLessonQA({
-        lessonContent: lesson.content,
-        numberOfPairs: 3,
-      });
-      setLessonQA(result.qaPairs);
-    } catch (error) {
-      console.error("Failed to generate Q&A:", error);
-      if (error instanceof Error) {
-        setQAError('Desculpe, não foi possível gerar o resumo. Erro: ' + error.message);
-      } else {
-        setQAError("Desculpe, não foi possível gerar o resumo no momento devido a um erro desconhecido. Tente novamente mais tarde.");
-      }
-    } finally {
-      setIsLoadingQA(false);
-    }
-  };
+  // Função handleGenerateQA removida
 
   const handleMarkAsCompleted = async () => {
     if (isCompleted || isMarkingComplete || !allInteractionsCompleted) return;
@@ -363,8 +346,8 @@ export function LessonView({ lesson }: LessonViewProps) {
           let toastMessage = result.message;
           if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
             const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!'; // CORRIGIDO AQUI
-             playSound('achievementUnlock');
+            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
+            playSound('achievementUnlock');
           }
           toast({
             title: "Lição Concluída! 🎉",
@@ -484,6 +467,8 @@ export function LessonView({ lesson }: LessonViewProps) {
         </CardContent>
       </Card>
 
+      {/* Seção de Q&A Removida */}
+      {/* 
       <Card className="mt-6 shadow-lg">
         <CardHeader>
             <CardTitle className="text-xl flex items-center">
@@ -545,6 +530,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             )}
         </CardContent>
       </Card>
+      */}
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:flex-1 flex justify-center sm:justify-start">
