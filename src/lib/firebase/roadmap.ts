@@ -1,9 +1,15 @@
-
 // src/lib/firebase/roadmap.ts
+// ESTE ARQUIVO NÃO É MAIS USADO PARA BUSCAR DADOS DO FIRESTORE NO MODO ESTÁTICO.
+// Os dados virão de mockData.ts.
+// Mantendo o arquivo para referência futura ou se a funcionalidade do Firestore for reativada.
+
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
+import { mockRoadmapData as fallbackRoadmapData } from '@/lib/mockData'; 
+
+// Função original comentada, pois não será usada no modo estático.
+/*
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
-import { mockRoadmapData as fallbackRoadmapData } from '@/lib/mockData'; // Importando os dados mockados
 
 export async function getRoadmapDataFromFirestore(): Promise<RoadmapStep[]> {
   try {
@@ -55,10 +61,14 @@ export async function getRoadmapDataFromFirestore(): Promise<RoadmapStep[]> {
   } catch (error) {
     console.error("Erro ao buscar dados do roadmap do Firestore:", error);
     console.warn("Retornando dados mockados devido a erro na busca do Firestore.");
-    // Em caso de erro (ex: permissão negada para não logados), retorna os dados mockados.
-    // Em um ambiente de produção, você pode querer tratar isso de forma diferente
-    // ou garantir que as regras do Firestore permitam leitura pública.
     return fallbackRoadmapData;
   }
 }
+*/
 
+// Função para retornar os dados mockados diretamente, já que não estamos usando Firestore.
+export async function getRoadmapData(): Promise<RoadmapStep[]> {
+  // Simula um pequeno atraso, como se estivesse buscando dados, para manter consistência com uma possível chamada async.
+  await new Promise(resolve => setTimeout(resolve, 50)); 
+  return fallbackRoadmapData;
+}

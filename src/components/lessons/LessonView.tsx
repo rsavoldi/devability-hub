@@ -1,31 +1,25 @@
-
+// src/components/lessons/LessonView.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
-import type { Lesson } from '@/lib/types';
+import type { Lesson, Achievement, UserProfile } from '@/lib/types'; // UserProfile adicionado
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react'; // Removido HelpCircle
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
-// Removida importação de generateLessonQA e GenerateLessonQAOutput
-// import { generateLessonQA, type GenerateLessonQAOutput } from '../../../ai/flows/generate-lesson-qa.ts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// Removida importação de Accordion se não for mais usado
-// import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockRoadmapData } from '@/lib/mockData';
+import { mockLessons as allMockLessons, mockRoadmapData, mockAchievements } from '@/lib/mockData';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -111,18 +105,12 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { currentUser, userProfile, loading: authLoading, refreshUserProfile } = useAuth();
+  const { userProfile, loading: authLoading, updateUserProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
-  // Estados para Q&A removidos
-  // const [lessonQA, setLessonQA] = useState<{ question: string; answer: string }[] | null>(null);
-  // const [isLoadingQA, setIsLoadingQA] = useState(false);
-  // const [qaError, setQAError] = useState<string | null>(null);
-
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [isLocallyCompleted, setIsLocallyCompleted] = useState(false);
-
+  
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
@@ -133,9 +121,14 @@ export function LessonView({ lesson }: LessonViewProps) {
     setCompletedInteractionIds(prev => {
       const newSet = new Set(prev);
       newSet.add(interactionId);
+      // Salvar progresso das interações no localStorage
+      if (typeof window !== 'undefined') {
+          const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
+          localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
+      }
       return newSet;
     });
-  }, []);
+  }, [lesson.id]);
 
   const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
     const elements: (string | JSX.Element)[] = [];
@@ -156,7 +149,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
       }
 
-      if (match[2]) {
+      if (match[2]) { // INTERACTIVE_WORD_CHOICE
         const optionsString = match[2];
         if (optionsString) {
           const rawOptions = optionsString.split(';');
@@ -181,13 +174,12 @@ export function LessonView({ lesson }: LessonViewProps) {
               />
             );
           } else {
-            console.warn("Error parsing INTERACTIVE_WORD_CHOICE:", match[0]);
             elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
           }
         } else {
            elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
         }
-      } else if (match[4]) {
+      } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
         const optionsString = match[4];
         if (optionsString) {
           const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
@@ -203,7 +195,6 @@ export function LessonView({ lesson }: LessonViewProps) {
               />
             );
           } else {
-            console.warn("Error parsing INTERACTIVE_FILL_IN_BLANK:", match[0]);
              elements.push(`<!-- FB PARSE ERROR: ${match[0]} -->`);
           }
         } else {
@@ -220,7 +211,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     return elements;
   }, [lesson.id, handleInteractionCorrect]);
 
-
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
       return parseLessonContentAndCountInteractions(lesson.content);
@@ -229,41 +219,34 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson?.content, parseLessonContentAndCountInteractions]);
 
   const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 && completedInteractionIds.size === totalInteractiveElements;
+    return totalInteractiveElements === 0 || completedInteractionIds.size === totalInteractiveElements;
   }, [totalInteractiveElements, completedInteractionIds]);
 
+
   const isCompleted = useMemo(() => {
-    if (authLoading && !currentUser) return isLocallyCompleted;
-    if (currentUser && userProfile) {
+    if (authLoading) return false; // Espera o auth carregar
+    if (userProfile) { // Se tem perfil (mesmo que convidado)
       return userProfile.completedLessons.includes(lesson.id);
     }
-    if (typeof window !== 'undefined') {
-      const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
-      if (guestProgress) {
-        const completedLessonIds: string[] = JSON.parse(guestProgress);
-        return completedLessonIds.includes(lesson.id);
-      }
-    }
-    return isLocallyCompleted;
-  }, [currentUser, userProfile, lesson.id, authLoading, isLocallyCompleted]);
+    return false; // Default se não houver perfil
+  }, [userProfile, lesson.id, authLoading]);
 
 
   useEffect(() => {
-    setCompletedInteractionIds(new Set());
-
-    if (typeof window !== 'undefined' && !currentUser) {
-      const guestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
-      setIsLocallyCompleted(guestProgress ? JSON.parse(guestProgress).includes(lesson.id) : false);
-    } else {
-      setIsLocallyCompleted(false);
+    // Carregar progresso das interações do localStorage ao montar a lição
+    if (typeof window !== 'undefined' && lesson) {
+        const currentLessonInteractionsKey = `lesson_interactions_${lesson.id}`;
+        const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
+        if (storedInteractions) {
+            setCompletedInteractionIds(new Set(JSON.parse(storedInteractions)));
+        } else {
+            setCompletedInteractionIds(new Set()); // Reset se não houver nada salvo
+        }
     }
 
-    // Reset dos estados de Q&A removido
-    // setLessonQA(null);
-    // setQAError(null);
-    // setIsLoadingQA(false);
     setIsMarkingComplete(false);
 
+    // Lógica para encontrar lições adjacentes (mantida, pois usa mockData)
     const findAdjacentMockLessons = () => {
       if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) return;
 
@@ -285,121 +268,44 @@ export function LessonView({ lesson }: LessonViewProps) {
       }
     };
     
-    const fetchAdjacentFirestoreLessons = async () => {
-      if (!lesson || typeof lesson.order === 'undefined' || !lesson.moduleId) {
-        setPrevLesson(null);
-        setNextLesson(null);
-        return;
-      }
-      const pathParts = lesson.moduleId.split('-mod-');
-      if (pathParts.length < 2) {
-        console.warn("Module ID format unexpected for fetching adjacent lessons from Firestore:", lesson.moduleId);
-        findAdjacentMockLessons();
-        return;
-      }
-      const trilhaId = pathParts[0];
-      const moduleIdForFirestore = lesson.moduleId;
+    findAdjacentMockLessons();
 
-      try {
-        const prevQuery = query(
-          collection(db, 'roadmaps', trilhaId, 'modules', moduleIdForFirestore, 'lessons'),
-          where('order', '<', lesson.order),
-          orderBy('order', 'desc'),
-          limit(1)
-        );
-        const prevSnapshot = await getDocs(prevQuery);
-        setPrevLesson(prevSnapshot.empty ? null : { id: prevSnapshot.docs[0].id, ...prevSnapshot.docs[0].data() } as Lesson);
+  }, [lesson]);
 
-        const nextQuery = query(
-          collection(db, 'roadmaps', trilhaId, 'modules', moduleIdForFirestore, 'lessons'),
-          where('order', '>', lesson.order),
-          orderBy('order', 'asc'),
-          limit(1)
-        );
-        const nextSnapshot = await getDocs(nextQuery);
-        setNextLesson(nextSnapshot.empty ? null : { id: nextSnapshot.docs[0].id, ...nextSnapshot.docs[0].data() } as Lesson);
-      } catch (error) {
-        console.error("Error fetching adjacent lessons from Firestore, falling back to mock data:", error);
-        findAdjacentMockLessons();
-      }
-    };
-
-    if (currentUser) {
-      fetchAdjacentFirestoreLessons();
-    } else {
-      findAdjacentMockLessons();
-    }
-
-  }, [lesson, currentUser]);
-
-  // Função handleGenerateQA removida
 
   const handleMarkAsCompleted = async () => {
     if (isCompleted || isMarkingComplete || !allInteractionsCompleted) return;
     setIsMarkingComplete(true);
 
-    if (currentUser) {
-      try {
-        const result = await markLessonCompletedAction(currentUser.uid, lesson.id);
-        if (result.success) {
-          playSound('pointGain');
-          let toastMessage = result.message;
-          if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
-            const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
-            playSound('achievementUnlock');
-          }
-          toast({
-            title: "Lição Concluída! 🎉",
-            description: toastMessage,
-            className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
-          });
-          refreshUserProfile(); 
-        } else {
-          toast({
-            title: "Erro",
-            description: result.message,
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao marcar lição (logado):", error);
-        toast({
-          title: "Erro Inesperado",
-          description: "Não foi possível marcar a lição como concluída. Tente novamente.",
-          variant: "destructive",
-        });
+    // Chamar a action (que agora deve retornar o perfil atualizado para o cliente)
+    const result = await markLessonCompletedAction(userProfile, lesson.id);
+
+    if (result.success && result.updatedProfile) {
+      updateUserProfile(result.updatedProfile); // Atualiza o contexto E localStorage
+      playSound('pointGain');
+      let toastMessage = "Lição marcada como concluída localmente!";
+      if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
+        const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
+        toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
+        playSound('achievementUnlock');
       }
+      toast({
+        title: "Lição Concluída! 🎉",
+        description: toastMessage,
+        className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
+      });
+      // refreshUserProfile(); // Chamado dentro de updateUserProfile implicitamente ou explicitamente
     } else {
-      if (typeof window !== 'undefined') {
-        try {
-          const guestProgressRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
-          let guestCompletedLessons: string[] = guestProgressRaw ? JSON.parse(guestProgressRaw) : [];
-          if (!guestCompletedLessons.includes(lesson.id)) {
-            guestCompletedLessons.push(lesson.id);
-            localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS, JSON.stringify(guestCompletedLessons));
-          }
-          setIsLocallyCompleted(true);
-          playSound('pointGain');
-          toast({
-            title: "Lição Marcada! 🎉",
-            description: "Seu progresso foi salvo localmente. Crie uma conta para salvar na nuvem!",
-            className: "bg-blue-500 dark:bg-blue-700 text-white dark:text-white",
-          });
-        } catch (error) {
-          console.error("Erro ao marcar lição (convidado):", error);
-          toast({
-            title: "Erro ao Salvar Localmente",
-            description: "Não foi possível salvar seu progresso localmente.",
-            variant: "destructive",
-          });
-        }
-      }
+      toast({
+        title: "Erro",
+        description: result.message || "Não foi possível marcar a lição como concluída.",
+        variant: "destructive",
+      });
     }
     setIsMarkingComplete(false);
   };
 
-  if (authLoading && !currentUser) {
+  if (authLoading) { // Verifica authLoading em vez de !currentUser (que agora é sempre guest ou user)
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -467,71 +373,6 @@ export function LessonView({ lesson }: LessonViewProps) {
         </CardContent>
       </Card>
 
-      {/* Seção de Q&A Removida */}
-      {/* 
-      <Card className="mt-6 shadow-lg">
-        <CardHeader>
-            <CardTitle className="text-xl flex items-center">
-                <HelpCircle className="mr-2 h-5 w-5 text-primary" />
-                Perguntas e Respostas (IA)
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
-            {(!lessonQA && !qaError) && !isLoadingQA && (
-                 <p className="text-sm text-muted-foreground mb-4">
-                    Clique no botão abaixo para gerar perguntas e respostas sobre esta lição usando Inteligência Artificial.
-                </p>
-            )}
-            <Button
-                onClick={handleGenerateQA}
-                disabled={isLoadingQA || !lesson?.content}
-                className="w-full sm:w-auto"
-            >
-              {isLoadingQA ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <HelpCircle className="mr-2 h-4 w-4" />
-              )}
-              {(lessonQA || qaError) ? "Gerar Novas P&R" : "Gerar P&R"}
-            </Button>
-
-            {isLoadingQA && (
-              <div className="mt-4 flex items-center text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Gerando P&R...</span>
-              </div>
-            )}
-
-            {qaError && !isLoadingQA && (
-              <Alert className="mt-4" variant="destructive">
-                <AlertTitle>Erro ao Gerar P&R</AlertTitle>
-                <AlertDescription>
-                    {qaError}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {lessonQA && lessonQA.length > 0 && !isLoadingQA && !qaError && (
-              <Accordion type="single" collapsible className="w-full mt-4 space-y-2">
-                {lessonQA.map((pair, index) => (
-                  <AccordionItem value={`item-${index}`} key={index} className="border rounded-md">
-                    <AccordionTrigger className="p-4 text-left hover:no-underline">
-                      <span className="font-medium">{index + 1}. {pair.question}</span>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                      <p className="text-sm text-muted-foreground">{pair.answer}</p>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-            {lessonQA && lessonQA.length === 0 && !isLoadingQA && !qaError && (
-                <p className="mt-4 text-sm text-muted-foreground">Nenhuma pergunta e resposta foi gerada.</p>
-            )}
-        </CardContent>
-      </Card>
-      */}
-
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:flex-1 flex justify-center sm:justify-start">
             {prevLesson ? (
@@ -594,4 +435,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-    

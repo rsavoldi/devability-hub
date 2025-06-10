@@ -1,11 +1,11 @@
-
+// src/components/roadmap/RoadmapDisplay.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, BookOpen, PackageSearch, PersonStanding, Rocket, type LucideIcon, CheckCircle } from 'lucide-react';
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types'; // Renomeado Module para ModuleType
+import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
@@ -83,7 +83,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
     }, [router]);
 
     const processedNodes: ProcessedRoadmapNode[] = useMemo(() => {
-        if (!initialRoadmapData || initialRoadmapData.length === 0) return [];
+        if (authLoading || !initialRoadmapData || initialRoadmapData.length === 0) return [];
 
         const completedModulesSet = userProfile ? new Set(userProfile.completedModules || []) : new Set<string>();
 
@@ -106,6 +106,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                 const firstModuleOfStep = step.modules && step.modules.length > 0 ? step.modules[0] : null;
 
                 const isStepCompleted = userProfile ? (step.modules ? step.modules.every(mod => completedModulesSet.has(mod.id)) : false) : false;
+                // Para convidado, nenhuma trilha é marcada como 'completed' inicialmente baseado em perfil,
+                // a menos que haja uma lógica local de progresso de trilhas para convidados (não implementado aqui).
 
                 return {
                     id: step.id,
@@ -119,34 +121,44 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                     description: step.description,
                     firstModuleId: firstModuleOfStep?.id,
                     isCompleted: isStepCompleted,
-                    isCurrent: false, // Será definido abaixo
+                    isCurrent: false, 
                     order: step.order ?? index,
                 };
             });
         
-        if (authLoading) { 
-            return tempProcessedNodes;
-        }
-
         let currentFound = false;
         const finalNodes = tempProcessedNodes.map(node => {
-            if (!userProfile) { 
+            // Se não há perfil (convidado sem progresso salvo) ou o perfil está carregando,
+            // a primeira trilha é a atual.
+            if (!userProfile && !authLoading) { 
                 return { ...node, isCurrent: node.order === 1 || (node.order === 0 && tempProcessedNodes.length ===1) };
             }
-            if (!node.isCompleted && !currentFound) {
+            // Se há perfil, define a primeira não completada como atual
+            if (userProfile && !node.isCompleted && !currentFound) {
                 currentFound = true;
                 return { ...node, isCurrent: true };
             }
             return { ...node, isCurrent: false };
         });
 
+        // Se todas as trilhas foram completadas (e há perfil), ou se nenhuma "atual" foi encontrada
         if (userProfile && !currentFound && finalNodes.length > 0) {
-            finalNodes[finalNodes.length - 1].isCurrent = true;
-        } else if (!userProfile && finalNodes.length > 0 && !finalNodes.some(n => n.isCurrent)) {
-             const minOrderNode = finalNodes.reduce((prev, curr) => (prev.order < curr.order ? prev : curr));
+            // Se todas completas, a última pode ser considerada "atual" para revisão, ou nenhuma.
+            // Aqui, vamos marcar a última como 'isCurrent' se todas estiverem completas.
+            // Ou, se nenhuma foi marcada como atual (cenário de fallback)
+            const allCompleted = finalNodes.every(n => n.isCompleted);
+            if (allCompleted) {
+                 finalNodes[finalNodes.length - 1].isCurrent = true;
+            } else if (!finalNodes.some(n => n.isCurrent)) { // Se nenhuma é atual, marca a primeira não completa
+                const firstNonCompleted = finalNodes.find(n => !n.isCompleted);
+                if (firstNonCompleted) firstNonCompleted.isCurrent = true;
+                else finalNodes[0].isCurrent = true; // Fallback para a primeira
+            }
+        } else if (!userProfile && !authLoading && finalNodes.length > 0 && !finalNodes.some(n => n.isCurrent)) {
+             // Para convidado, se nenhuma foi marcada como atual (deveria ser a primeira), força a primeira.
+             const minOrderNode = finalNodes.reduce((prev, curr) => ((prev.order ?? Infinity) < (curr.order ?? Infinity) ? prev : curr));
              minOrderNode.isCurrent = true;
         }
-
         return finalNodes;
 
     }, [initialRoadmapData, userProfile, authLoading]);
@@ -186,8 +198,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
       return processedNodes.find(node => node.isCurrent) || null;
     }, [processedNodes, authLoading]);
 
-
-    if (authLoading && initialRoadmapData.length === 0) {
+    if (authLoading && initialRoadmapData.length === 0) { // Modificado para authLoading
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -199,7 +210,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
     if (initialRoadmapData.length === 0 && !authLoading) {
          return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
-                <p className="text-lg text-muted-foreground">Nenhuma trilha encontrada ou erro ao carregar. Tente recarregar.</p>
+                <p className="text-lg text-muted-foreground">Nenhuma trilha encontrada. O conteúdo pode estar sendo preparado.</p>
             </div>
         );
     }
@@ -226,11 +237,10 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                 : "text-foreground group-hover/node-visual:text-primary";
                         
                         const circleFillClass = node.isCompleted
-                            ? "fill-green-500/10 dark:fill-green-700/10" // 10% opacity
+                            ? "fill-green-500/10 dark:fill-green-700/10"
                             : node.isCurrent
-                                ? "fill-primary/10" // 10% opacity
-                                : "fill-muted/10 group-hover/node-visual:fill-primary/10"; // 10% opacity
-
+                                ? "fill-primary/10"
+                                : "fill-muted/10 group-hover/node-visual:fill-primary/10";
 
                         const titleTextFillClass = node.isCompleted 
                             ? "fill-green-700 dark:fill-green-300" 
@@ -246,10 +256,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                     className={cn(
                                         "stroke-2 transition-all duration-200 ease-in-out",
                                         "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90",
-                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 stroke-primary dark:ring-primary/70"
-                                                                          : "",
-                                        node.isCompleted ? "stroke-green-500"
-                                                         : "stroke-border",
+                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 stroke-primary dark:ring-primary/70" : "",
+                                        node.isCompleted ? "stroke-green-500" : "stroke-border",
                                         circleFillClass 
                                     )}
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }}
@@ -320,5 +328,3 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         </div>
     );
 }
-
-    

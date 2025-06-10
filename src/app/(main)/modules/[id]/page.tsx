@@ -1,18 +1,20 @@
-
+// src/app/(main)/modules/[id]/page.tsx
 "use client";
 
 import { use, useEffect, useState, useMemo, useCallback } from 'react'; 
-import { mockRoadmapData } from '@/lib/mockData'; 
+import { mockRoadmapData, mockExercises as allMockExercises } from '@/lib/mockData'; 
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, BookOpen, Target, ExternalLink, Loader2, Zap, ListChecks } from 'lucide-react';
+import { ArrowLeft, CheckCircle, BookOpen, Target, ExternalLink, Loader2, ListChecks } from 'lucide-react'; // Removido Zap
 import Link from 'next/link';
-import Image from 'next/image';
+// import Image from 'next/image'; // Removido se não usado
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext'; 
-import { cn } from '@/lib/utils'; // <-- IMPORTAÇÃO ADICIONADA AQUI
+import { cn } from '@/lib/utils';
+import { LOCAL_STORAGE_KEYS } from '@/constants';
+import { useToast } from '@/hooks/use-toast';
 
 interface ModulePageProps {
   params: Promise<{ 
@@ -24,11 +26,13 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   const actualParams = use(paramsPromise); 
   const { id: moduleId } = actualParams; 
 
-  const { userProfile, loading: authLoading } = useAuth(); 
+  const { userProfile, loading: authLoading, updateUserProfile } = useAuth(); 
+  const { toast } = useToast();
 
   const [module, setModule] = useState<Module | null>(null);
   const [parentTrilha, setParentTrilha] = useState<RoadmapStep | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMarkingModuleComplete, setIsMarkingModuleComplete] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -54,21 +58,20 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     return userProfile.completedLessons.includes(lessonId);
   }, [userProfile, authLoading]);
   
-  const { moduleProgress, moduleIsCompleted } = useMemo(() => {
+  const { moduleProgress, moduleIsCompleted, allLessonsCompleted } = useMemo(() => {
     if (authLoading || !userProfile || !module?.lessons) {
-      return { moduleProgress: module?.progress || 0, moduleIsCompleted: module?.isCompleted || false };
-    }
-
-    if (userProfile.completedModules.includes(module.id)) {
-        const totalModuleLessons = module.lessons.length;
-        const completedLessonsCount = totalModuleLessons > 0 ? module.lessons.filter(l => userProfile.completedLessons.includes(l.id)).length : 0;
-        const progress = totalModuleLessons > 0 ? (completedLessonsCount / totalModuleLessons) * 100 : 100;
-        return { moduleProgress: progress, moduleIsCompleted: true };
+      return { 
+        moduleProgress: module?.progress || 0, 
+        moduleIsCompleted: userProfile?.completedModules.includes(module?.id || "") || module?.isCompleted || false,
+        allLessonsCompleted: false
+      };
     }
     
     const totalModuleLessons = module.lessons.length;
     if (totalModuleLessons === 0) {
-      return { moduleProgress: 0, moduleIsCompleted: false }; 
+      // Se não há lições, considera completo se estiver no perfil ou se já estava marcado
+      const isActuallyCompleted = userProfile.completedModules.includes(module.id) || module.isCompleted || false;
+      return { moduleProgress: isActuallyCompleted ? 100: 0, moduleIsCompleted: isActuallyCompleted, allLessonsCompleted: true }; 
     }
 
     const completedLessonsCount = module.lessons.filter(l =>
@@ -76,10 +79,35 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     ).length;
     
     const progress = (completedLessonsCount / totalModuleLessons) * 100;
-    const isCompletedBasedOnLessons = progress === 100;
+    const allLessonsDone = completedLessonsCount === totalModuleLessons;
+    const isCompletedByProfile = userProfile.completedModules.includes(module.id);
 
-    return { moduleProgress: progress, moduleIsCompleted: isCompletedBasedOnLessons };
+    return { 
+        moduleProgress: progress, 
+        moduleIsCompleted: isCompletedByProfile, // Confia no que está no perfil para "módulo completo"
+        allLessonsCompleted: allLessonsDone
+    };
   }, [module, userProfile, authLoading]);
+
+  const handleMarkModuleAsCompleted = () => {
+    if (!userProfile || !module || moduleIsCompleted || !allLessonsCompleted) return;
+
+    setIsMarkingModuleComplete(true);
+    const newCompletedModules = [...new Set([...userProfile.completedModules, module.id])];
+    const pointsForModuleCompletion = 50; // Exemplo de pontos para completar módulo
+    
+    updateUserProfile({
+      completedModules: newCompletedModules,
+      points: (userProfile.points || 0) + pointsForModuleCompletion
+    });
+
+    toast({
+      title: "Módulo Concluído! 🚀",
+      description: `Você ganhou ${pointsForModuleCompletion} pontos por completar o módulo "${module.title}"!`,
+      className: "bg-primary text-primary-foreground",
+    });
+    setIsMarkingModuleComplete(false);
+  };
 
 
   if (isLoading || authLoading) { 
@@ -93,6 +121,8 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   if (!module || !parentTrilha) {
     return <div className="text-center py-10">Módulo ou trilha não encontrado.</div>;
   }
+
+  const exercisesForThisModule = allMockExercises.filter(ex => ex.moduleId === module.id);
 
   return (
     <div className="container mx-auto py-8">
@@ -111,10 +141,11 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{module.title}</CardTitle>
           <CardDescription className="mt-1 text-lg">
             {module.lessons.length} lições
+            {exercisesForThisModule.length > 0 && `, ${exercisesForThisModule.length} exercícios`}
           </CardDescription>
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo</span>
+              <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo (Lições)</span>
               <Badge variant={moduleIsCompleted ? "default" : "secondary"} className={cn(moduleIsCompleted ? "bg-green-500 hover:bg-green-600" : "bg-secondary hover:bg-secondary/80")}>
                 {moduleProgress.toFixed(0)}% {moduleIsCompleted ? "Concluído" : ""}
               </Badge>
@@ -157,7 +188,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
             )}
           </section>
 
-          {module.exercises && module.exercises.length > 0 && (
+          {exercisesForThisModule.length > 0 && (
             <section>
               <h2 className="text-2xl font-semibold mb-4 flex items-center">
                 <Target className="h-6 w-6 mr-2 text-primary" />
@@ -167,30 +198,30 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
                 <Link href={`/modules/${moduleId}/exercises`}> 
                   <span className="flex items-center">
                     <ListChecks className="mr-2 h-5 w-5" />
-                    Acessar Exercícios do Módulo
+                    Acessar Exercícios do Módulo ({exercisesForThisModule.length})
                   </span>
                 </Link>
               </Button>
                <p className="text-sm text-muted-foreground mt-2">
-                Os exercícios práticos para este módulo estão agrupados em uma página dedicada.
+                Teste seus conhecimentos com os exercícios práticos deste módulo.
               </p>
             </section>
           )}
         </CardContent>
         <CardFooter className="p-6 bg-muted/30">
-             <Button size="lg" className="w-full" disabled={moduleIsCompleted}>
-                {moduleIsCompleted ? (
-                    <> <CheckCircle className="mr-2 h-5 w-5"/> Módulo Concluído! </>
-                ) : (
-                    "Marcar Módulo como Concluído (em breve)"
-                )}
+             <Button 
+                size="lg" 
+                className="w-full" 
+                onClick={handleMarkModuleAsCompleted}
+                disabled={moduleIsCompleted || !allLessonsCompleted || isMarkingModuleComplete}
+                variant={moduleIsCompleted ? "default" : (allLessonsCompleted ? "secondary" : "outline")}
+             >
+                {isMarkingModuleComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
+                {moduleIsCompleted ? "Módulo Concluído!" : 
+                 (allLessonsCompleted ? "Marcar Módulo como Concluído" : "Complete todas as lições para finalizar")}
              </Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
-    
-
-    

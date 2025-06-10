@@ -1,8 +1,8 @@
-
+// src/components/layout/AppHeader.tsx
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, UserCircle, Menu as MenuIcon, Home, BookOpen, Target, SpellCheck, Trophy, LayoutDashboard, Settings, Award, Bot, LogOut } from "lucide-react";
+import { Moon, Sun, UserCircle, Menu as MenuIcon, Home, BookOpen, Target, SpellCheck, Trophy, LayoutDashboard, Settings, Award, Bot, LogOut, UserPlus, LogIn } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,9 +21,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatbotDialog } from "@/components/chatbot/ChatbotDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
+// import { auth } from '@/lib/firebase'; // Firebase Auth não é mais usado diretamente aqui
+// import { signOut } from 'firebase/auth'; // Firebase Auth não é mais usado diretamente aqui
 import { useRouter } from "next/navigation";
+import { LOCAL_STORAGE_KEYS } from "@/constants";
 
 const mainNavItems: NavItem[] = [
   { href: "/", label: "Roadmap", icon: Home },
@@ -34,25 +35,30 @@ const mainNavItems: NavItem[] = [
 ];
 
 const toolNavItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  // { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, // Dashboard pode ser removido/simplificado
 ];
 
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, refreshUserProfile } = useAuth(); // Removido loading, pois o AuthProvider já lida com isso
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login'); 
-    } catch (error) {
-      console.error("Error signing out: ", error);
+  const handleClearGuestProgress = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.PROGRESS);
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS); // Limpar lições de convidado também
+      refreshUserProfile(); // Recarrega o perfil (que será o padrão de convidado)
+      router.push('/'); // Opcional: redirecionar para a home
+      // Idealmente, um toast de sucesso aqui
     }
   };
+
+  const displayName = userProfile?.name || "Convidado(a)";
+  const displayAvatarFallback = displayName.substring(0, 1).toUpperCase();
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -101,7 +107,7 @@ export function AppHeader() {
           <div className="flex-grow" />
 
           <div className="flex items-center gap-2">
-            {currentUser && userProfile && (
+            {userProfile && (
               <div className={cn("items-center gap-2 text-sm font-medium", isMobile ? "hidden" : "flex")}>
                 <span>💎</span>
                 <span>{userProfile.points} Pontos</span>
@@ -120,55 +126,66 @@ export function AppHeader() {
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
 
-            {currentUser && userProfile ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full" suppressHydrationWarning>
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} />
-                      <AvatarFallback>{userProfile.name ? userProfile.name.substring(0, 2).toUpperCase() : 'U'}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem disabled>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{userProfile.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
+            {/* Menu do Usuário / Convidado */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full" suppressHydrationWarning>
+                  <Avatar className="h-9 w-9">
+                    {userProfile?.avatarUrl ? (
+                       <AvatarImage src={userProfile.avatarUrl} alt={displayName} />
+                    ) : (
+                      <AvatarImage src={`https://placehold.co/100x100.png?text=${displayAvatarFallback}`} alt={displayName} />
+                    )}
+                    <AvatarFallback>{displayAvatarFallback}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem disabled>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    {currentUser?.email && (
+                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser.email}
                       </p>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <span className="flex items-center w-full">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      Perfil
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <span className="flex items-center w-full">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configurações
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleClearGuestProgress}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Limpar Progresso Local</span>
+                </DropdownMenuItem>
+                 <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <span className="flex items-center w-full">
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        Perfil
-                      </span>
+                    <Link href="/login">
+                       <LogIn className="mr-2 h-4 w-4" /> Login (Em implantação)
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">
-                      <span className="flex items-center w-full">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Configurações
-                      </span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                    <Link href="/register">
+                       <UserPlus className="mr-2 h-4 w-4" /> Registrar (Em implantação)
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/login">Entrar</Link>
-              </Button>
-            )}
-
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {isMobile && (
               <DropdownMenu>
@@ -189,7 +206,7 @@ export function AppHeader() {
                       </Link>
                     </DropdownMenuItem>
                   ))}
-                   {currentUser && userProfile && ( 
+                   {userProfile && ( 
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">

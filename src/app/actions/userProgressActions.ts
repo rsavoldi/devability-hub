@@ -1,105 +1,154 @@
-
 // src/app/actions/userProgressActions.ts
-"use server";
+"use server"; // Esta diretiva pode ser mantida, mas a lógica é client-side via chamada indireta
 
-import { db } from "@/lib/firebase";
-import { doc, updateDoc, arrayUnion, getDoc, Timestamp } from "firebase/firestore";
 import type { UserProfile, Achievement } from "@/lib/types";
-import { mockAchievements } from "@/lib/mockData"; // Para obter os detalhes da conquista
+import { mockAchievements } from "@/lib/mockData";
+import { LOCAL_STORAGE_KEYS } from '@/constants';
 
 interface MarkLessonCompletedResult {
   success: boolean;
   message: string;
-  updatedProfile?: UserProfile | null;
+  updatedProfile?: UserProfile | null; // Opcional, pois o AuthContext pode reler
   unlockedAchievementsDetails?: Achievement[];
 }
 
-export async function markLessonAsCompleted(
-  userId: string,
-  lessonId: string
-): Promise<MarkLessonCompletedResult> {
-  if (!userId || !lessonId) {
-    return { success: false, message: "ID do usuário ou da lição ausente.", unlockedAchievementsDetails: [] };
-  }
+// Esta função será chamada no contexto do servidor (ou pode ser convertida para client-side)
+// mas para este exemplo, vamos assumir que ela é chamada e o AuthContext no cliente
+// vai lidar com a atualização do localStorage e do estado.
+// Para uma solução puramente client-side, moveríamos essa lógica para o AuthContext ou um hook.
+// Por enquanto, faremos ela retornar os dados para o cliente atualizar o localStorage.
 
-  const userDocRef = doc(db, "users", userId);
-
-  try {
-    const userDocSnap = await getDoc(userDocRef);
-    if (!userDocSnap.exists()) {
-      return { success: false, message: "Perfil do usuário não encontrado.", unlockedAchievementsDetails: [] };
-    }
-
-    const userProfile = userDocSnap.data() as UserProfile;
-    const currentCompletedLessons = userProfile.completedLessons || [];
-    const currentUnlockedAchievements = userProfile.unlockedAchievements || [];
-    const currentPoints = userProfile.points || 0;
-
-    let pointsToAdd = 0;
-    const newAchievementsToUnlock: string[] = [];
-    const unlockedAchievementsDetails: Achievement[] = [];
-
-    // Se a lição ainda não foi completada
-    if (!currentCompletedLessons.includes(lessonId)) {
-      pointsToAdd = 10; // Pontos pela conclusão da lição
-
-      // Conquista "Leitor Assíduo" (ach3) - Primeira lição concluída
-      if (!currentUnlockedAchievements.includes('ach3') && currentCompletedLessons.length === 0) {
-        newAchievementsToUnlock.push('ach3');
-        const achDetails = mockAchievements.find(a => a.id === 'ach3');
-        if (achDetails) unlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
-      }
-      
-      // Conquista "Explorador de Trilhas" (ach2) - Pode ser a primeira lição de todas, ou poderíamos refinar
-      // Por simplicidade, se ach3 for desbloqueada, ach2 também é (se não tiver sido antes)
-      if (newAchievementsToUnlock.includes('ach3') && !currentUnlockedAchievements.includes('ach2')) {
-        newAchievementsToUnlock.push('ach2');
-         const achDetails = mockAchievements.find(a => a.id === 'ach2');
-        if (achDetails) unlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
-      }
-    }
-
-    const updatedCompletedLessons = arrayUnion(lessonId);
-    const updatedUnlockedAchievements = newAchievementsToUnlock.length > 0 ? arrayUnion(...newAchievementsToUnlock) : currentUnlockedAchievements; // Mantém o array se não houver novas
-
-    await updateDoc(userDocRef, {
-      completedLessons: updatedCompletedLessons,
-      points: currentPoints + pointsToAdd,
-      unlockedAchievements: updatedUnlockedAchievements,
-    });
-    
-    // Para feedback imediato, podemos simular o perfil atualizado
-    // Em uma aplicação real, você pode querer refetch o perfil ou usar o listener do AuthContext
-     const simulatedUpdatedProfile: UserProfile = {
-      ...userProfile,
-      completedLessons: [...new Set([...currentCompletedLessons, lessonId])],
-      points: currentPoints + pointsToAdd,
-      unlockedAchievements: [...new Set([...currentUnlockedAchievements, ...newAchievementsToUnlock])],
-    };
-
-    return {
-      success: true,
-      message: "Lição marcada como concluída com sucesso!",
-      updatedProfile: simulatedUpdatedProfile, // Para feedback otimista na UI se necessário
-      unlockedAchievementsDetails,
-    };
-  } catch (error: any) {
-    console.error("Erro detalhado ao marcar lição como concluída:", error);
-    console.error("Detalhes do erro:", {
-      message: error.message,
-      stack: error.stack,
-      userId,
-      lessonId
-    });
-    return {
-      success: false,
-      message: "Erro ao marcar lição como concluída. Tente novamente.",
-      unlockedAchievementsDetails: [],
-    };
-  }
+interface UserProgressUpdate {
+  completedLessons?: string[];
+  points?: number;
+  unlockedAchievements?: string[];
+  // Adicione outros campos se necessário
 }
 
-// Futura action para exercícios (exemplo)
-export async function markExerciseAsCompleted(userId: string, exerciseId: string, pointsAwarded: number) {
-  // Lógica similar à markLessonAsCompleted
+export async function markLessonAsCompleted(
+  currentProfile: UserProfile | null, // Perfil atual vindo do cliente
+  lessonId: string
+): Promise<MarkLessonCompletedResult> {
+  if (!lessonId) {
+    return { success: false, message: "ID da lição ausente.", unlockedAchievementsDetails: [] };
+  }
+
+  const profileToUpdate = currentProfile ? { ...currentProfile } : {
+    id: "guest_user", // Ou um ID gerado
+    name: "Convidado(a)",
+    points: 0,
+    completedLessons: [],
+    completedExercises: [],
+    unlockedAchievements: ['ach1'],
+    completedModules: [],
+    roles: ['guest'],
+  };
+
+  const currentCompletedLessons = profileToUpdate.completedLessons || [];
+  const currentUnlockedAchievements = profileToUpdate.unlockedAchievements || [];
+  let currentPoints = profileToUpdate.points || 0;
+
+  const newlyUnlockedAchievementsDetails: Achievement[] = [];
+  let pointsToAdd = 0;
+  const newAchievementsToUnlock: string[] = [];
+
+  if (!currentCompletedLessons.includes(lessonId)) {
+    currentCompletedLessons.push(lessonId);
+    pointsToAdd = 10; // Pontos pela conclusão da lição
+
+    // Conquista "Leitor Assíduo" (ach3) - Primeira lição concluída
+    // Se ach3 não está nas conquistas E esta é a primeira lição sendo completada
+    if (!currentUnlockedAchievements.includes('ach3') && currentCompletedLessons.length === 1) {
+      newAchievementsToUnlock.push('ach3');
+    }
+    
+    // Conquista "Explorador de Trilhas" (ach2)
+    // Assumindo que ao completar a primeira lição, também "explorou" a primeira trilha.
+    // Poderia ter uma lógica mais complexa aqui.
+    if (!currentUnlockedAchievements.includes('ach2') && currentCompletedLessons.length > 0) {
+      newAchievementsToUnlock.push('ach2');
+    }
+    // Adicionar outras lógicas de conquista aqui...
+  }
+
+  profileToUpdate.completedLessons = [...new Set(currentCompletedLessons)]; // Garante unicidade
+  profileToUpdate.points = currentPoints + pointsToAdd;
+  profileToUpdate.unlockedAchievements = [...new Set([...currentUnlockedAchievements, ...newAchievementsToUnlock])];
+
+  newAchievementsToUnlock.forEach(achId => {
+    const achDetails = mockAchievements.find(a => a.id === achId);
+    if (achDetails) {
+      newlyUnlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
+    }
+  });
+  
+  // O cliente (LessonView) será responsável por salvar este perfil atualizado no localStorage
+  // e atualizar o estado do AuthContext.
+  return {
+    success: true,
+    message: "Progresso da lição registrado para atualização local.",
+    updatedProfile: profileToUpdate,
+    unlockedAchievementsDetails: newlyUnlockedAchievementsDetails,
+  };
+}
+
+// Placeholder para futura action de exercícios
+export async function markExerciseAsCompleted(
+  currentProfile: UserProfile | null,
+  exerciseId: string,
+  pointsAwarded: number
+): Promise<MarkLessonCompletedResult> { // Reutilizando o tipo de resultado por simplicidade
+   if (!exerciseId) {
+    return { success: false, message: "ID do exercício ausente.", unlockedAchievementsDetails: [] };
+  }
+
+  const profileToUpdate = currentProfile ? { ...currentProfile } : {
+    id: "guest_user",
+    name: "Convidado(a)",
+    points: 0,
+    completedLessons: [],
+    completedExercises: [],
+    unlockedAchievements: ['ach1'],
+    completedModules: [],
+    roles: ['guest'],
+  };
+
+  const currentCompletedExercises = profileToUpdate.completedExercises || [];
+  const currentUnlockedAchievements = profileToUpdate.unlockedAchievements || [];
+  let currentPoints = profileToUpdate.points || 0;
+
+  const newlyUnlockedAchievementsDetails: Achievement[] = [];
+  let newPointsToAdd = 0;
+  const newAchievementsToUnlock: string[] = [];
+
+  if (!currentCompletedExercises.includes(exerciseId)) {
+    currentCompletedExercises.push(exerciseId);
+    newPointsToAdd = pointsAwarded;
+
+    // Exemplo: Conquista "Mestre dos Conceitos" (ach4) - Acertou 5 exercícios de múltipla escolha.
+    // Esta lógica precisaria saber o tipo de exercício e o total de MC completados.
+    // Por simplicidade, vamos assumir que este exercício (se for o quinto MC) desbloqueia.
+    // const mcExercisesCompleted = currentCompletedExercises.filter(id => mockExercises.find(e=>e.id === id)?.type === 'multiple-choice').length;
+    // if (!currentUnlockedAchievements.includes('ach4') && mcExercisesCompleted >= 5) {
+    //    newAchievementsToUnlock.push('ach4');
+    // }
+  }
+
+  profileToUpdate.completedExercises = [...new Set(currentCompletedExercises)];
+  profileToUpdate.points = currentPoints + newPointsToAdd;
+  profileToUpdate.unlockedAchievements = [...new Set([...currentUnlockedAchievements, ...newAchievementsToUnlock])];
+  
+   newAchievementsToUnlock.forEach(achId => {
+    const achDetails = mockAchievements.find(a => a.id === achId);
+    if (achDetails) {
+      newlyUnlockedAchievementsDetails.push({...achDetails, isUnlocked: true, dateUnlocked: new Date().toLocaleDateString('pt-BR')});
+    }
+  });
+
+  return {
+    success: true,
+    message: "Progresso do exercício registrado para atualização local.",
+    updatedProfile: profileToUpdate,
+    unlockedAchievementsDetails: newlyUnlockedAchievementsDetails,
+  };
 }
