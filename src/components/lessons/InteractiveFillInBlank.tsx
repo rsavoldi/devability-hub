@@ -14,15 +14,15 @@ import {
 interface InteractiveFillInBlankProps {
   options: string[]; 
   correctAnswer: string;
-  interactionId: string; // Nova prop
-  onCorrect: (interactionId: string) => void; // Nova prop
+  interactionId: string;
+  onCorrect: (interactionId: string) => void;
 }
 
 export function InteractiveFillInBlank({
   options,
   correctAnswer,
-  interactionId, // Nova prop
-  onCorrect, // Nova prop
+  interactionId,
+  onCorrect,
 }: InteractiveFillInBlankProps) {
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -46,7 +46,7 @@ export function InteractiveFillInBlank({
 
     if (currentIsCorrect) {
       setIsSubmitted(true); 
-      onCorrect(interactionId); // Chama o callback quando correto
+      onCorrect(interactionId);
     }
   };
   
@@ -54,8 +54,12 @@ export function InteractiveFillInBlank({
 
   useEffect(() => {
     const textToMeasure = filledAnswer || blankPlaceholder;
-    const estimated = `${Math.max(textToMeasure.length * 8 + 24, 80)}px`; 
-    setButtonWidth(estimated);
+    // Ajuste para estimar melhor a largura, considerando o ícone se presente.
+    // Adiciona um pouco mais de padding para o ícone.
+    const baseLength = Math.max(textToMeasure.length * 7, blankPlaceholder.length * 7); // Aproximadamente 7px por caractere em text-xs
+    const paddingAndIcon = 28; // Ajuste para padding e ícone
+    const minWidth = 80;
+    setButtonWidth(`${Math.max(baseLength + paddingAndIcon, minWidth)}px`); 
   }, [filledAnswer, blankPlaceholder]);
 
   const handleTriggerClick = () => {
@@ -65,41 +69,39 @@ export function InteractiveFillInBlank({
       setFilledAnswer(null);
       setIsCorrect(null);
     }
-    // Sempre alterna o popover se não estiver submetido corretamente
     setIsPopoverOpen(o => !o); 
   };
 
   let triggerContent;
-  let icon = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />;
+  let icon = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70 shrink-0" /> : <ChevronDown className="h-3 w-3 opacity-70 shrink-0" />;
   let textColorClass = "text-primary hover:text-primary/80 dark:text-primary-foreground/70 dark:hover:text-primary-foreground/90";
   let borderColorClass = "border-primary/50 hover:border-primary";
   let cursorClass = "cursor-pointer";
   let mainText = blankPlaceholder;
-  let prefixIcon = <Edit2 className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />;
+  let prefixIcon = <Edit2 className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />;
 
 
-  if (isSubmitted) { // Após submissão correta
-    prefixIcon = <Check className="h-3 w-3 mr-1" />;
-    mainText = filledAnswer || correctAnswer; // Mostra a resposta correta
+  if (isSubmitted) { 
+    prefixIcon = <Check className="h-3 w-3 mr-1 shrink-0" />;
+    mainText = filledAnswer || correctAnswer; 
     textColorClass = "text-green-700 dark:text-green-200";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800";
     cursorClass = "cursor-default";
-    icon = null; // Sem ícone de dropdown
-  } else if (filledAnswer && isCorrect === false) { // Tentativa incorreta
-    prefixIcon = <X className="h-3 w-3 mr-0.5" />;
-    mainText = filledAnswer; // Mostra a tentativa incorreta, sem riscar
+    icon = null; 
+  } else if (filledAnswer && isCorrect === false) { 
+    prefixIcon = <X className="h-3 w-3 mr-0.5 shrink-0" />;
+    mainText = filledAnswer; 
     textColorClass = "text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900";
     borderColorClass = "border-red-500 dark:border-red-600";
-  } else if (filledAnswer && isCorrect === null) { // Selecionou, mas ainda não verificou (ou limpou incorreta)
+  } else if (filledAnswer && isCorrect === null) { 
      mainText = filledAnswer;
-     prefixIcon = null; // Sem ícone de lápis se algo já foi preenchido e não é erro
+     prefixIcon = null; 
   }
-
 
   triggerContent = (
       <>
           {prefixIcon}
-          <span>{mainText}</span>
+          <span className="truncate">{mainText}</span>
           {icon}
       </>
   );
@@ -119,7 +121,7 @@ export function InteractiveFillInBlank({
                 }
             }}
             className={cn(
-            "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs leading-tight transition-all duration-200 rounded group",
+            "inline-flex items-center justify-between gap-1 px-1.5 py-0.5 text-xs leading-tight transition-all duration-200 rounded group align-baseline not-prose", // Adicionado align-baseline
             borderColorClass,
             textColorClass,
             cursorClass,
@@ -156,3 +158,5 @@ export function InteractiveFillInBlank({
     </Popover>
   );
 }
+
+    
