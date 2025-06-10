@@ -1,9 +1,8 @@
 
-import { config } from 'dotenv';
-config();
-
 import {genkit, type Genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+
+// dotenv.config() is removed as Next.js handles .env files automatically.
 
 const plugins = []; // Initialize with an empty array
 let googleAiPluginAttempted = false;
