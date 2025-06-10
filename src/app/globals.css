@@ -28,7 +28,6 @@ body {
     --border: 210 40% 85%;
     --input: 210 40% 88%;
     --ring: 262 80% 58%;
-    --radius: 0.5rem;
 
     --chart-1: 262 80% 58%;
     --chart-2: 210 80% 58%;
@@ -54,13 +53,13 @@ body {
     --popover: 210 20% 15%;
     --popover-foreground: 210 40% 98%;
     --primary: 262 70% 65%; /* Lighter Vibrant Purple for Dark Mode */
-    --primary-foreground: 210 20% 12%;
+    --primary-foreground: 210 40% 98%; /* AJUSTADO: Texto claro sobre fundo primário claro */
     --secondary: 210 20% 25%; /* Darker Cool Gray */
     --secondary-foreground: 210 40% 98%;
     --muted: 210 20% 25%;
-    --muted-foreground: 210 40% 60%;
+    --muted-foreground: 210 40% 75%; /* AJUSTADO: Muted foreground mais claro */
     --accent: 262 70% 70%; /* Lighter Purple Accent for Dark Mode */
-    --accent-foreground: 210 20% 12%;
+    --accent-foreground: 210 40% 98%; /* AJUSTADO: Texto claro sobre fundo de destaque claro */
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 210 20% 30%;
@@ -76,7 +75,7 @@ body {
     --sidebar-background: 220 15% 18%; /* Darker blue-gray for dark mode sidebar */
     --sidebar-foreground: 220 15% 85%;
     --sidebar-primary: 262 70% 65%;
-    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-primary-foreground: 210 15% 95%; /* AJUSTADO: Texto claro para sidebar primary */
     --sidebar-accent: 220 15% 25%;
     --sidebar-accent-foreground: 220 15% 95%;
     --sidebar-border: 220 15% 28%;
@@ -93,6 +92,3 @@ body {
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
-
-/* Estilos específicos para o Roadmap, se necessário, podem ser adicionados aqui */
-/* No entanto, a maior parte do layout do novo roadmap é controlada por posicionamento absoluto e JS */
