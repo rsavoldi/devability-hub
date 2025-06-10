@@ -12,7 +12,7 @@ import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
 import { cn, shuffleArray } from '@/lib/utils';
-import { generateLessonQA, type GenerateLessonQAOutput } from '@/ai/flows/generate-lesson-qa';
+import { generateLessonQA, type GenerateLessonQAOutput } from '../../../ai/flows/generate-lesson-qa.ts'; // CORRIGIDO AQUI
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { db } from '@/lib/firebase';
@@ -363,7 +363,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           let toastMessage = result.message;
           if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
             const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
+            toastMessage += ' Você desbloqueou: ' + achievementTitles + '!'; // CORRIGIDO AQUI
              playSound('achievementUnlock');
           }
           toast({
@@ -371,7 +371,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             description: toastMessage,
             className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
           });
-          refreshUserProfile(); // Atualiza o perfil para refletir as mudanças
+          refreshUserProfile(); 
         } else {
           toast({
             title: "Erro",
@@ -608,5 +608,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
     
