@@ -1,3 +1,4 @@
+
 import type { Lesson } from '@/lib/types';
 
 export const lessonM1L4: Lesson = {
@@ -5,7 +6,7 @@ export const lessonM1L4: Lesson = {
   title: 'Lição 1.4: Desenvolvimento Social e Afetivo em Crianças e Adolescentes com Deficiência',
   type: 'interactive',
   content: `
-O **desenvolvimento social e afetivo** é um processo contínuo e dinâmico que envolve a maneira como crianças e adolescentes aprendem a interagir com os outros, a compreender e gerenciar suas emoções, a formar relacionamentos significativos e a desenvolver um senso de si mesmos. Para Wallon (1995), a dimensão afetiva é <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*indissociável;separada;oposta] --> das dimensões cognitiva e motora, atuando como o motor primário do desenvolvimento integral.
+O **desenvolvimento social e afetivo** é um processo contínuo e dinâmico que envolve a maneira como crianças e adolescentes aprendem a interagir com os outros, a compreender e gerenciar suas emoções, a formar relacionamentos significativos e a desenvolver um senso de si mesmos.
 
 **Marcos do Desenvolvimento Socioafetivo Típico x Atípico:**
 
@@ -20,6 +21,8 @@ Diversas teorias fundamentais oferecem lentes para compreender as complexas inte
 A teoria do desenvolvimento psicossocial de **Erik Erikson** (1963) postula que os indivíduos passam por uma série de estágios, cada um com um conflito central a ser resolvido para um desenvolvimento saudável. A resolução desses conflitos impacta a formação da identidade e o senso de si. Por exemplo, na infância, a resolução do conflito de **confiança versus desconfiança** estabelece a base para futuras relações. Para crianças com deficiência, experiências de dependência ou isolamento podem influenciar a percepção de si e do mundo, impactando a formação da <!-- INTERACTIVE_FILL_IN_BLANK: [autonomia e identidade|memória de longo prazo|habilidade motora] --> nas etapas posteriores. A resolução positiva de um estágio contribui para a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*virtude;fraqueza;estagnação] --> do ego.
 
 A teoria do desenvolvimento cognitivo de **Jean Piaget** (1970) foca na construção do conhecimento através da interação com o ambiente. Embora seu foco principal seja a cognição, o desenvolvimento social é intrinsecamente ligado à capacidade de entender diferentes perspectivas, superar o egocentrismo infantil e desenvolver o raciocínio moral. O raciocínio moral se desenvolve através da <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*interação social;instrução direta;observação passiva] -->. Crianças com deficiência podem construir sua compreensão social e moral de forma adaptada, necessitando de mediações para <!-- INTERACTIVE_FILL_IN_BLANK: [desenvolver a tomada de perspectiva|apenas memorizar regras|aceitar a submissão] --> e a compreensão das nuances sociais, o que impacta sua capacidade de interação e resolução de conflitos.
+
+Outra perspectiva crucial é a de **Henri Wallon** (1995), que via o desenvolvimento como um processo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*dialético e integrado;linear e segmentado;puramente biológico] -->, onde a **afetividade** não é apenas um componente, mas um <!-- INTERACTIVE_FILL_IN_BLANK: [motor e organizador|resultado secundário|fator disruptivo] --> do desenvolvimento integral. Para Wallon, as **emoções** são a primeira forma de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*comunicação e ligação;expressão de déficits;manifestação de descontrole] --> da criança com o meio social, mobilizando o outro e construindo os primeiros vínculos. Ele enfatizava a **indissociabilidade entre o motor, o afetivo e o cognitivo**, argumentando que o movimento, por exemplo, é inicialmente expressivo e tônico-emocional antes de se tornar instrumental. A criança se constitui na relação com o <!-- INTERACTIVE_FILL_IN_BLANK: [outro social|ambiente físico apenas|mundo interno exclusivamente] -->, que funciona como um espelho, sendo o ser humano "**organicamente social**" (Galvão, 2007). No contexto da deficiência, a teoria de Wallon nos convida a observar como as interações afetivas e as possibilidades de expressão motora e emocional são <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*fundamentais para a constituição do sujeito;secundárias em relação ao treino cognitivo;irrelevantes se houver suporte médico] -->, mesmo quando a comunicação verbal ou a cognição abstrata apresentam desafios significativos.
 
 **Lev Vygotsky** (1997), com sua teoria histórico-cultural, enfatiza que o desenvolvimento cognitivo e social está enraizado nas **interações sociais e culturais**. A deficiência primária (o déficit orgânico) pode ser compensada por vias de **compensação social**, onde a cultura e a mediação de outros fornecem instrumentos e rotas alternativas para o desenvolvimento socioafetivo. A mediação de outros é um <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*recurso essencial;obstáculo;fator isolador] --> no desenvolvimento. A **Zona de Desenvolvimento Proximal (ZDP)** – a distância entre o que a criança consegue fazer sozinha e o que pode fazer com <!-- INTERACTIVE_FILL_IN_BLANK: [suporte ou colaboração|dificuldade inerente|medicação específica] --> – é crucial para guiar intervenções que promovam a interação e o aprendizado social. Este suporte é fundamental para o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*avanço;retrocesso;estagnação] --> cognitivo e social.
 
@@ -53,23 +56,25 @@ O desenvolvimento socioafetivo é complexo e influenciado por múltiplos fatores
 
 Compreender as nuances do desenvolvimento social e afetivo em crianças e adolescentes com deficiência, sob uma perspectiva anticapacitista, permite criar ambientes e suportes que fomentem relacionamentos saudáveis, uma autoimagem positiva e a plena participação social em todas as esferas da vida.
 `,
-  estimatedTime: '20-28 mins', // Increased time estimate due to added content
+  estimatedTime: '25-35 mins', // Ajustado devido à nova seção
   coverImage: '/images/Dev1.4.png',
-  aiHint: 'amizade emoções comunidade identidade capacitismo TEA DI Erikson Piaget Vygotsky Bronfenbrenner',
+  aiHint: 'amizade emoções comunidade identidade capacitismo TEA DI Erikson Piaget Vygotsky Bronfenbrenner Wallon', // Adicionado Wallon
   references: [
     "Amaral, L. A. (1998). Sobre crocodilos e avestruzes: falando de (d)eficiências, preconceitos e seus filhos. In L. A. Amaral (Org.), Corpo e deficiência: falando sobre o corpo (pp. 11-24). São Paulo: Cortez.",
     "<a href='https://doi.org/10.1590/S0102-37722004000300003' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Batista, C. A. M., & Enumo, S. R. F. (2004). Desenvolvimento infantil: a criança de 0 a 6 anos e suas interações com o ambiente. Psicologia: Teoria e Pesquisa, 20(3), 221-230.</a>",
     "Bowlby, J. (1988). A secure base: Parent-child attachment and healthy human development. Basic Books.",
     "<a href='https://doi.org/10.1590/S1516-44462006000500008' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Bosa, C. A. (2006). Autismo: intervenções psicoeducacionais. Revista Brasileira de Psiquiatria, 28(Supl I), S47-S53.</a>",
-    "Bronfenbrenner, U. (1979). The ecology of human development: Experiments by nature and design. Harvard University Press.", // New reference
+    "Bronfenbrenner, U. (1979). The ecology of human development: Experiments by nature and design. Harvard University Press.",
     "Del Prette, Z. A. P., & Del Prette, A. (2005). Psicologia das habilidades sociais na infância: teoria e prática. Vozes.",
     "Dessen, M. A., & Silva, N. L. P. (2004). Famílias de pessoas com deficiência: desafios e perspectivas. In M. A. Dessen & A. L. Costa Júnior (Orgs.), A ciência do desenvolvimento humano (pp. 212-228). Artmed.",
-    "Erikson, E. H. (1963). Childhood and society (2nd ed.). W. W. Norton.", // New reference
+    "Erikson, E. H. (1963). Childhood and society (2nd ed.). W. W. Norton.",
+    "Galvão, I. (2007). Henri Wallon: uma concepção dialética do desenvolvimento infantil (15ª ed.). Petrópolis: Vozes.", // Nova referência
     "Glat, R. (2004). A integração social dos portadores de deficiência: uma reflexão. Rio de Janeiro: Sette Letras.",
     "Omote, S. (2018). A inclusão da pessoa com deficiência: perspectivas e desafios. Marília: Oficina Universitária; São Paulo: Cultura Acadêmica.",
     "Piaget, J. (1970). A epistemologia genética. Vozes.",
     "Strobel, K. (2008). As imagens do outro sobre a cultura surda. Florianópolis: EdUFSC.",
     "Vygotsky, L. S. (1997). Fundamentos de defectologia. Obras escogidas, vol. 5. Visor Distribuciones.",
-    "Wallon, H. (1995). As origens do caráter na criança. Nova Alexandria."
+    "Wallon, H. (1995). As origens do caráter na criança. Nova Alexandria." // Referência já existente
   ]
 };
+
