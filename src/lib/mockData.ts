@@ -1,6 +1,8 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
-import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy } from 'lucide-react';
+// Lucide icons não são mais usados para RoadmapSteps ou LessonCategories aqui, mas podem ser usados em outros lugares.
+// Mantendo as importações de ícones Lucide se forem usados por mockAchievements ou outros componentes não refatorados ainda.
+import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy, Zap, CheckCircle, Rocket, Home } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Importações dos arquivos de dados modulares
@@ -57,8 +59,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha1',
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
-    iconName: "UsersRound", 
-    icon: UsersRound,
+    emoji: '🧒', // Usando o emoji do título
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -76,9 +77,8 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha2',
     title: 'Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.',
     order: 2,
-    iconName: "UserCheck", 
-    icon: UserCheck,
-    description: 'Compreenda as particularidades do desenvolvimento, os direitos, a cidadania e as perspectivas de envelhecimento de pessoas adultas com deficiência.',
+    emoji: '🧑‍🦳', 
+    description: 'Compreenda as particularidades do desenvolvimento de adultos e idosos com deficiência, abordando aspectos físicos, cognitivos, sociais e afetivos ao longo do envelhecimento.',
     modules: [{
       id: 'mod-trilha2-0',
       title: 'A Pessoa Adulta com Deficiência: Trajetórias e Desafios',
@@ -95,8 +95,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha3',
     title: 'Modelos de intervenção para o favorecimento do desenvolvimento de pessoas com deficiência.',
     order: 3,
-    iconName: "ToyBrick", 
-    icon: ToyBrick,
+    emoji: '🧩', 
     description: 'Conheça e analise diferentes modelos de intervenção que visam promover o desenvolvimento e a inclusão de pessoas com deficiência em diversos contextos.',
     modules: [{
       id: 'mod-trilha3-0',
@@ -114,8 +113,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha4',
     title: 'Principais abordagens teóricas relativas ao desenvolvimento da pessoa com deficiência.',
     order: 4,
-    iconName: "Brain", 
-    icon: Brain,
+    emoji: '🧠', 
     description: 'Aprofunde-se nas principais teorias que fundamentam a compreensão do desenvolvimento de pessoas com deficiência, desde perspectivas clássicas até contemporâneas.',
     modules: [{
       id: 'mod-trilha4-0',
@@ -133,8 +131,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha5',
     title: 'Contribuições da neuropsicologia para a compreensão dos fenômenos desenvolvimentais da Pessoa com Deficiência.',
     order: 5,
-    iconName: "Microscope", 
-    icon: Microscope,
+    emoji: '🔬', 
     description: 'Descubra como a neuropsicologia contribui para entender os processos de desenvolvimento, as funções cognitivas e os comportamentos em pessoas com deficiência.',
     modules: [{
       id: 'mod-trilha5-0',
@@ -152,8 +149,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha6',
     title: 'Fundamentos da Avaliação Psicológica e do Psicodiagnóstico da pessoa com deficiência.',
     order: 6,
-    iconName: "BarChart3", 
-    icon: BarChart3,
+    emoji: '📊', 
     description: 'Estude os fundamentos da avaliação psicológica e do psicodiagnóstico aplicados a pessoas com deficiência, considerando suas especificidades, instrumentos e ética.',
     modules: [{
       id: 'mod-trilha6-0',
@@ -171,8 +167,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha7',
     title: 'Pesquisa com Pessoas com Deficiência: Tópicos, Métodos e Ética.',
     order: 7,
-    iconName: "FileText", 
-    icon: FileText,
+    emoji: '📝', 
     description: 'Explore temas de pesquisa, métodos de coleta e análise de dados (qualitativos, quantitativos e mistos), e as considerações éticas envolvidas na investigação científica sobre deficiência.',
     modules: [{
       id: 'mod-trilha7-0',
@@ -190,8 +185,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha8',
     title: 'Implicações éticas da avaliação e intervenção com pessoas com deficiência.',
     order: 8,
-    iconName: "Scale", 
-    icon: Scale,
+    emoji: '⚖️', 
     description: 'Analise as implicações éticas relacionadas à avaliação e intervenção junto a pessoas com deficiência, promovendo práticas responsáveis e respeitosas.',
     modules: [{
       id: 'mod-trilha8-0',
@@ -209,8 +203,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha9',
     title: 'Políticas e Processos de inclusão da pessoa com deficiência nos contextos educacionais, laborais e sociais.',
     order: 9,
-    iconName: "Landmark", 
-    icon: Landmark,
+    emoji: '🏛️', 
     description: 'Conheça as políticas e os processos que visam a inclusão de pessoas com deficiência em diversos contextos, como educação, trabalho e sociedade.',
     modules: [{
       id: 'mod-trilha9-0',
@@ -228,8 +221,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha10',
     title: 'Debates contemporâneos sobre processos de inclusão: desenho universal, neurodivergências, tecnologias assistivas e deficiência oculta.',
     order: 10,
-    iconName: "Accessibility", 
-    icon: Accessibility,
+    emoji: '♿', 
     description: 'Participe de debates atuais sobre inclusão, abordando temas como desenho universal, neurodivergência, tecnologias assistivas e deficiências ocultas.',
     modules: [{
       id: 'mod-trilha10-0',
@@ -247,8 +239,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha11',
     title: 'Acesso, permanência e participação de pessoas com deficiência no Ensino Superior.',
     order: 11,
-    iconName: "GraduationCap", 
-    icon: GraduationCap,
+    emoji: '🎓', 
     description: 'Discuta os desafios e os progressos relacionados ao acesso, permanência e participação de pessoas com deficiência no ensino superior.',
     modules: [{
       id: 'mod-trilha11-0',
@@ -266,8 +257,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha12',
     title: 'Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.',
     order: 12,
-    iconName: "HelpingHand", 
-    icon: HelpingHand,
+    emoji: '❤️‍🩹', 
     description: 'Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.',
     modules: [{
       id: 'mod-trilha12-0',
@@ -288,7 +278,14 @@ export const mockRoadmapData: RoadmapStep[] = [
 const allModuleLessonsAggregated = mockRoadmapData.reduce((acc, step) => {
   step.modules.forEach(mod => {
     if (mod.lessons && Array.isArray(mod.lessons)) {
-      acc.push(...mod.lessons);
+      // Adiciona moduleId e trilhaId a cada lição
+      const lessonsWithContext = mod.lessons.map(lesson => ({
+        ...lesson,
+        moduleId: mod.id,
+        moduleTitle: mod.title, // Adicionando título do módulo
+        trilhaId: step.id,
+      }));
+      acc.push(...lessonsWithContext);
     }
   });
   return acc;
@@ -310,24 +307,27 @@ export const mockModules: Module[] = mockRoadmapData.flatMap(step => step.module
 
 
 // --- Categorias de Lições e Exercícios ---
-// Esta variável é usada pela página de Lições para agrupar por módulo/trilha.
-// Ela agora usa iconName diretamente.
-export const finalLessonCategories: { name: string; iconName: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.reduce((acc, roadmap) => {
+export const finalLessonCategories: { name: string; emoji: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.reduce((acc, roadmap) => {
   if (roadmap.modules && roadmap.modules.length > 0) {
-    // Agrupa todas as lições de todos os módulos de uma trilha sob o título do primeiro módulo como nome da categoria.
-    // Usa o iconName da trilha.
-    const allLessonsInRoadmap = roadmap.modules.flatMap(mod => mod.lessons);
+    const allLessonsInRoadmap = roadmap.modules.flatMap(mod => 
+        mod.lessons.map(lesson => ({
+            ...lesson,
+            moduleId: mod.id, // Garante que a lição tenha o ID do módulo
+            moduleTitle: mod.title, // Adiciona o título do módulo
+            trilhaId: roadmap.id, // Adiciona o ID da trilha
+        }))
+    );
     if (allLessonsInRoadmap.length > 0) {
       acc.push({
-        name: roadmap.modules[0].title || `Trilha ${roadmap.order}`, // Nome da categoria é o título do primeiro módulo
-        iconName: roadmap.iconName || "BookOpen", // Usa o iconName da trilha
+        name: roadmap.modules[0].title || `Trilha ${roadmap.order}`, 
+        emoji: roadmap.emoji || "📚", 
         lessons: [...new Map(allLessonsInRoadmap.map(item => [item.id, item])).values()],
-        moduleId: roadmap.modules[0].id || roadmap.id, // ID da categoria para a aba
+        moduleId: roadmap.modules[0].id || roadmap.id, 
       });
     }
   }
   return acc;
-}, [] as { name: string; iconName: string; lessons: Lesson[]; moduleId: string; }[]);
+}, [] as { name: string; emoji: string; lessons: Lesson[]; moduleId: string; }[]);
 
 
 const allCategorizedLessonIds = new Set(finalLessonCategories.flatMap(cat => cat.lessons.map(l => l.id)));
@@ -340,13 +340,12 @@ if (uncategorizedLessons.length > 0) {
   } else {
     finalLessonCategories.push({
       name: "Geral/Outros",
-      iconName: "PackageSearch",
+      emoji: "📦", 
       lessons: [...new Map(uncategorizedLessons.map(item => [item.id, item])).values()],
       moduleId: "geral-outros"
     });
   }
 }
-
 
 export const exerciseCategories: { name: string; icon: LucideIcon; exercises: Exercise[] }[] = [
   { name: "Múltipla Escolha", icon: Radio, exercises: mockExercises.filter(e => e.type === 'multiple-choice') },
@@ -369,13 +368,12 @@ if (outrosExercisesCategory && uncategorizedExercises.length > 0) {
   outrosExercisesCategory.exercises = [...new Map(outrosExercisesCategory.exercises.map(item => [item.id, item])).values()];
 }
 
-
 mockUserProfile.completedLessons = [...new Set(mockUserProfile.completedLessons)];
 mockUserProfile.completedExercises = [...new Set(mockUserProfile.completedExercises)];
 mockUserProfile.completedModules = [...new Set(mockUserProfile.completedModules)];
 
 let firstUncompletedTrilhaFound = false;
-mockRoadmapData.forEach(trilha => {
+mockRoadmapData.forEach((trilha) => {
   let allModulesInTrilhaCompleted = true;
   if (trilha.modules && trilha.modules.length > 0) {
     trilha.modules.forEach(module => {
@@ -394,8 +392,6 @@ mockRoadmapData.forEach(trilha => {
       if (totalModuleItems > 0) {
         module.isCompleted = module.progress === 100;
       } else {
-        // Se não há itens, considera completo se o módulo estiver na lista de completados do usuário
-        // ou se não há itens E já estava marcado como completo (para persistir um estado manual se necessário)
         module.isCompleted = mockUserProfile.completedModules.includes(module.id);
       }
       
@@ -405,7 +401,6 @@ mockRoadmapData.forEach(trilha => {
     });
     trilha.isCompleted = allModulesInTrilhaCompleted;
   } else {
-    // Trilha sem módulos é considerada não completa por padrão, a menos que queiramos outra lógica
     trilha.isCompleted = false; 
   }
 
@@ -418,21 +413,12 @@ mockRoadmapData.forEach(trilha => {
 });
 
 if (mockRoadmapData.length > 0 && mockRoadmapData.every(t => t.isCompleted)) {
-    // Se todas as trilhas estão completas, nenhuma é "atual"
     mockRoadmapData.forEach(t => t.isCurrent = false); 
 } else if (!firstUncompletedTrilhaFound && mockRoadmapData.length > 0) { 
-    // Se nenhuma "atual" foi encontrada (ex: todas não completas mas nenhuma explicitamente marcada como atual)
-    // e há trilhas, marca a primeira não completa como atual.
-    // Se todas estiverem completas, este bloco não é executado, mas o anterior já tratou disso.
-    // Se todas foram marcadas como completas exceto a última, e a última não foi marcada como atual, este bloco corrige.
     const firstNotDone = mockRoadmapData.find(t => !t.isCompleted);
     if (firstNotDone) {
         firstNotDone.isCurrent = true;
     } else {
-        // Caso de fallback extremo: se não há trilhas não completas, mas o loop não marcou
-        // nenhuma como current (o que não deveria acontecer se houver trilhas),
-        // marca a primeira como current, assumindo que não está completa.
-        // Esta lógica pode ser redundante com a de cima.
         if (mockRoadmapData.length > 0 && !mockRoadmapData[0].isCompleted && !mockRoadmapData.some(t => t.isCurrent)) {
              mockRoadmapData[0].isCurrent = true;
         }

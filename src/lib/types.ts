@@ -5,9 +5,7 @@ export interface RoadmapStep {
   id: string;
   title: string;
   order?: number;
-  emoji?: string;
-  iconName?: string;
-  icon?: LucideIcon;
+  emoji?: string; // Ícones Lucide removidos, emoji é a prioridade
   description: string;
   modules: Module[];
   isCompleted?: boolean;
@@ -21,7 +19,7 @@ export interface Module {
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
-  roadmapIcon?: any;
+  roadmapIcon?: any; // Mantido por enquanto, caso usado em outro lugar, mas RoadmapDisplay não usará
   progress?: number; // 0-100
 }
 
@@ -34,11 +32,11 @@ export interface Lesson {
   estimatedTime: string;
   coverImage?: string;
   aiHint?: string;
-  iconName?: string; // Campo adicionado
+  emoji?: string; // Alterado de iconName para emoji
   references?: string[];
   moduleId?: string;
   moduleTitle?: string;
-  trilhaId?: string; // Adicionado para navegação
+  trilhaId?: string;
 }
 
 export type ExerciseType =
@@ -81,8 +79,8 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  iconName?: string;
-  icon?: LucideIcon;
+  emoji?: string; // Alterado de iconName/icon para emoji
+  icon?: LucideIcon; // Mantendo icon opcionalmente se ainda for usado em AchievementCard
   isUnlocked: boolean;
   dateUnlocked?: string;
   criteria: string;
@@ -97,13 +95,13 @@ export interface UserProfile {
   completedExercises: string[];
   unlockedAchievements: string[];
   completedModules: string[];
-  roles: string[]; // Novo campo para papéis
+  roles: string[];
 }
 
 export interface NavItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  emoji?: string; // Alterado de icon para emoji
   disabled?: boolean;
   external?: boolean;
   badge?: string;

@@ -1,8 +1,9 @@
+
 // src/components/layout/AppHeader.tsx
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, UserCircle, Menu as MenuIcon, Home, BookOpen, Target, SpellCheck, Trophy, LayoutDashboard, Settings, Award, Bot, LogOut, UserPlus, LogIn } from "lucide-react";
+import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn } from "lucide-react"; // Removido ícones de navegação
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuGroup,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,27 +21,25 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatbotDialog } from "@/components/chatbot/ChatbotDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-// import { auth } from '@/lib/firebase'; // Firebase Auth não é mais usado diretamente aqui
-// import { signOut } from 'firebase/auth'; // Firebase Auth não é mais usado diretamente aqui
 import { useRouter } from "next/navigation";
 import { LOCAL_STORAGE_KEYS } from "@/constants";
 
 const mainNavItems: NavItem[] = [
-  { href: "/", label: "Roadmap", icon: Home },
-  { href: "/lessons", label: "Lições", icon: BookOpen },
-  { href: "/exercises", label: "Exercícios", icon: Target },
-  { href: "/dictionary", label: "Dicionário", icon: SpellCheck },
-  { href: "/achievements", label: "Conquistas", icon: Trophy },
+  { href: "/", label: "Roadmap", emoji: "🗺️" },
+  { href: "/lessons", label: "Lições", emoji: "📖" },
+  { href: "/exercises", label: "Exercícios", emoji: "🎯" },
+  { href: "/dictionary", label: "Dicionário", emoji: "📚" }, // Alterado para 📚 (livros empilhados)
+  { href: "/achievements", label: "Conquistas", emoji: "🏆" },
 ];
 
 const toolNavItems: NavItem[] = [
-  // { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }, // Dashboard pode ser removido/simplificado
+  // { href: "/dashboard", label: "Dashboard", emoji: "📊" },
 ];
 
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, refreshUserProfile } = useAuth(); // Removido loading, pois o AuthProvider já lida com isso
+  const { currentUser, userProfile, refreshUserProfile } = useAuth();
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
@@ -49,10 +47,9 @@ export function AppHeader() {
   const handleClearGuestProgress = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LOCAL_STORAGE_KEYS.PROGRESS);
-      localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS); // Limpar lições de convidado também
-      refreshUserProfile(); // Recarrega o perfil (que será o padrão de convidado)
-      router.push('/'); // Opcional: redirecionar para a home
-      // Idealmente, um toast de sucesso aqui
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
+      refreshUserProfile(); 
+      router.push('/'); 
     }
   };
 
@@ -66,7 +63,7 @@ export function AppHeader() {
         <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
-              <Award className="h-7 w-7 text-primary" />
+              <span role="img" aria-label="Prêmio/Troféu" className="text-2xl">🏆</span> {/* Emoji para o logo */}
               <h1 className="text-xl font-bold tracking-tight">DevAbility Hub</h1>
             </Link>
           </div>
@@ -78,7 +75,7 @@ export function AppHeader() {
                   <TooltipTrigger asChild>
                     <Button asChild variant="ghost" size="icon" aria-label={item.label}>
                       <Link href={item.href}>
-                        <item.icon className="h-5 w-5" />
+                        <span className="text-xl leading-none">{item.emoji}</span>
                       </Link>
                     </Button>
                   </TooltipTrigger>
@@ -92,7 +89,7 @@ export function AppHeader() {
                  <TooltipTrigger asChild>
                    <Button asChild variant="ghost" size="icon" aria-label={item.label}>
                      <Link href={item.href}>
-                       <item.icon className="h-5 w-5" />
+                       <span className="text-xl leading-none">{item.emoji}</span>
                      </Link>
                    </Button>
                  </TooltipTrigger>
@@ -126,7 +123,6 @@ export function AppHeader() {
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
 
-            {/* Menu do Usuário / Convidado */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full" suppressHydrationWarning>
@@ -200,7 +196,7 @@ export function AppHeader() {
                     <DropdownMenuItem key={item.href} asChild>
                       <Link href={item.href}>
                         <span className="flex items-center w-full">
-                          <item.icon className="mr-2 h-4 w-4" />
+                          <span className="mr-2 text-lg leading-none">{item.emoji}</span>
                           {item.label}
                         </span>
                       </Link>

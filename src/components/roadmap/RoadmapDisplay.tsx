@@ -1,16 +1,17 @@
+
 // src/components/roadmap/RoadmapDisplay.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Loader2, UsersRound, UserCheck, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, BookOpen, PackageSearch, PersonStanding, Rocket, type LucideIcon, CheckCircle } from 'lucide-react';
-import type { RoadmapStep, Module as ModuleType } from '@/lib/types';
+import { Loader2, CheckCircle, Rocket, BookOpen as DefaultIcon } from 'lucide-react'; // Rocket, BookOpen as DefaultIcon
+import type { RoadmapStep } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 // --- CONSTANTES E INTERFACES ---
 const NODE_RADIUS_BASE = 40;
-const ICON_SIZE = NODE_RADIUS_BASE * 0.6;
+const EMOJI_FONT_SIZE_FACTOR = 0.7; // Emoji size relative to node radius
 const VERTICAL_NODE_SPACING = 200;
 const HORIZONTAL_ZIGZAG_OFFSET = 120;
 const PADDING = 60;
@@ -19,6 +20,11 @@ const SVG_TEXT_LINE_HEIGHT = 15;
 const TITLE_OFFSET_ABOVE_CIRCLE = 25;
 const TITLE_HORIZONTAL_SHIFT_AMOUNT = 70;
 const LINE_THICKNESS = 3;
+const CHECK_ICON_SIZE_FACTOR = 0.5;
+const ROCKET_SIZE_FACTOR = 0.8;
+const ROCKET_Y_OFFSET_FACTOR = 0.2;
+const ROCKET_X_OFFSET_FACTOR = ROCKET_SIZE_FACTOR / 2;
+
 
 interface ProcessedRoadmapNode {
     id: string;
@@ -28,7 +34,7 @@ interface ProcessedRoadmapNode {
     titleLines: string[];
     svg_x_title: number;
     svg_title_start_y: number;
-    iconName: string;
+    emoji: string; // Agora é emoji
     description: string;
     firstModuleId?: string;
     isCompleted: boolean;
@@ -36,14 +42,7 @@ interface ProcessedRoadmapNode {
     order: number;
 }
 
-export const lucideIconMap: Record<string, LucideIcon> = {
-    "UsersRound": UsersRound, "UserCheck": UserCheck, "ToyBrick": ToyBrick,
-    "Brain": Brain, "Microscope": Microscope, "BarChart3": BarChart3,
-    "FileText": FileText, "Scale": Scale, "Landmark": Landmark,
-    "Accessibility": Accessibility, "GraduationCap": GraduationCap,
-    "HelpingHand": HelpingHand, "BookOpen": BookOpen, "PackageSearch": PackageSearch,
-    "PersonStanding": PersonStanding, "Rocket": Rocket,
-};
+// LucideIconMap não é mais necessária aqui, emojis são strings.
 
 interface RoadmapDisplayProps {
   initialRoadmapData: RoadmapStep[];
@@ -52,7 +51,10 @@ interface RoadmapDisplayProps {
 // --- FUNÇÃO HELPER ---
 function splitTitleIntoLines(title: string | undefined, maxChars: number): string[] {
     if (!title) return [''];
-    const cleanTitle = title.replace(/([\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F700}-\u{1F77F}]|[\u{1F780}-\u{1F7FF}]|[\u{1F800}-\u{1F8FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/gu, '').trim();
+    // Remove o emoji do título para cálculo de quebra de linha, se o emoji estiver no início
+    const emojiRegex = /^([\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F700}-\u{1F77F}]|[\u{1F780}-\u{1F7FF}]|[\u{1F800}-\u{1F8FF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA00}-\u{1FA6F}]|[\u{1FA70}-\u{1FAFF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])\s*/u;
+    const cleanTitle = title.replace(emojiRegex, '').trim();
+    
     const words = cleanTitle.split(' ');
     const lines: string[] = [];
     let currentLine = "";
@@ -115,7 +117,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                     titleLines,
                     svg_x_title,
                     svg_title_start_y,
-                    iconName: step.iconName || "BookOpen",
+                    emoji: step.emoji || "📚", // Usa o emoji da trilha, ou um fallback
                     description: step.description,
                     firstModuleId: firstModuleOfStep?.id,
                     isCompleted: isStepCompleted,
@@ -218,18 +220,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                     {paths.map(path => (<line key={path.id} x1={path.x1} y1={path.y1} x2={path.x2} y2={path.y2} strokeWidth={LINE_THICKNESS} className={cn("transition-all duration-300", path.isCompleted ? "stroke-green-500" : "stroke-border")} />))}
                     {processedNodes.map((node) => {
                         const nodeAriaLabel = `Trilha: ${node.originalStep.title}. Status: ${node.isCompleted ? 'Concluído' : node.isCurrent ? 'Atual' : 'Não iniciado'}. Pressione Enter ou Espaço para ${node.isCompleted ? 'revisitar' : 'iniciar'} esta trilha.`;
-                        const IconComponent = lucideIconMap[node.iconName] || BookOpen;
                         
-                        const iconColorClass = node.isCompleted
-                            ? "text-green-600 dark:text-green-500" 
-                            : node.isCurrent 
-                                ? "text-primary" 
-                                : "text-foreground group-hover/node-visual:text-primary";
-                        
-                        // Alteração aqui: O preenchimento base do círculo agora é --background
                         const circleBaseFill = "hsl(var(--background))"; 
-                        
-                        // Este continuará sendo o brilho/borda colorida semi-transparente
                         const circleEffectFillClass = node.isCompleted
                             ? "fill-green-500/10 dark:fill-green-700/10"
                             : node.isCurrent
@@ -244,7 +236,6 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
                                 <title>{node.originalStep.title}: {node.description}</title>
                                 
-                                {/* Círculo de efeito/brilho (semi-transparente) - renderizado primeiro para ficar atrás */}
                                 <circle
                                     cx={node.nodeX}
                                     cy={node.nodeY}
@@ -252,43 +243,38 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                     className={cn(
                                         "stroke-2 transition-all duration-200 ease-in-out",
                                         "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90",
-                                        node.isCurrent && !node.isCompleted ? "stroke-primary dark:stroke-primary" : "", // Removido o ring aqui, pode ser adicionado no círculo de base se necessário
+                                        node.isCurrent && !node.isCompleted ? "stroke-primary dark:stroke-primary" : "",
                                         node.isCompleted ? "stroke-green-500" : "stroke-border",
                                         circleEffectFillClass
                                     )}
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }}
                                 />
-                                {/* Círculo principal opaco - renderizado por cima do de efeito */}
                                 <circle
                                     cx={node.nodeX}
                                     cy={node.nodeY}
-                                    r={NODE_RADIUS_BASE - LINE_THICKNESS / 2} // Um pouco menor para o efeito de borda
-                                    fill={circleBaseFill} // Preenchimento opaco
+                                    r={NODE_RADIUS_BASE - LINE_THICKNESS / 2}
+                                    fill={circleBaseFill}
                                     className={cn(
-                                        "stroke-0", // Sem borda própria, a borda vem do círculo de efeito
-                                        node.isCurrent && !node.isCompleted ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-[hsl(var(--background))]" : "" // Adiciona anel de foco aqui
+                                        "stroke-0",
+                                        node.isCurrent && !node.isCompleted ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-[hsl(var(--background))]" : ""
                                     )}
                                 />
                                 
-                                {IconComponent ? (
-                                    <IconComponent
-                                        x={node.nodeX - ICON_SIZE / 2}
-                                        y={node.nodeY - ICON_SIZE / 2}
-                                        width={ICON_SIZE}
-                                        height={ICON_SIZE}
-                                        className={cn("select-none pointer-events-none transition-colors", iconColorClass)}
-                                        strokeWidth={2} 
-                                    />
-                                ) : node.originalStep.emoji ? ( 
+                                {node.emoji ? (
                                     <text
                                         x={node.nodeX}
                                         y={node.nodeY}
                                         textAnchor="middle"
                                         dominantBaseline="central"
-                                        style={{ fontSize: `${NODE_RADIUS_BASE * 0.7}px` }}
-                                        className={cn("select-none pointer-events-none transition-colors", node.isCompleted ? "fill-green-700 dark:fill-green-300" : "fill-foreground")}
+                                        style={{ fontSize: `${NODE_RADIUS_BASE * EMOJI_FONT_SIZE_FACTOR}px` }}
+                                        className={cn(
+                                            "select-none pointer-events-none transition-colors",
+                                            // A cor do emoji pode ser fixa ou condicional
+                                            // node.isCompleted ? "fill-green-700 dark:fill-green-300" : 
+                                            // node.isCurrent ? "fill-primary" : "fill-foreground"
+                                        )}
                                     >
-                                        {node.originalStep.emoji}
+                                        {node.emoji}
                                     </text>
                                 ) : null}
                                 
@@ -309,8 +295,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                      <CheckCircle
                                         x={node.nodeX + NODE_RADIUS_BASE * 0.6}
                                         y={node.nodeY - NODE_RADIUS_BASE * 0.9}
-                                        width={ICON_SIZE*0.5}
-                                        height={ICON_SIZE*0.5}
+                                        width={NODE_RADIUS_BASE * CHECK_ICON_SIZE_FACTOR}
+                                        height={NODE_RADIUS_BASE * CHECK_ICON_SIZE_FACTOR}
                                         className="text-green-500 fill-background" 
                                         strokeWidth={2}
                                      />
@@ -319,16 +305,17 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                         );
                     })}
                     {emojiTargetNode && (
-                        <Rocket
-                            x={emojiTargetNode.nodeX - (ICON_SIZE * 0.8 / 2)}
-                            y={emojiTargetNode.nodeY + NODE_RADIUS_BASE + (ICON_SIZE * 0.8 * 0.2)}
-                            width={ICON_SIZE * 0.8}
-                            height={ICON_SIZE * 0.8}
-                            className="pointer-events-none text-primary opacity-80"
-                            style={{ filter: 'url(#emoji-shadow)' }}
+                        <text
+                            x={emojiTargetNode.nodeX}
+                            y={emojiTargetNode.nodeY + NODE_RADIUS_BASE + (NODE_RADIUS_BASE * ROCKET_SIZE_FACTOR * 0.4) + 10 } // Ajuste para o emoji 🚀
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            style={{ fontSize: `${NODE_RADIUS_BASE * ROCKET_SIZE_FACTOR * 0.8}px`, filter: 'url(#emoji-shadow)' }}
+                            className="pointer-events-none"
                         >
+                            🚀
                             <animateTransform attributeName="transform" type="translate" values={`0 0; 0 -${NODE_RADIUS_BASE * 0.12}; 0 0`} begin="0s" dur="1.5s" repeatCount="indefinite" additive="sum" accumulate="none" />
-                        </Rocket>
+                        </text>
                     )}
                 </g>
             </svg>

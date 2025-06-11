@@ -2,19 +2,18 @@
 "use client"; 
 
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
-import { mockLessons, finalLessonCategories } from '@/lib/mockData'; // Importa finalLessonCategories
+import { mockLessons, finalLessonCategories } from '@/lib/mockData'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, ListFilter, ListChecks, type LucideIcon } from 'lucide-react'; 
+import { ListFilter, ListChecks, BookOpen as DefaultCategoryIcon } from 'lucide-react'; 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
-import type { Lesson } from '@/lib/types'; // Não precisamos de ModuleType ou RoadmapStep aqui
+import type { Lesson } from '@/lib/types'; 
 import { useState, useEffect } from 'react'; 
-import { lucideIconMap } from '@/components/roadmap/RoadmapDisplay'; 
 
-interface LessonCategory {
+interface LessonCategoryWithEmoji {
   name: string;
-  iconName: string; 
+  emoji: string; // Agora é emoji
   lessons: Lesson[];
   moduleId: string;
 }
@@ -22,10 +21,13 @@ interface LessonCategory {
 export default function LessonsPage() {
   const allLessons = mockLessons; 
   
-  // Usa finalLessonCategories diretamente de mockData.ts, que já está processado
-  const categoriesWithLessons = finalLessonCategories.filter(cat => cat.lessons.length > 0);
+  const categoriesWithLessons: LessonCategoryWithEmoji[] = finalLessonCategories
+    .filter(cat => cat.lessons.length > 0)
+    .map(cat => ({
+        ...cat,
+        emoji: cat.emoji || "📚" // Fallback emoji
+    }));
   
-  // Define o valor padrão da aba de forma mais robusta
   const getDefaultTabValue = () => {
     if (categoriesWithLessons.length > 0) {
       return categoriesWithLessons[0].moduleId;
@@ -35,7 +37,6 @@ export default function LessonsPage() {
 
   const [activeTab, setActiveTab] = useState(getDefaultTabValue());
   
-  // Ajusta a aba ativa se a atual se tornar inválida
   useEffect(() => {
     const currentTabIsValid = activeTab === 'all' || categoriesWithLessons.some(cat => cat.moduleId === activeTab);
     if (!currentTabIsValid) {
@@ -48,7 +49,7 @@ export default function LessonsPage() {
     <div className="container mx-auto py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
-          <BookOpen className="w-10 h-10 mr-3 text-primary" />
+          <span role="img" aria-label="livro" className="text-4xl mr-3">📖</span> {/* Substituído BookOpen por emoji */}
           Explore as Lições
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
@@ -89,7 +90,6 @@ export default function LessonsPage() {
               </Tooltip>
 
               {categoriesWithLessons.map((category) => {
-                const CategoryIcon = lucideIconMap[category.iconName] || BookOpen; 
                 return (
                   <Tooltip key={category.moduleId}>
                     <TooltipTrigger asChild>
@@ -97,11 +97,12 @@ export default function LessonsPage() {
                         value={category.moduleId}
                         className={cn(
                             "h-10 w-10 p-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground", 
-                            "rounded-md border-transparent hover:bg-accent hover:text-accent-foreground data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-ring"
+                            "rounded-md border-transparent hover:bg-accent hover:text-accent-foreground data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-ring",
+                            "flex items-center justify-center text-xl leading-none" // Para centralizar e dimensionar emojis
                         )}
                         aria-label={category.name}
                       >
-                        <CategoryIcon className="h-5 w-5" />
+                        {category.emoji}
                       </TabsTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -132,11 +133,10 @@ export default function LessonsPage() {
           </TabsContent>
 
           {categoriesWithLessons.map((category) => {
-            const CategoryIcon = lucideIconMap[category.iconName] || BookOpen;
             return (
             <TabsContent key={category.moduleId} value={category.moduleId}>
               <h2 className="text-2xl font-semibold mb-6 mt-4 flex items-center">
-                <CategoryIcon className="w-6 h-6 mr-2 text-primary shrink-0" />
+                <span className="text-2xl mr-2 leading-none">{category.emoji}</span>
                 {category.name} ({category.lessons.length})
               </h2>
               {category.lessons.length > 0 ? (
