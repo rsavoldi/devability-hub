@@ -20,7 +20,7 @@ import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/action
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData';
+import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData'; // Renomeado para allMockLessons
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -73,29 +73,27 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   elements.forEach((element, elementIdx) => {
     const elementKey = `${baseKey}-el-${elementIdx}`;
     if (typeof element === 'string') {
-      const textSegments = element.split(/(\n|\\n)/g); 
+      const textSegments = element.split(/(\\n|\n)/g); 
+      let firstSegmentOfElement = true;
       textSegments.forEach((segment, segmentIdx) => {
         const segmentKey = `${elementKey}-seg-${segmentIdx}`;
-        if (segment === '\n' || segment === '\\n') {
+        if (segment === '\\n' || segment === '\n') {
           finalizeParagraph();
         } else if (segment && segment.trim() !== '') {
-          currentParagraphChildren.push(
-            ...renderTextWithBold(segment, segmentKey)
-          );
+          currentParagraphChildren.push(...renderTextWithBold(segment, segmentKey));
         }
+        firstSegmentOfElement = false;
       });
     } else if (React.isValidElement(element)) {
       currentParagraphChildren.push(React.cloneElement(element, { key: elementKey }));
     }
   });
 
-  finalizeParagraph();
+  finalizeParagraph(); 
 
-  // Se, após todo o processamento, currentParagraphChildren ainda tiver conteúdo mas nenhum parágrafo foi adicionado
-  // (ex: a lição inteira é uma única linha de texto sem \n e com interações)
   if (outputParagraphs.length === 0 && currentParagraphChildren.length > 0) {
-    outputParagraphs.push(
-      <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
+     outputParagraphs.push(
+      <p key={`${baseKey}-p-singlefinal`} className="mb-4 last:mb-0">
         {currentParagraphChildren}
       </p>
     );
@@ -165,7 +163,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           if (parsedOptions.length > 0 && correctAnswer) {
             elements.push(
               <InteractiveWordChoice
-                key={interactionId} // Use a unique key here
+                key={interactionId} 
                 interactionId={interactionId}
                 options={shuffleArray(parsedOptions)}
                 correctAnswer={correctAnswer}
@@ -186,7 +184,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             const correctAnswerFillIn = allOptions[0];
             elements.push(
               <InteractiveFillInBlank
-                key={interactionId} // Use a unique key here
+                key={interactionId} 
                 interactionId={interactionId}
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
@@ -242,9 +240,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile, lesson, authLoading]);
 
   useEffect(() => {
-    setCompletedInteractionIds(new Set());
-    setPrevLesson(null);
-    setNextLesson(null);
+    setCompletedInteractionIds(new Set()); 
     setIsMarkingComplete(false);
 
     if (typeof window !== 'undefined' && lesson) {
@@ -257,21 +253,19 @@ export function LessonView({ lesson }: LessonViewProps) {
                     setCompletedInteractionIds(new Set(parsedInteractions));
                 }
             } catch (error) {
-                console.error("Error parsing stored interactions for new lesson:", error);
+                console.error("Error parsing stored interactions:", error);
             }
         }
     }
-    
-    // Lógica de navegação SIMPLES baseada no índice do array global allMockLessons
+
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
 
       if (currentIndex > -1) {
-        const prev = currentIndex > 0 ? allMockLessons[currentIndex - 1] : null;
-        const next = currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null;
-        setPrevLesson(prev);
-        setNextLesson(next);
+        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
+        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
       } else {
+        console.error(`Lesson with id ${lesson.id} not found in allMockLessons for navigation.`);
         setPrevLesson(null);
         setNextLesson(null);
       }
@@ -323,6 +317,13 @@ export function LessonView({ lesson }: LessonViewProps) {
   const interactionsProgressText = totalInteractiveElements > 0
     ? `Interações concluídas: ${completedInteractionIds.size} de ${totalInteractiveElements}`
     : "Nenhuma interação nesta lição.";
+
+  const truncateTitle = (title: string, maxLength: number = 20) => {
+    if (title.length > maxLength) {
+      return title.substring(0, maxLength) + "...";
+    }
+    return title;
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -385,17 +386,18 @@ export function LessonView({ lesson }: LessonViewProps) {
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-start">
             {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
-                <Link href={`/lessons/${prevLesson.id}`}>
+                <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
                   <span className="flex items-center justify-center w-full">
-                    <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
-                    <span className="truncate">Anterior</span>
+                    <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2 shrink-0" />
+                    <span className="hidden sm:inline truncate">Anterior: {truncateTitle(prevLesson.title)}</span>
+                    <span className="sm:hidden">Anterior</span>
                   </span>
                 </Link>
             </Button>
             ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
 
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0">
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0 order-first sm:order-none">
             <Button
               variant={isCompleted ? "default" : "secondary"}
               size="lg"
@@ -428,10 +430,11 @@ export function LessonView({ lesson }: LessonViewProps) {
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
             {nextLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
-                <Link href={`/lessons/${nextLesson.id}`}>
+                <Link href={`/lessons/${nextLesson.id}`} title={`Próxima: ${nextLesson.title}`}>
                   <span className="flex items-center justify-center w-full">
-                    <span className="truncate">Próxima</span>
-                    <ArrowRight className="h-4 w-4 ml-1 sm:ml-2" />
+                    <span className="hidden sm:inline truncate">Próxima: {truncateTitle(nextLesson.title)}</span>
+                    <span className="sm:hidden">Próxima</span>
+                    <ArrowRight className="h-4 w-4 ml-1 sm:ml-2 shrink-0" />
                   </span>
                 </Link>
             </Button>
@@ -441,6 +444,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-    
-
     
