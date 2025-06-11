@@ -1,13 +1,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard } from "lucide-react";
+// import { LayoutDashboard } from "lucide-react"; // Removido
 
 export default function DashboardPage() {
   return (
     <div className="container mx-auto py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
-          <LayoutDashboard className="w-10 h-10 mr-3 text-primary" />
+          <span role="img" aria-label="Painel de Controle" className="text-4xl mr-3">📊</span> {/* Substituído por emoji */}
           Dashboard
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">

@@ -5,14 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings as SettingsIcon } from "lucide-react"; // Renamed to avoid conflict
+// import { Settings as SettingsIcon } from "lucide-react"; // Removido
 
 export default function SettingsPage() {
   return (
     <div className="container mx-auto py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
-            <SettingsIcon className="w-10 h-10 mr-3 text-primary" />
+            <span role="img" aria-label="Configurações" className="text-4xl mr-3">⚙️</span> {/* Substituído SettingsIcon por emoji */}
             Configurações
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">

@@ -1,3 +1,4 @@
+
 // src/app/(main)/modules/[id]/page.tsx
 "use client";
 
@@ -6,9 +7,8 @@ import { mockRoadmapData, mockExercises as allMockExercises } from '@/lib/mockDa
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, BookOpen, Target, ExternalLink, Loader2, ListChecks } from 'lucide-react'; // Removido Zap
+import { ArrowLeft, CheckCircle, ExternalLink, Loader2 } from 'lucide-react'; // Removido BookOpen, Target, ListChecks
 import Link from 'next/link';
-// import Image from 'next/image'; // Removido se não usado
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext'; 
@@ -69,7 +69,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     
     const totalModuleLessons = module.lessons.length;
     if (totalModuleLessons === 0) {
-      // Se não há lições, considera completo se estiver no perfil ou se já estava marcado
       const isActuallyCompleted = userProfile.completedModules.includes(module.id) || module.isCompleted || false;
       return { moduleProgress: isActuallyCompleted ? 100: 0, moduleIsCompleted: isActuallyCompleted, allLessonsCompleted: true }; 
     }
@@ -84,7 +83,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
 
     return { 
         moduleProgress: progress, 
-        moduleIsCompleted: isCompletedByProfile, // Confia no que está no perfil para "módulo completo"
+        moduleIsCompleted: isCompletedByProfile, 
         allLessonsCompleted: allLessonsDone
     };
   }, [module, userProfile, authLoading]);
@@ -94,7 +93,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
 
     setIsMarkingModuleComplete(true);
     const newCompletedModules = [...new Set([...userProfile.completedModules, module.id])];
-    const pointsForModuleCompletion = 50; // Exemplo de pontos para completar módulo
+    const pointsForModuleCompletion = 50; 
     
     updateUserProfile({
       completedModules: newCompletedModules,
@@ -137,7 +136,10 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
 
       <Card className="shadow-xl overflow-hidden">
         <CardHeader className="bg-muted/30 p-6">
-          <p className="text-sm font-medium text-primary mb-1">Trilha: {parentTrilha.title}</p>
+          <p className="text-sm font-medium text-primary mb-1 flex items-center">
+            <span role="img" aria-label="Trilha" className="mr-2 text-lg">{parentTrilha.emoji || '🗺️'}</span>
+            Trilha: {parentTrilha.title}
+          </p>
           <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{module.title}</CardTitle>
           <CardDescription className="mt-1 text-lg">
             {module.lessons.length} lições
@@ -157,7 +159,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
         <CardContent className="p-6">
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 flex items-center">
-              <BookOpen className="h-6 w-6 mr-2 text-primary" />
+              <span role="img" aria-label="Livro Aberto" className="text-2xl mr-2">📖</span> {/* Substituído BookOpen por emoji */}
               Lições
             </h2>
             {module.lessons.length > 0 ? (
@@ -191,13 +193,13 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           {exercisesForThisModule.length > 0 && (
             <section>
               <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <Target className="h-6 w-6 mr-2 text-primary" />
+                <span role="img" aria-label="Alvo" className="text-2xl mr-2">🎯</span> {/* Substituído Target por emoji */}
                 Exercícios Práticos
               </h2>
               <Button asChild className="w-full md:w-auto">
                 <Link href={`/modules/${moduleId}/exercises`}> 
                   <span className="flex items-center">
-                    <ListChecks className="mr-2 h-5 w-5" />
+                    <span role="img" aria-label="Lista de Verificação" className="mr-2">📋</span> {/* Substituído ListChecks */}
                     Acessar Exercícios do Módulo ({exercisesForThisModule.length})
                   </span>
                 </Link>

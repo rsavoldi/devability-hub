@@ -1,3 +1,4 @@
+
 // src/app/(main)/achievements/page.tsx
 "use client";
 
@@ -6,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AchievementCard } from '@/components/gamification/AchievementCard';
 import { mockAchievements } from '@/lib/mockData';
 import type { Achievement } from '@/lib/types';
-import { Trophy, Loader2, UserCircle } from 'lucide-react'; // Removido LogIn
+import { Loader2, UserCircle } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -14,7 +15,7 @@ export default function AchievementsPage() {
   const { userProfile, loading: authLoading, refreshUserProfile } = useAuth();
 
   useEffect(() => {
-    refreshUserProfile(); // Garante que os dados estão atualizados ao carregar a página
+    refreshUserProfile(); 
   }, [refreshUserProfile]);
 
   if (authLoading) {
@@ -26,11 +27,9 @@ export default function AchievementsPage() {
   }
 
   if (!userProfile) {
-    // Este caso deve ser raro com a nova lógica do AuthContext,
-    // mas é bom ter um fallback.
     return (
       <div className="container mx-auto py-12 text-center">
-        <Trophy className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+        <span role="img" aria-label="Troféu" className="text-5xl mb-4 block">🏆</span>
         <h2 className="text-2xl font-semibold mb-2">Erro ao Carregar Conquistas</h2>
         <p className="text-muted-foreground mb-6">
           Não foi possível carregar seu progresso. Tente recarregar a página.
@@ -53,7 +52,6 @@ export default function AchievementsPage() {
   }).sort((a,b) => {
       if (a.isUnlocked && !b.isUnlocked) return -1;
       if (!a.isUnlocked && b.isUnlocked) return 1;
-      // Opcional: ordenar por título se o status de desbloqueio for o mesmo
       return a.title.localeCompare(b.title);
   });
 
@@ -61,8 +59,8 @@ export default function AchievementsPage() {
     <div className="container mx-auto py-8">
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold tracking-tight flex items-center justify-center">
-          <Trophy className="w-10 h-10 mr-3 text-primary" />
-          Suas Conquistas <span role="img" aria-label="troféu">🏆</span>
+          <span role="img" aria-label="Troféu" className="text-4xl mr-3">🏆</span>
+          Suas Conquistas
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
           Acompanhe seu progresso e celebre suas realizações.

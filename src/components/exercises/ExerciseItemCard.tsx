@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { Exercise, ExerciseType } from '@/lib/types';
-import { Clock, Zap, Puzzle, Radio, Type, Code, Link2, ListOrdered, MousePointerSquareDashed } from 'lucide-react';
+import { Clock } from 'lucide-react'; // Zap removido
 import { Badge } from '@/components/ui/badge';
 
 interface ExerciseItemCardProps {
@@ -11,15 +11,15 @@ interface ExerciseItemCardProps {
   categoryName?: string;
 }
 
-const getExerciseIcon = (type: ExerciseType) => {
+const getExerciseEmoji = (type: ExerciseType): string => {
   switch (type) {
-    case 'multiple-choice': return <Radio className="h-4 w-4 mr-2" />;
-    case 'fill-in-the-blank': return <Type className="h-4 w-4 mr-2" />;
-    case 'coding': return <Code className="h-4 w-4 mr-2" />;
-    case 'association': return <Link2 className="h-4 w-4 mr-2" />;
-    case 'ordering': return <ListOrdered className="h-4 w-4 mr-2" />;
-    case 'drag-and-drop': return <MousePointerSquareDashed className="h-4 w-4 mr-2" />;
-    default: return <Puzzle className="h-4 w-4 mr-2" />;
+    case 'multiple-choice': return '🔘'; // Ou '📻'
+    case 'fill-in-the-blank': return '✍️';
+    case 'coding': return '💻';
+    case 'association': return '🔗';
+    case 'ordering': return '🔢';
+    case 'drag-and-drop': return '🖐️';
+    default: return '🧩';
   }
 }
 
@@ -35,15 +35,16 @@ const getExerciseTypeLabel = (type: ExerciseType): string => {
   return labels[type] || type.replace('-', ' ');
 }
 
-
 export function ExerciseItemCard({ exercise, categoryName }: ExerciseItemCardProps) {
+  const emoji = getExerciseEmoji(exercise.type);
+
   return (
     <Card className="flex flex-col h-full overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader>
         <div className="flex justify-between items-start">
           <CardTitle className="text-xl font-semibold mb-1 line-clamp-2">{exercise.title}</CardTitle>
           <Badge variant="outline" className="capitalize flex items-center whitespace-nowrap">
-            {getExerciseIcon(exercise.type)}
+            <span className="mr-2 text-lg">{emoji}</span>
             {getExerciseTypeLabel(exercise.type)}
           </Badge>
         </div>
@@ -62,7 +63,8 @@ export function ExerciseItemCard({ exercise, categoryName }: ExerciseItemCardPro
         <Button asChild variant="default" size="sm">
           <Link href={`/exercises/${exercise.id}`}>
             <span className="flex items-center">
-              <Zap className="h-4 w-4 mr-2" /> Praticar
+              <span role="img" aria-label="Praticar" className="mr-2">⚡</span> {/* Substituído Zap por emoji */}
+              Praticar
             </span>
           </Link>
         </Button>

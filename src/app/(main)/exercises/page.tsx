@@ -7,34 +7,44 @@ import { ExerciseItemCard } from '@/components/exercises/ExerciseItemCard';
 import { exerciseCategories, mockRoadmapData, mockExercises } from '@/lib/mockData';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from '@/components/ui/button';
-import { Target, ListChecks, Brain, Wand2, ArrowRight, RefreshCw } from 'lucide-react';
+// import { Target, ListChecks, Brain, Wand2, ArrowRight, RefreshCw } from 'lucide-react'; // Removido
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import type { Module as ModuleType, Exercise } from '@/lib/types';
+import type { Module as ModuleType, Exercise, ExerciseType } from '@/lib/types'; // Adicionado ExerciseType
 import { QuickChallengeDisplay } from '@/components/exercises/QuickChallengeDisplay';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 
 type ViewMode = 'byType' | 'byModule' | 'randomChallenge';
 
+// Mapeamento de tipos de exercício para emojis
+const exerciseTypeToEmoji: Record<ExerciseType, string> = {
+  'multiple-choice': '🔘', // Ou '📻'
+  'fill-in-the-blank': '✍️',
+  'coding': '💻',
+  'association': '🔗',
+  'ordering': '🔢',
+  'drag-and-drop': '🖐️',
+};
+
+
 export default function ExercisesPage() {
   const [activeViewMode, setActiveViewMode] = useState<ViewMode>('byType');
   const [quickChallengeExercises, setQuickChallengeExercises] = useState<Exercise[]>([]);
   const [isQuickChallengeActive, setIsQuickChallengeActive] = useState(false);
-  const [selectedChallengeSize, setSelectedChallengeSize] = useState<string>("3"); // Default to 3 questions
+  const [selectedChallengeSize, setSelectedChallengeSize] = useState<string>("3");
 
-  const allModules: (ModuleType & { trilhaTitle: string, trilhaIcon?: React.ElementType })[] = useMemo(() => {
+  const allModules: (ModuleType & { trilhaTitle: string, trilhaEmoji?: string })[] = useMemo(() => { // Adicionado trilhaEmoji
     return mockRoadmapData.reduce((acc, trilha) => {
       trilha.modules.forEach(module => {
-        acc.push({ ...module, trilhaTitle: trilha.title, trilhaIcon: trilha.icon });
+        acc.push({ ...module, trilhaTitle: trilha.title, trilhaEmoji: trilha.emoji }); // Passando emoji da trilha
       });
       return acc;
-    }, [] as (ModuleType & { trilhaTitle: string, trilhaIcon?: React.ElementType })[]);
+    }, [] as (ModuleType & { trilhaTitle: string, trilhaEmoji?: string })[]);
   }, []);
 
   const handleStartQuickChallenge = () => {
     const numberOfQuestions = parseInt(selectedChallengeSize, 10);
     if (isNaN(numberOfQuestions) || numberOfQuestions <= 0) {
-        // Handle invalid selection, though Select should prevent this
         return;
     }
     const shuffledExercises = [...mockExercises].sort(() => 0.5 - Math.random());
@@ -49,14 +59,19 @@ export default function ExercisesPage() {
     setActiveViewMode('byType');
   };
 
+  // Atualizando exerciseCategories em mockData.ts para incluir emoji
+  // Esta parte da lógica deve ser feita no arquivo mockData.ts.
+  // Aqui, assumimos que exerciseCategories já tem um campo 'emoji'.
+  // Se não tiver, precisará de um mapeamento local ou ajuste em mockData.
+
   return (
     <div className="container mx-auto py-8">
       {!isQuickChallengeActive && (
         <>
           <header className="mb-8">
             <h1 className="text-4xl font-bold tracking-tight flex items-center">
-              <Target className="w-10 h-10 mr-3 text-primary" />
-              Exercícios Práticos <span role="img" aria-label="alvo">🎯</span>
+              <span role="img" aria-label="Alvo" className="text-4xl mr-3">🎯</span> {/* Substituído Target por emoji */}
+              Exercícios Práticos
             </h1>
             <p className="mt-2 text-lg text-muted-foreground">
               Teste seus conhecimentos e aprimore suas habilidades.
@@ -66,7 +81,7 @@ export default function ExercisesPage() {
           <Card className="mb-8 shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl">
-                <Wand2 className="w-7 h-7 mr-3 text-primary" />
+                <span role="img" aria-label="Varinha Mágica" className="text-2xl mr-3">🪄</span> {/* Substituído Wand2 por emoji */}
                 Como você gostaria de praticar hoje?
               </CardTitle>
               <CardDescription>
@@ -79,7 +94,7 @@ export default function ExercisesPage() {
                 onClick={() => setActiveViewMode('byType')}
                 className="w-full"
               >
-                <ListChecks className="w-4 h-4 mr-2" />
+                <span role="img" aria-label="Lista de Verificação" className="mr-2">📋</span> {/* Substituído ListChecks */}
                 Explorar por Tipo
               </Button>
               <Button
@@ -87,7 +102,7 @@ export default function ExercisesPage() {
                 onClick={() => setActiveViewMode('byModule')}
                 className="w-full"
               >
-                <Brain className="w-4 h-4 mr-2" />
+                <span role="img" aria-label="Cérebro" className="mr-2">🧠</span> {/* Substituído Brain */}
                 Prática por Módulo
               </Button>
               <div className="space-y-2">
@@ -107,7 +122,7 @@ export default function ExercisesPage() {
                     onClick={handleStartQuickChallenge}
                     className="w-full"
                 >
-                    <RefreshCw className="w-4 h-4 mr-2" />
+                    <span role="img" aria-label="Atualizar" className="mr-2">🔄</span> {/* Substituído RefreshCw */}
                     Iniciar Desafio Rápido
                 </Button>
               </div>
@@ -123,7 +138,8 @@ export default function ExercisesPage() {
               <AccordionItem value={`category-${category.name}`} key={category.name} className="border rounded-lg overflow-hidden shadow-sm bg-card">
                 <AccordionTrigger className="px-6 py-4 text-lg font-semibold hover:no-underline hover:bg-muted/50 transition-colors">
                   <div className="flex items-center">
-                    <category.icon className="w-5 h-5 mr-3 text-primary" />
+                    {/* Assumindo que exerciseCategories terá um campo emoji */}
+                    <span className="text-xl mr-3">{category.emoji || '🧩'}</span>
                     {category.name} ({category.exercises.length})
                   </div>
                 </AccordionTrigger>
@@ -151,11 +167,10 @@ export default function ExercisesPage() {
           {allModules.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {allModules.map((module) => {
-                const TrilhaIcon = module.trilhaIcon;
                 return (
                   <Card key={module.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow">
                     <CardHeader>
-                      {TrilhaIcon && <TrilhaIcon className="w-7 h-7 mb-2 text-primary opacity-70" />}
+                      {module.trilhaEmoji && <span className="text-2xl mb-2 opacity-70">{module.trilhaEmoji}</span>}
                       <CardTitle className="text-xl">{module.title}</CardTitle>
                       <CardDescription>Trilha: {module.trilhaTitle.length > 50 ? module.trilhaTitle.substring(0, 50) + '...' : module.trilhaTitle}</CardDescription>
                     </CardHeader>
@@ -167,9 +182,9 @@ export default function ExercisesPage() {
                     <CardFooter>
                       <Button asChild className="w-full">
                         <Link href={`/modules/${module.id}/exercises`}>
-                          <ListChecks className="mr-2 h-4 w-4" />
+                          <span role="img" aria-label="Lista de Verificação" className="mr-2">📋</span> {/* Substituído ListChecks */}
                           Praticar Exercícios
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          <span role="img" aria-label="Seta para Direita" className="ml-2">➡️</span> {/* Substituído ArrowRight */}
                         </Link>
                       </Button>
                     </CardFooter>

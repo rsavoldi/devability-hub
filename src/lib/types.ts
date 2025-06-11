@@ -5,7 +5,7 @@ export interface RoadmapStep {
   id: string;
   title: string;
   order?: number;
-  emoji?: string; // Ícones Lucide removidos, emoji é a prioridade
+  emoji?: string; // Emoji é a prioridade
   description: string;
   modules: Module[];
   isCompleted?: boolean;
@@ -19,7 +19,7 @@ export interface Module {
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
-  roadmapIcon?: any; // Mantido por enquanto, caso usado em outro lugar, mas RoadmapDisplay não usará
+  roadmapIcon?: any; 
   progress?: number; // 0-100
 }
 
@@ -32,7 +32,7 @@ export interface Lesson {
   estimatedTime: string;
   coverImage?: string;
   aiHint?: string;
-  emoji?: string; // Alterado de iconName para emoji
+  emoji?: string; 
   references?: string[];
   moduleId?: string;
   moduleTitle?: string;
@@ -79,8 +79,8 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  emoji?: string; // Alterado de iconName/icon para emoji
-  icon?: LucideIcon; // Mantendo icon opcionalmente se ainda for usado em AchievementCard
+  emoji?: string; // Adicionado para priorizar emoji
+  icon?: LucideIcon; // Mantido como opcional para fallback
   isUnlocked: boolean;
   dateUnlocked?: string;
   criteria: string;
