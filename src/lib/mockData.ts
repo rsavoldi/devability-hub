@@ -1,8 +1,14 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
-// Lucide icons não são mais usados para RoadmapSteps ou LessonCategories aqui, mas podem ser usados em outros lugares.
-// Mantendo as importações de ícones Lucide se forem usados por mockAchievements ou outros componentes não refatorados ainda.
-import { BookOpen, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, UserCheck, PersonStanding, PackageSearch, UsersRound, GraduationCap, HelpingHand, Target, Radio, Type, Code, Puzzle, ListOrdered, MousePointerSquareDashed, Link2, ToyBrick, BookCopy, Zap, CheckCircle, Rocket, Home } from 'lucide-react';
+// Ícones Lucide que AINDA SÃO USADOS em outros lugares (ex: Achievements fallback, ExerciseView feedback)
+// ou ícones funcionais que decidimos manter.
+// Ícones que eram SÓ para exerciseCategories foram removidos da importação.
+import { 
+    Zap, Target, BookOpen, CheckCircle, Link2, Shuffle, MousePointerSquareDashed, Type, Trophy, Award, 
+    ListOrdered, Code, Puzzle, // Estes eram para exerciseCategories, agora são emojis. Se não usados em outro lugar, poderiam ser removidos.
+    UsersRound, PersonStanding, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, 
+    PackageSearch, Home, Loader2 
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // Importações dos arquivos de dados modulares
@@ -77,7 +83,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha2',
     title: 'Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.',
     order: 2,
-    emoji: '👤', // ATUALIZADO
+    emoji: '👤', 
     description: 'Compreenda as particularidades do desenvolvimento de adultos e idosos com deficiência, abordando aspectos físicos, cognitivos, sociais e afetivos ao longo do envelhecimento.',
     modules: [{
       id: 'mod-trilha2-0',
@@ -113,7 +119,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha4',
     title: 'Principais abordagens teóricas relativas ao desenvolvimento da pessoa com deficiência.',
     order: 4,
-    emoji: '📚', // ATUALIZADO
+    emoji: '📚', 
     description: 'Aprofunde-se nas principais teorias que fundamentam a compreensão do desenvolvimento de pessoas com deficiência, desde perspectivas clássicas até contemporâneas.',
     modules: [{
       id: 'mod-trilha4-0',
@@ -131,7 +137,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha5',
     title: 'Contribuições da neuropsicologia para a compreensão dos fenômenos desenvolvimentais da Pessoa com Deficiência.',
     order: 5,
-    emoji: '🧠', // ATUALIZADO
+    emoji: '🧠', 
     description: 'Descubra como a neuropsicologia contribui para entender os processos de desenvolvimento, as funções cognitivas e os comportamentos em pessoas com deficiência.',
     modules: [{
       id: 'mod-trilha5-0',
@@ -221,7 +227,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha10',
     title: 'Debates contemporâneos sobre processos de inclusão: desenho universal, neurodivergências, tecnologias assistivas e deficiência oculta.',
     order: 10,
-    emoji: '🌈', // ATUALIZADO
+    emoji: '🌈', 
     description: 'Participe de debates atuais sobre inclusão, abordando temas como desenho universal, neurodivergência, tecnologias assistivas e deficiências ocultas.',
     modules: [{
       id: 'mod-trilha10-0',
@@ -257,7 +263,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha12',
     title: 'Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.',
     order: 12,
-    emoji: '🧑‍🦳', // ATUALIZADO
+    emoji: '🧑‍🦳', 
     description: 'Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.',
     modules: [{
       id: 'mod-trilha12-0',
@@ -281,8 +287,8 @@ const allModuleLessonsAggregated = mockRoadmapData.reduce((acc, step) => {
       // Adiciona moduleId e trilhaId a cada lição
       const lessonsWithContext = mod.lessons.map(lesson => ({
         ...lesson,
-        moduleId: mod.id,
-        moduleTitle: mod.title, // Adicionando título do módulo
+        moduleId: mod.id, 
+        moduleTitle: mod.title, 
         trilhaId: step.id,
       }));
       acc.push(...lessonsWithContext);
@@ -307,14 +313,15 @@ export const mockModules: Module[] = mockRoadmapData.flatMap(step => step.module
 
 
 // --- Categorias de Lições e Exercícios ---
+// As `lessonCategories` já são dinâmicas e usam o emoji da trilha.
 export const finalLessonCategories: { name: string; emoji: string; lessons: Lesson[]; moduleId: string;}[] = mockRoadmapData.reduce((acc, roadmap) => {
   if (roadmap.modules && roadmap.modules.length > 0) {
     const allLessonsInRoadmap = roadmap.modules.flatMap(mod => 
         mod.lessons.map(lesson => ({
             ...lesson,
-            moduleId: mod.id, // Garante que a lição tenha o ID do módulo
-            moduleTitle: mod.title, // Adiciona o título do módulo
-            trilhaId: roadmap.id, // Adiciona o ID da trilha
+            moduleId: mod.id, 
+            moduleTitle: mod.title, 
+            trilhaId: roadmap.id,
         }))
     );
     if (allLessonsInRoadmap.length > 0) {
@@ -347,15 +354,16 @@ if (uncategorizedLessons.length > 0) {
   }
 }
 
-export const exerciseCategories: { name: string; icon: LucideIcon; exercises: Exercise[] }[] = [
-  { name: "Múltipla Escolha", icon: Radio, exercises: mockExercises.filter(e => e.type === 'multiple-choice') },
-  { name: "Preencher Lacunas", icon: Type, exercises: mockExercises.filter(e => e.type === 'fill-in-the-blank') },
-  { name: "Associação", icon: Link2, exercises: mockExercises.filter(e => e.type === 'association') },
-  { name: "Ordenação", icon: ListOrdered, exercises: mockExercises.filter(e => e.type === 'ordering') },
-  { name: "Categorização (Drag & Drop)", icon: MousePointerSquareDashed, exercises: mockExercises.filter(e => e.type === 'drag-and-drop') },
-  { name: "Estudo de Caso/Análise", icon: BookCopy, exercises: [] }, 
-  { name: "Programação (Placeholder)", icon: Code, exercises: mockExercises.filter(e => e.type === 'coding') },
-  { name: "Outros Tipos", icon: Puzzle, exercises: mockExercises.filter(e => !['multiple-choice', 'fill-in-the-blank', 'association', 'ordering', 'drag-and-drop', 'coding'].includes(e.type))},
+// ATUALIZAÇÃO AQUI: exerciseCategories agora usa 'emoji' em vez de 'icon'
+export const exerciseCategories: { name: string; emoji: string; exercises: Exercise[] }[] = [
+  { name: "Múltipla Escolha", emoji: '🔘', exercises: mockExercises.filter(e => e.type === 'multiple-choice') },
+  { name: "Preencher Lacunas", emoji: '✍️', exercises: mockExercises.filter(e => e.type === 'fill-in-the-blank') },
+  { name: "Associação", emoji: '🔗', exercises: mockExercises.filter(e => e.type === 'association') },
+  { name: "Ordenação", emoji: '🔢', exercises: mockExercises.filter(e => e.type === 'ordering') },
+  { name: "Categorização (Drag & Drop)", emoji: '🖐️', exercises: mockExercises.filter(e => e.type === 'drag-and-drop') },
+  { name: "Estudo de Caso/Análise", emoji: '🧐', exercises: [] }, // Emoji para estudo de caso
+  { name: "Programação (Placeholder)", emoji: '💻', exercises: mockExercises.filter(e => e.type === 'coding') },
+  { name: "Outros Tipos", emoji: '🧩', exercises: mockExercises.filter(e => !['multiple-choice', 'fill-in-the-blank', 'association', 'ordering', 'drag-and-drop', 'coding'].includes(e.type))},
 ];
 
 exerciseCategories.forEach(cat => cat.exercises = [...new Map(cat.exercises.map(item => [item.id, item])).values()]);
@@ -390,7 +398,12 @@ mockRoadmapData.forEach((trilha) => {
       module.progress = totalModuleItems > 0 ? Math.round((completedModuleItems / totalModuleItems) * 100) : 0;
       
       if (totalModuleItems > 0) {
-        module.isCompleted = module.progress === 100;
+        module.isCompleted = mockUserProfile.completedModules.includes(module.id) || module.progress === 100;
+         if (module.isCompleted && !mockUserProfile.completedModules.includes(module.id)) {
+            // Se o progresso é 100 mas não está no perfil, pode ser um bom lugar para atualizar o perfil
+            // No entanto, essa lógica de atualização de perfil é melhor no AuthContext ou actions.
+            // Aqui, apenas refletimos o que *poderia* ser o estado.
+         }
       } else {
         module.isCompleted = mockUserProfile.completedModules.includes(module.id);
       }
@@ -414,13 +427,19 @@ mockRoadmapData.forEach((trilha) => {
 
 if (mockRoadmapData.length > 0 && mockRoadmapData.every(t => t.isCompleted)) {
     mockRoadmapData.forEach(t => t.isCurrent = false); 
+    // Opcional: marcar a última como atual se todas estiverem completas
+    // mockRoadmapData[mockRoadmapData.length - 1].isCurrent = true;
 } else if (!firstUncompletedTrilhaFound && mockRoadmapData.length > 0) { 
     const firstNotDone = mockRoadmapData.find(t => !t.isCompleted);
     if (firstNotDone) {
         firstNotDone.isCurrent = true;
     } else {
-        if (mockRoadmapData.length > 0 && !mockRoadmapData[0].isCompleted && !mockRoadmapData.some(t => t.isCurrent)) {
-             mockRoadmapData[0].isCurrent = true;
+        // Se todas estão completas (caso já coberto acima) ou se não há nenhuma não completa (improvável se !firstUncompletedTrilhaFound)
+        // Apenas como um fallback se a lógica acima não pegar todos os casos:
+        if (mockRoadmapData.length > 0 && !mockRoadmapData.some(t => t.isCurrent)) {
+             mockRoadmapData[0].isCurrent = true; // Garante que pelo menos uma seja atual se nenhuma foi marcada
         }
     }
 }
+
+    
