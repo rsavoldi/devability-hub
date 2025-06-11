@@ -20,7 +20,7 @@ import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/action
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockRoadmapData, mockAchievements } from '@/lib/mockData'; // Importando todas as lições
+import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -71,25 +71,29 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   };
   
   elements.forEach((element, elementIdx) => {
+    const elementKey = `${baseKey}-el-${elementIdx}`;
     if (typeof element === 'string') {
-      const textSegments = element.split(/(\n|\\n)/g); // Split by \n or \\n, keeping delimiters
+      const textSegments = element.split(/(\n|\\n)/g); 
       textSegments.forEach((segment, segmentIdx) => {
+        const segmentKey = `${elementKey}-seg-${segmentIdx}`;
         if (segment === '\n' || segment === '\\n') {
           finalizeParagraph();
         } else if (segment && segment.trim() !== '') {
           currentParagraphChildren.push(
-            ...renderTextWithBold(segment, `${baseKey}-txt-${elementIdx}-${segmentIdx}`)
+            ...renderTextWithBold(segment, segmentKey)
           );
         }
       });
     } else if (React.isValidElement(element)) {
-      currentParagraphChildren.push(React.cloneElement(element, { key: `${baseKey}-jsx-${elementIdx}` }));
+      currentParagraphChildren.push(React.cloneElement(element, { key: elementKey }));
     }
   });
 
   finalizeParagraph();
 
-  if (outputParagraphs.length === 0 && elements.length > 0 && currentParagraphChildren.length > 0) {
+  // Se, após todo o processamento, currentParagraphChildren ainda tiver conteúdo mas nenhum parágrafo foi adicionado
+  // (ex: a lição inteira é uma única linha de texto sem \n e com interações)
+  if (outputParagraphs.length === 0 && currentParagraphChildren.length > 0) {
     outputParagraphs.push(
       <p key={`${baseKey}-p-single`} className="mb-4 last:mb-0">
         {currentParagraphChildren}
@@ -161,7 +165,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           if (parsedOptions.length > 0 && correctAnswer) {
             elements.push(
               <InteractiveWordChoice
-                key={interactionId}
+                key={interactionId} // Use a unique key here
                 interactionId={interactionId}
                 options={shuffleArray(parsedOptions)}
                 correctAnswer={correctAnswer}
@@ -182,7 +186,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             const correctAnswerFillIn = allOptions[0];
             elements.push(
               <InteractiveFillInBlank
-                key={interactionId}
+                key={interactionId} // Use a unique key here
                 interactionId={interactionId}
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
@@ -204,6 +208,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return elements;
   }, [lesson?.id, handleInteractionCorrect]);
+
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -237,7 +242,6 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile, lesson, authLoading]);
 
   useEffect(() => {
-    // Resetting states for new lesson
     setCompletedInteractionIds(new Set());
     setPrevLesson(null);
     setNextLesson(null);
@@ -257,49 +261,21 @@ export function LessonView({ lesson }: LessonViewProps) {
             }
         }
     }
-
-    // Logic for finding adjacent lessons
-    console.log("Current lesson:", lesson);
-    console.log("All mock lessons available:", allMockLessons.length);
-
-    if (lesson?.moduleId && allMockLessons?.length > 0) {
-      console.log(`Finding lessons for moduleId: ${lesson.moduleId}`);
-      const lessonsInModule = allMockLessons
-        .filter(l => {
-          // console.log(`Checking lesson ${l.id}, moduleId: ${l.moduleId}`);
-          return l.moduleId === lesson.moduleId;
-        })
-        .sort((a, b) => {
-          const orderA = a.order ?? Infinity;
-          const orderB = b.order ?? Infinity;
-          if (orderA === Infinity && orderB === Infinity) {
-            // Fallback to original index in allMockLessons if order is undefined for both
-            // This is tricky because filter creates a new array. A better fallback might be ID string sort.
-            return allMockLessons.indexOf(a) - allMockLessons.indexOf(b);
-          }
-          return orderA - orderB;
-        });
-
-      console.log(`Lessons found in module ${lesson.moduleId}:`, lessonsInModule.map(l => ({id: l.id, order: l.order, title: l.title })));
-
-      const currentIndex = lessonsInModule.findIndex(l => l.id === lesson.id);
-      console.log(`Current lesson index in module: ${currentIndex}`);
+    
+    // Lógica de navegação SIMPLES baseada no índice do array global allMockLessons
+    if (lesson && allMockLessons && allMockLessons.length > 0) {
+      const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
 
       if (currentIndex > -1) {
-        const prev = currentIndex > 0 ? lessonsInModule[currentIndex - 1] : null;
-        const next = currentIndex < lessonsInModule.length - 1 ? lessonsInModule[currentIndex + 1] : null;
+        const prev = currentIndex > 0 ? allMockLessons[currentIndex - 1] : null;
+        const next = currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null;
         setPrevLesson(prev);
         setNextLesson(next);
-        console.log("Previous lesson:", prev?.id);
-        console.log("Next lesson:", next?.id);
       } else {
-        console.error(`Current lesson ${lesson.id} not found in its module ${lesson.moduleId} after filtering and sorting.`);
         setPrevLesson(null);
         setNextLesson(null);
       }
     } else {
-      if (!lesson?.moduleId) console.warn("Current lesson has no moduleId.");
-      if (!allMockLessons || allMockLessons.length === 0) console.warn("allMockLessons is empty or not available.");
       setPrevLesson(null);
       setNextLesson(null);
     }
@@ -465,5 +441,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+    
 
     
