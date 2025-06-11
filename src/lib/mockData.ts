@@ -59,7 +59,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha1',
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
-    emoji: '🧒', // Usando o emoji do título
+    emoji: '🧒', 
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -77,7 +77,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha2',
     title: 'Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.',
     order: 2,
-    emoji: '🧑‍🦳', 
+    emoji: '👤', // ATUALIZADO
     description: 'Compreenda as particularidades do desenvolvimento de adultos e idosos com deficiência, abordando aspectos físicos, cognitivos, sociais e afetivos ao longo do envelhecimento.',
     modules: [{
       id: 'mod-trilha2-0',
@@ -113,7 +113,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha4',
     title: 'Principais abordagens teóricas relativas ao desenvolvimento da pessoa com deficiência.',
     order: 4,
-    emoji: '🧠', 
+    emoji: '📚', // ATUALIZADO
     description: 'Aprofunde-se nas principais teorias que fundamentam a compreensão do desenvolvimento de pessoas com deficiência, desde perspectivas clássicas até contemporâneas.',
     modules: [{
       id: 'mod-trilha4-0',
@@ -131,7 +131,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha5',
     title: 'Contribuições da neuropsicologia para a compreensão dos fenômenos desenvolvimentais da Pessoa com Deficiência.',
     order: 5,
-    emoji: '🔬', 
+    emoji: '🧠', // ATUALIZADO
     description: 'Descubra como a neuropsicologia contribui para entender os processos de desenvolvimento, as funções cognitivas e os comportamentos em pessoas com deficiência.',
     modules: [{
       id: 'mod-trilha5-0',
@@ -221,7 +221,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha10',
     title: 'Debates contemporâneos sobre processos de inclusão: desenho universal, neurodivergências, tecnologias assistivas e deficiência oculta.',
     order: 10,
-    emoji: '♿', 
+    emoji: '🌈', // ATUALIZADO
     description: 'Participe de debates atuais sobre inclusão, abordando temas como desenho universal, neurodivergência, tecnologias assistivas e deficiências ocultas.',
     modules: [{
       id: 'mod-trilha10-0',
@@ -257,7 +257,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha12',
     title: 'Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.',
     order: 12,
-    emoji: '❤️‍🩹', 
+    emoji: '🧑‍🦳', // ATUALIZADO
     description: 'Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.',
     modules: [{
       id: 'mod-trilha12-0',
