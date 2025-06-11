@@ -106,8 +106,6 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                 const firstModuleOfStep = step.modules && step.modules.length > 0 ? step.modules[0] : null;
 
                 const isStepCompleted = userProfile ? (step.modules ? step.modules.every(mod => completedModulesSet.has(mod.id)) : false) : false;
-                // Para convidado, nenhuma trilha é marcada como 'completed' inicialmente baseado em perfil,
-                // a menos que haja uma lógica local de progresso de trilhas para convidados (não implementado aqui).
 
                 return {
                     id: step.id,
@@ -128,12 +126,9 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
         
         let currentFound = false;
         const finalNodes = tempProcessedNodes.map(node => {
-            // Se não há perfil (convidado sem progresso salvo) ou o perfil está carregando,
-            // a primeira trilha é a atual.
             if (!userProfile && !authLoading) { 
                 return { ...node, isCurrent: node.order === 1 || (node.order === 0 && tempProcessedNodes.length ===1) };
             }
-            // Se há perfil, define a primeira não completada como atual
             if (userProfile && !node.isCompleted && !currentFound) {
                 currentFound = true;
                 return { ...node, isCurrent: true };
@@ -141,21 +136,16 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
             return { ...node, isCurrent: false };
         });
 
-        // Se todas as trilhas foram completadas (e há perfil), ou se nenhuma "atual" foi encontrada
         if (userProfile && !currentFound && finalNodes.length > 0) {
-            // Se todas completas, a última pode ser considerada "atual" para revisão, ou nenhuma.
-            // Aqui, vamos marcar a última como 'isCurrent' se todas estiverem completas.
-            // Ou, se nenhuma foi marcada como atual (cenário de fallback)
             const allCompleted = finalNodes.every(n => n.isCompleted);
             if (allCompleted) {
                  finalNodes[finalNodes.length - 1].isCurrent = true;
-            } else if (!finalNodes.some(n => n.isCurrent)) { // Se nenhuma é atual, marca a primeira não completa
+            } else if (!finalNodes.some(n => n.isCurrent)) { 
                 const firstNonCompleted = finalNodes.find(n => !n.isCompleted);
                 if (firstNonCompleted) firstNonCompleted.isCurrent = true;
-                else finalNodes[0].isCurrent = true; // Fallback para a primeira
+                else finalNodes[0].isCurrent = true;
             }
         } else if (!userProfile && !authLoading && finalNodes.length > 0 && !finalNodes.some(n => n.isCurrent)) {
-             // Para convidado, se nenhuma foi marcada como atual (deveria ser a primeira), força a primeira.
              const minOrderNode = finalNodes.reduce((prev, curr) => ((prev.order ?? Infinity) < (curr.order ?? Infinity) ? prev : curr));
              minOrderNode.isCurrent = true;
         }
@@ -198,7 +188,7 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
       return processedNodes.find(node => node.isCurrent) || null;
     }, [processedNodes, authLoading]);
 
-    if (authLoading && initialRoadmapData.length === 0) { // Modificado para authLoading
+    if (authLoading && initialRoadmapData.length === 0) {
         return (
             <div className="flex justify-center items-center min-h-[300px] w-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -236,7 +226,11 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                 ? "text-primary" 
                                 : "text-foreground group-hover/node-visual:text-primary";
                         
-                        const circleFillClass = node.isCompleted
+                        // Alteração aqui: O preenchimento base do círculo agora é --background
+                        const circleBaseFill = "hsl(var(--background))"; 
+                        
+                        // Este continuará sendo o brilho/borda colorida semi-transparente
+                        const circleEffectFillClass = node.isCompleted
                             ? "fill-green-500/10 dark:fill-green-700/10"
                             : node.isCurrent
                                 ? "fill-primary/10"
@@ -249,6 +243,8 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                         return (
                             <g key={node.id} className={cn("group/node-visual focus:outline-none focus-visible:ring-0", node.firstModuleId && "cursor-pointer")} onClick={() => handleNavigation(node.firstModuleId)} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && node.firstModuleId) { e.preventDefault(); handleNavigation(node.firstModuleId); }}} tabIndex={node.firstModuleId ? 0 : -1} role={node.firstModuleId ? "link" : "img"} aria-label={nodeAriaLabel}>
                                 <title>{node.originalStep.title}: {node.description}</title>
+                                
+                                {/* Círculo de efeito/brilho (semi-transparente) - renderizado primeiro para ficar atrás */}
                                 <circle
                                     cx={node.nodeX}
                                     cy={node.nodeY}
@@ -256,11 +252,22 @@ export function RoadmapDisplay({ initialRoadmapData }: RoadmapDisplayProps) {
                                     className={cn(
                                         "stroke-2 transition-all duration-200 ease-in-out",
                                         "group-hover/node-visual:stroke-primary group-hover/node-visual:opacity-90",
-                                        node.isCurrent && !node.isCompleted ? "ring-4 ring-primary/50 ring-offset-0 stroke-primary dark:ring-primary/70" : "",
+                                        node.isCurrent && !node.isCompleted ? "stroke-primary dark:stroke-primary" : "", // Removido o ring aqui, pode ser adicionado no círculo de base se necessário
                                         node.isCompleted ? "stroke-green-500" : "stroke-border",
-                                        circleFillClass 
+                                        circleEffectFillClass
                                     )}
                                     style={{ filter: node.isCompleted ? 'url(#completed-node-shadow)' : 'url(#node-shadow)' }}
+                                />
+                                {/* Círculo principal opaco - renderizado por cima do de efeito */}
+                                <circle
+                                    cx={node.nodeX}
+                                    cy={node.nodeY}
+                                    r={NODE_RADIUS_BASE - LINE_THICKNESS / 2} // Um pouco menor para o efeito de borda
+                                    fill={circleBaseFill} // Preenchimento opaco
+                                    className={cn(
+                                        "stroke-0", // Sem borda própria, a borda vem do círculo de efeito
+                                        node.isCurrent && !node.isCompleted ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-[hsl(var(--background))]" : "" // Adiciona anel de foco aqui
+                                    )}
                                 />
                                 
                                 {IconComponent ? (
