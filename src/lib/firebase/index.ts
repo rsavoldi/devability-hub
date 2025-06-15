@@ -1,7 +1,7 @@
 // src/lib/firebase/index.ts
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
-// import { getAuth } from "firebase/auth"; // Comentado pois não usaremos Firebase Auth
+import { getAuth } from "firebase/auth"; // Descomentado
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,15 +20,10 @@ if (!getApps().length) {
   app = getApps()[0];
 }
 
-// Inicializa o Firestore com cache ilimitado (ou outra configuração desejada)
-// Mantido para o caso de Genkit ou outras funcionalidades ainda precisarem do Firestore
 const db = initializeFirestore(app, {
   cacheSizeBytes: CACHE_SIZE_UNLIMITED
 });
 
-// const auth = getAuth(app); // Comentado pois não usaremos Firebase Auth
+const auth = getAuth(app); // Descomentado e inicializado
 
-// Exportar apenas o 'db' por enquanto, se 'auth' não for mais necessário em nenhum lugar.
-// Se 'auth' for necessário para o Genkit ou outra parte, ele deve ser mantido.
-// Por ora, como o foco é remover a autenticação de usuário, vou comentar.
-export { db /* , auth */ };
+export { db, auth }; // Exportando auth

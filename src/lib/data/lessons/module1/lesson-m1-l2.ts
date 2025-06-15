@@ -7,9 +7,9 @@ export const lessonM1L2: Lesson = {
   type: 'interactive',
   content: `O **desenvolvimento físico e motor** de crianças e adolescentes é um processo intrinsecamente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*dinâmico;estático;linear] -->, que abarca o crescimento corporal, a complexa maturação dos sistemas orgânicos e a progressiva aquisição de habilidades motoras. Esse processo é fundamental para a interação com o mundo e a construção da autonomia, constituindo-se como uma <!-- INTERACTIVE_FILL_IN_BLANK: [dimensão central|questão secundária|preocupação menor] --> do desenvolvimento humano.
 
-**1. Desconstruindo a 'Normalidade' e Adotando uma Perspectiva Crítica:**
+**1. Adotando uma Perspectiva Crítica:**
 
-Embora existam **marcos do desenvolvimento típico** amplamente reconhecidos – como o sorriso social nos primeiros meses, sustentar a cabeça, sentar, engatinhar e andar –, é de suma importância reconhecer que cada criança segue um percurso <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*singular;rígido;predefinido] --> e individualizado. Esta individualidade é um <!-- INTERACTIVE_FILL_IN_BLANK: [aspecto chave|detalhe menor|fator complicador] --> a ser considerado por pais e profissionais.
+Embora existam **marcos típicos do desenvolvimento** amplamente reconhecidos – como o sorriso social nos primeiros meses, sustentar a cabeça, sentar, engatinhar e andar –, é de suma importância reconhecer que cada criança segue um percurso <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*singular;rígido;predefinido] --> e individualizado. Esta individualidade é um <!-- INTERACTIVE_FILL_IN_BLANK: [aspecto chave|detalhe menor|fator complicador] --> a ser considerado por pais e profissionais.
 
 Antes de explorarmos as especificidades do desenvolvimento, é crucial adotar uma perspectiva crítica que questione as estruturas sociais vigentes. A própria ideia de um **desenvolvimento "típico"**, com seus marcos e cronogramas rígidos, é uma <!-- INTERACTIVE_FILL_IN_BLANK: [construção social|verdade biológica imutável|meta universal] -->. Esses marcos, embora úteis como guias orientadores, foram historicamente utilizados para criar uma norma, um padrão corporal e funcional idealizado, conhecido como **corponormatividade**. Tudo o que desvia dessa norma é frequentemente rotulado como "atraso" ou "desvio", uma visão <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*problemática e limitante;neutra e objetiva;necessária para diagnóstico] --> alinhada ao **modelo médico da deficiência**, que foca no déficit individual a ser "corrigido".
 
@@ -133,7 +133,7 @@ A paciência genuína e a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*observação a
 
 **Conclusão: Transformando Perspectivas e Práticas:**
 
-Em suma, estudar o desenvolvimento físico e motor de crianças e adolescentes com deficiência sob uma perspectiva crítica, política e anticapacitista significa fundamentalmente mover o foco da "tragédia" individual para a **responsabilidade coletiva** de transformação social.
+Em suma, estudar o desenvolvimento físico e motor de crianças e adolescentes com deficiência sob uma perspectiva crítica, política e anticapacitista significa fundamentalmente mover o foco para a **responsabilidade coletiva** de transformação social.
 
 Compreender as singularidades do desenvolvimento físico e motor de crianças e adolescentes com deficiência é o primeiro passo essencial para promover efetivamente sua saúde integral, bem-estar, autonomia plena e inclusão social genuína. O objetivo não é normalizar corpos ou impor padrões externos, mas transformar ambientes, desconstruir preconceitos estruturais e garantir os suportes necessários para que cada pessoa possa viver, aprender e participar plenamente da sociedade, valorizada e respeitada em sua <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*singularidade e dignidade;conformidade às normas;capacidade de adaptação] -->.
 

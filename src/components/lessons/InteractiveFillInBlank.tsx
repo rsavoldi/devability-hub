@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, shuffleArray } from '@/lib/utils'; 
 import { Check, X, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
@@ -56,8 +56,8 @@ export function InteractiveFillInBlank({
     const textToMeasure = filledAnswer || blankPlaceholder;
     // Ajuste para estimar melhor a largura, considerando o ícone se presente.
     // Adiciona um pouco mais de padding para o ícone.
-    const baseLength = Math.max(textToMeasure.length * 7, blankPlaceholder.length * 7); // Aproximadamente 7px por caractere em text-xs
-    const paddingAndIcon = 28; // Ajuste para padding e ícone
+    const baseLength = Math.max(textToMeasure.length * 6, blankPlaceholder.length * 7); // Aproximadamente 7px por caractere em text-xs
+    const paddingAndIcon = 20; // Ajuste para padding e ícone
     const minWidth = 80;
     setButtonWidth(`${Math.max(baseLength + paddingAndIcon, minWidth)}px`); 
   }, [filledAnswer, blankPlaceholder]);
@@ -73,7 +73,7 @@ export function InteractiveFillInBlank({
   };
 
   let triggerContent;
-  let icon = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70 shrink-0" /> : <ChevronDown className="h-3 w-3 opacity-70 shrink-0" />;
+  let icon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70 shrink-0" /> : <ChevronDown className="h-3 w-3 opacity-70 shrink-0" />;
   let textColorClass = "text-primary hover:text-primary/80 dark:text-primary-foreground/70 dark:hover:text-primary-foreground/90";
   let borderColorClass = "border-primary/50 hover:border-primary";
   let cursorClass = "cursor-pointer";
@@ -81,7 +81,7 @@ export function InteractiveFillInBlank({
   let prefixIcon = <Edit2 className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity shrink-0" />;
 
 
-  if (isSubmitted) { 
+  if (isSubmitted) {
     prefixIcon = <Check className="h-3 w-3 mr-1 shrink-0" />;
     mainText = filledAnswer || correctAnswer; 
     textColorClass = "text-green-700 dark:text-green-200";
