@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn } from "lucide-react"; // Removido ícones de navegação
+import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react"; // Adicionado Trash2
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,13 +22,13 @@ import { ChatbotDialog } from "@/components/chatbot/ChatbotDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { LOCAL_STORAGE_KEYS } from "@/constants";
+// import { LOCAL_STORAGE_KEYS } from "@/constants"; // Não é mais necessário aqui diretamente
 
 const mainNavItems: NavItem[] = [
   { href: "/", label: "Roadmap", emoji: "🗺️" },
   { href: "/lessons", label: "Lições", emoji: "📖" },
   { href: "/exercises", label: "Exercícios", emoji: "🎯" },
-  { href: "/dictionary", label: "Dicionário", emoji: "📚" }, // Alterado para 📚 (livros empilhados)
+  { href: "/dictionary", label: "Dicionário", emoji: "📚" },
   { href: "/achievements", label: "Conquistas", emoji: "🏆" },
 ];
 
@@ -39,22 +39,22 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, refreshUserProfile } = useAuth();
+  const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth(); // Adicionado clearCurrentUserProgress
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
-  const handleClearGuestProgress = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(LOCAL_STORAGE_KEYS.PROGRESS);
-      localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS);
-      refreshUserProfile(); 
-      router.push('/'); 
+  const handleClearProgress = () => {
+    // Adicionar uma confirmação seria uma boa prática aqui
+    if (confirm("Tem certeza que deseja limpar seu progresso local? Esta ação não pode ser desfeita.")) {
+      clearCurrentUserProgress();
+      router.push('/'); // Opcional: redirecionar para home após limpar
     }
   };
 
   const displayName = userProfile?.name || "Convidado(a)";
   const displayAvatarFallback = displayName.substring(0, 1).toUpperCase();
+  const displayAvatarUrl = userProfile?.avatarUrl || `https://placehold.co/100x100.png?text=${displayAvatarFallback}`;
 
 
   return (
@@ -63,7 +63,7 @@ export function AppHeader() {
         <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
-              <span role="img" aria-label="Prêmio/Troféu" className="text-2xl">🏆</span> {/* Emoji para o logo */}
+              <span role="img" aria-label="Troféu DevAbility Hub" className="text-2xl">🏆</span>
               <h1 className="text-xl font-bold tracking-tight">DevAbility Hub</h1>
             </Link>
           </div>
@@ -127,17 +127,13 @@ export function AppHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full" suppressHydrationWarning>
                   <Avatar className="h-9 w-9">
-                    {userProfile?.avatarUrl ? (
-                       <AvatarImage src={userProfile.avatarUrl} alt={displayName} />
-                    ) : (
-                      <AvatarImage src={`https://placehold.co/100x100.png?text=${displayAvatarFallback}`} alt={displayName} />
-                    )}
+                    <AvatarImage src={displayAvatarUrl} alt={displayName} />
                     <AvatarFallback>{displayAvatarFallback}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled>
+                <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{displayName}</p>
                     {currentUser?.email && (
@@ -146,40 +142,47 @@ export function AppHeader() {
                       </p>
                     )}
                   </div>
-                </DropdownMenuItem>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/profile">
-                    <span className="flex items-center w-full">
-                      <UserCircle className="mr-2 h-4 w-4" />
-                      Perfil
-                    </span>
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
-                    <span className="flex items-center w-full">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Configurações
-                    </span>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
+                
+                <DropdownMenuItem onClick={handleClearProgress}>
+                  <Trash2 className="mr-2 h-4 w-4 text-destructive" /> {/* Ícone de lixeira */}
+                  <span className="text-destructive">Limpar Progresso Local</span>
+                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleClearGuestProgress}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Limpar Progresso Local</span>
-                </DropdownMenuItem>
-                 <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/login">
-                       <LogIn className="mr-2 h-4 w-4" /> Login (Em implantação)
-                    </Link>
-                </DropdownMenuItem>
-                 <DropdownMenuItem asChild>
-                    <Link href="/register">
-                       <UserPlus className="mr-2 h-4 w-4" /> Registrar (Em implantação)
-                    </Link>
-                </DropdownMenuItem>
+
+                {currentUser ? (
+                  <DropdownMenuItem onClick={signOutFirebase}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={signInWithGoogle}>
+                       <LogIn className="mr-2 h-4 w-4" />
+                       <span>Login com Google</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/register">
+                         <UserPlus className="mr-2 h-4 w-4" /> 
+                         <span>Registrar (Em implantação)</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -220,3 +223,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    

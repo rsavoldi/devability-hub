@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 "use client";
 
@@ -5,24 +6,25 @@ import React, { createContext, useContext, useEffect, useState, type ReactNode, 
 import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockAchievements } from '@/lib/mockData';
-import { auth } from '@/lib/firebase'; // Importar auth do Firebase
+// import { mockAchievements } from '@/lib/mockData'; // Não é mais necessário aqui, pois o perfil padrão lida com 'ach1'
+import { auth } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut,
-  type User as FirebaseUser // Renomeado para evitar conflito com UserProfile
+  type User as FirebaseUser
 } from 'firebase/auth';
 
 interface AuthContextType {
-  currentUser: FirebaseUser | null; // Agora pode ser FirebaseUser ou null
+  currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
   refreshUserProfile: () => void;
   updateUserProfile: (updates: Partial<UserProfile>) => void;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
+  clearCurrentUserProgress: () => void; // Nova função
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,7 +32,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const GUEST_USER_ID = "guest_user";
 const GUEST_USER_NAME = "Convidado(a)";
 
-// Função para criar um perfil de convidado padrão ou para um novo usuário Firebase
 const createDefaultProfile = (userId: string, userName?: string | null, userAvatar?: string | null): UserProfile => ({
   id: userId,
   name: userName || GUEST_USER_NAME,
@@ -38,9 +39,9 @@ const createDefaultProfile = (userId: string, userName?: string | null, userAvat
   points: 0,
   completedLessons: [],
   completedExercises: [],
-  unlockedAchievements: ['ach1'], 
+  unlockedAchievements: userId === GUEST_USER_ID || !userId ? ['ach1'] : ['ach1'], // Garante que ach1 sempre exista no perfil padrão
   completedModules: [],
-  roles: userId === GUEST_USER_ID ? ['guest'] : ['user'],
+  roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -61,24 +62,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedProfileRaw) {
         try {
           profile = JSON.parse(storedProfileRaw) as UserProfile;
-          // Garantir que os arrays e campos essenciais existam e tenham valores padrão
-          profile.id = userId || GUEST_USER_ID; // Garante que o ID está correto
+          profile.id = userId || GUEST_USER_ID;
           profile.name = firebaseUser?.displayName || profile.name || GUEST_USER_NAME;
           profile.avatarUrl = firebaseUser?.photoURL || profile.avatarUrl || `https://placehold.co/100x100.png?text=${(profile.name || GUEST_USER_NAME).charAt(0).toUpperCase()}`;
           profile.completedLessons = profile.completedLessons || [];
           profile.completedExercises = profile.completedExercises || [];
-          profile.unlockedAchievements = profile.unlockedAchievements || (userId === GUEST_USER_ID ? ['ach1'] : []);
+          profile.unlockedAchievements = profile.unlockedAchievements || (userId === GUEST_USER_ID || !userId ? ['ach1'] : ['ach1']);
           profile.completedModules = profile.completedModules || [];
-          profile.roles = profile.roles || (userId === GUEST_USER_ID ? ['guest'] : ['user']);
+          profile.roles = profile.roles || (userId === GUEST_USER_ID || !userId ? ['guest'] : ['user']);
           profile.points = typeof profile.points === 'number' ? profile.points : 0;
-
         } catch (e) {
           console.error("Erro ao parsear perfil do localStorage, resetando:", e);
           profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.photoURL);
           localStorage.setItem(storageKey, JSON.stringify(profile));
         }
       } else {
-        // Se não há perfil salvo, cria um novo (para convidado ou para novo usuário Firebase)
         profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.photoURL);
         localStorage.setItem(storageKey, JSON.stringify(profile));
       }
@@ -91,11 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setCurrentUser(firebaseUser);
       if (firebaseUser) {
-        // Usuário Firebase logado
         loadProfile(firebaseUser.uid, firebaseUser);
       } else {
-        // Usuário deslogado -> Carrega perfil de convidado
-        loadProfile(null, null); // Passa null para indicar convidado
+        loadProfile(null, null); 
       }
       setLoading(false);
     });
@@ -104,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserProfile = useCallback((updates: Partial<UserProfile>) => {
     setUserProfile(prevProfile => {
-      if (!prevProfile) return null; // Não deveria acontecer se loadProfile funciona
+      if (!prevProfile) return null; 
       
       const profileIdToUpdate = currentUser?.uid || GUEST_USER_ID;
       const updatedProfile = { ...prevProfile, ...updates, id: profileIdToUpdate };
@@ -121,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentUser) {
       loadProfile(currentUser.uid, currentUser);
     } else {
-      loadProfile(null, null); // Convidado
+      loadProfile(null, null);
     }
   }, [currentUser, loadProfile]);
 
@@ -130,29 +126,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged vai lidar com a atualização do estado e carregamento do perfil
     } catch (error) {
       console.error("Erro ao fazer login com Google:", error);
-      // Aqui você pode usar o sistema de Toast para notificar o usuário sobre o erro
-      // Ex: toast({ title: "Erro no Login", description: "Não foi possível fazer login com o Google.", variant: "destructive" });
-      setLoading(false); // Garante que o loading é desativado em caso de erro
+      setLoading(false); 
     }
-    // setLoading(false) é gerenciado pelo onAuthStateChanged
   };
 
   const signOutFirebase = async () => {
     setLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged vai lidar com a transição para o estado de convidado
-      // e o carregamento do perfil de convidado.
-      // setUserProfile(null); // Opcional: limpar perfil imediatamente ou deixar onAuthStateChanged tratar
-      // setCurrentUser(null);
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
       setLoading(false);
     }
   };
+
+  const clearCurrentUserProgress = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const activeUserId = currentUser?.uid || null;
+      const storageKey = getProfileStorageKey(activeUserId);
+      localStorage.removeItem(storageKey);
+      // Recarrega/recria o perfil padrão para o estado atual (logado ou convidado)
+      loadProfile(activeUserId, currentUser); 
+      // Poderia adicionar um toast aqui para informar o usuário
+      console.log(`Progresso local para ${activeUserId || 'convidado'} foi limpo.`);
+    }
+  }, [currentUser, getProfileStorageKey, loadProfile]);
+
 
   if (loading && typeof window !== 'undefined') {
     return (
@@ -168,7 +169,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, loading, refreshUserProfile, updateUserProfile, signInWithGoogle, signOutFirebase }}>
+    <AuthContext.Provider value={{ 
+        currentUser, 
+        userProfile, 
+        loading, 
+        refreshUserProfile, 
+        updateUserProfile, 
+        signInWithGoogle, 
+        signOutFirebase,
+        clearCurrentUserProgress // Expondo a nova função
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -181,3 +191,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
