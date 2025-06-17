@@ -5,7 +5,7 @@ export interface RoadmapStep {
   id: string;
   title: string;
   order?: number;
-  emoji?: string; // Emoji é a prioridade
+  emoji?: string;
   description: string;
   modules: Module[];
   isCompleted?: boolean;
@@ -19,7 +19,7 @@ export interface Module {
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
-  roadmapIcon?: any; 
+  roadmapIcon?: any;
   progress?: number; // 0-100
 }
 
@@ -32,11 +32,12 @@ export interface Lesson {
   estimatedTime: string;
   coverImage?: string;
   aiHint?: string;
-  emoji?: string; 
+  emoji?: string;
   references?: string[];
   moduleId?: string;
   moduleTitle?: string;
   trilhaId?: string;
+  points?: number; // Adicionado para pontuação da lição
 }
 
 export type ExerciseType =
@@ -63,7 +64,7 @@ export interface Exercise {
   targetCategories?: ExerciseOption[];
   correctAnswer?: string | string[] | Record<string, string>;
   feedback?: string;
-  points: number;
+  points: number; // Já existia, apenas confirmando
   estimatedTime: string;
 }
 
@@ -79,29 +80,36 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  emoji?: string; // Adicionado para priorizar emoji
-  icon?: LucideIcon; // Mantido como opcional para fallback
-  isUnlocked: boolean;
-  dateUnlocked?: string;
-  criteria: string;
+  emoji?: string;
+  icon?: LucideIcon; // Mantido como fallback opcional
+  isUnlocked: boolean; // Este campo será gerenciado dinamicamente no UserProfile
+  dateUnlocked?: string; // Este campo será gerenciado dinamicamente no UserProfile
+  criteria: string; // Descrição do critério
+  pointsAwarded?: number; // Pontos ganhos ao desbloquear esta conquista
+  // Adicionar um campo para verificar se a conquista já deu pontos para o usuário
+  hasAwardedPoints?: boolean; // Para controle se os pontos já foram dados
 }
 
 export interface UserProfile {
   id: string;
   name: string;
+  email?: string | null; // Adicionado email
   avatarUrl?: string;
   points: number;
   completedLessons: string[];
   completedExercises: string[];
-  unlockedAchievements: string[];
+  unlockedAchievements: string[]; // IDs das conquistas desbloqueadas
   completedModules: string[];
   roles: string[];
+  // Poderíamos adicionar um objeto para armazenar detalhes das conquistas desbloqueadas,
+  // como data, se os pontos foram concedidos, etc.
+  // Ex: unlockedAchievementsDetails?: Record<string, { dateUnlocked: string, hasAwardedPoints: boolean }>;
 }
 
 export interface NavItem {
   href: string;
   label: string;
-  emoji?: string; // Alterado de icon para emoji
+  emoji?: string;
   disabled?: boolean;
   external?: boolean;
   badge?: string;

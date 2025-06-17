@@ -1,5 +1,4 @@
 
-// src/components/lessons/LessonView.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
@@ -7,7 +6,7 @@ import Image from 'next/image';
 import type { Lesson, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
@@ -16,11 +15,12 @@ import { cn, shuffleArray } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
+// Ação de completar lição será chamada através do AuthContext
+// import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData'; // Renomeado para allMockLessons
+import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -38,7 +38,7 @@ const renderTextWithBold = (text: string, baseKey: string): React.ReactNode[] =>
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
-  boldRegexGlobal.lastIndex = 0; 
+  boldRegexGlobal.lastIndex = 0;
 
   while ((match = boldRegexGlobal.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -69,12 +69,11 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
       currentParagraphChildren = [];
     }
   };
-  
+
   elements.forEach((element, elementIdx) => {
     const elementKey = `${baseKey}-el-${elementIdx}`;
     if (typeof element === 'string') {
-      const textSegments = element.split(/(\\n|\n)/g); 
-      let firstSegmentOfElement = true;
+      const textSegments = element.split(/(\\n|\n)/g);
       textSegments.forEach((segment, segmentIdx) => {
         const segmentKey = `${elementKey}-seg-${segmentIdx}`;
         if (segment === '\\n' || segment === '\n') {
@@ -82,14 +81,13 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
         } else if (segment && segment.trim() !== '') {
           currentParagraphChildren.push(...renderTextWithBold(segment, segmentKey));
         }
-        firstSegmentOfElement = false;
       });
     } else if (React.isValidElement(element)) {
       currentParagraphChildren.push(React.cloneElement(element, { key: elementKey }));
     }
   });
 
-  finalizeParagraph(); 
+  finalizeParagraph();
 
   if (outputParagraphs.length === 0 && currentParagraphChildren.length > 0) {
      outputParagraphs.push(
@@ -103,12 +101,12 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, updateUserProfile } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson } = useAuth(); // completeLesson do contexto
   const { toast } = useToast();
   const router = useRouter();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  
+
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
 
@@ -120,12 +118,12 @@ export function LessonView({ lesson }: LessonViewProps) {
       const newSet = new Set(prev);
       newSet.add(interactionId);
       if (typeof window !== 'undefined' && lesson) {
-          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}`;
+          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile?.id || 'guest'}`;
           localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
       }
       return newSet;
     });
-  }, [lesson]);
+  }, [lesson, userProfile?.id]);
 
   const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
     const elements: (string | JSX.Element)[] = [];
@@ -163,7 +161,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           if (parsedOptions.length > 0 && correctAnswer) {
             elements.push(
               <InteractiveWordChoice
-                key={interactionId} 
+                key={interactionId}
                 interactionId={interactionId}
                 options={shuffleArray(parsedOptions)}
                 correctAnswer={correctAnswer}
@@ -184,7 +182,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             const correctAnswerFillIn = allOptions[0];
             elements.push(
               <InteractiveFillInBlank
-                key={interactionId} 
+                key={interactionId}
                 interactionId={interactionId}
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
@@ -214,7 +212,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return [];
   }, [lesson?.content, parseLessonContentAndCountInteractions]);
-  
+
   useEffect(() => {
       let count = 0;
       processedContentElements.forEach(el => {
@@ -240,11 +238,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile, lesson, authLoading]);
 
   useEffect(() => {
-    setCompletedInteractionIds(new Set()); 
+    setCompletedInteractionIds(new Set());
     setIsMarkingComplete(false);
 
-    if (typeof window !== 'undefined' && lesson) {
-        const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}`;
+    if (typeof window !== 'undefined' && lesson && userProfile) {
+        const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
         if (storedInteractions) {
             try {
@@ -265,7 +263,6 @@ export function LessonView({ lesson }: LessonViewProps) {
         setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
         setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
       } else {
-        console.error(`Lesson with id ${lesson.id} not found in allMockLessons for navigation.`);
         setPrevLesson(null);
         setNextLesson(null);
       }
@@ -273,40 +270,19 @@ export function LessonView({ lesson }: LessonViewProps) {
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [lesson]);
+  }, [lesson, userProfile]);
 
 
   const handleMarkAsCompleted = async () => {
     if (isCompleted || isMarkingComplete || !allInteractionsCompleted || !lesson || !userProfile) return;
     setIsMarkingComplete(true);
 
-    const result = await markLessonCompletedAction(userProfile, lesson.id);
+    await completeLesson(lesson.id); // Chama a função do AuthContext
 
-    if (result.success && result.updatedProfile) {
-      updateUserProfile(result.updatedProfile); 
-      playSound('pointGain');
-      let toastMessage = "Lição marcada como concluída!";
-      if (result.unlockedAchievementsDetails && result.unlockedAchievementsDetails.length > 0) {
-        const achievementTitles = result.unlockedAchievementsDetails.map(a => a.title).join(', ');
-        toastMessage += ' Você desbloqueou: ' + achievementTitles + '!';
-        playSound('achievementUnlock');
-      }
-      toast({
-        title: "Lição Concluída! 🎉",
-        description: toastMessage,
-        className: "bg-green-500 dark:bg-green-700 text-white dark:text-white",
-      });
-    } else {
-      toast({
-        title: "Erro",
-        description: result.message || "Não foi possível marcar a lição como concluída.",
-        variant: "destructive",
-      });
-    }
     setIsMarkingComplete(false);
   };
 
-  if (authLoading || !lesson) { 
+  if (authLoading || !lesson) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -350,6 +326,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               <span>{lesson.estimatedTime}</span>
             </div>
             <span className="capitalize">Tipo: {lesson.type}</span>
+            {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
           </div>
            {totalInteractiveElements > 0 && (
             <div className="mt-3 text-sm text-primary flex items-center">
@@ -444,4 +421,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-    

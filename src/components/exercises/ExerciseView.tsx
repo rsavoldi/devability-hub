@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
-import { mockExercises, mockAchievements } from '@/lib/mockData'; // Added mockAchievements
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { mockExercises, mockAchievements } from '@/lib/mockData';
 import type { Exercise, ExerciseOption, FormedAssociation, Achievement } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, XCircle, Loader2, Send, Link2, Shuffle, MousePointerSquareDashed, PlusCircle, Trash2, ListOrdered, ArrowUpCircle, ArrowDownCircle, Code, Type, Radio as RadioIcon, Puzzle, GripVertical, Star, Trophy } from 'lucide-react'; // Added Trophy
+import { CheckCircle, XCircle, Loader2, Send, Link2, Shuffle, MousePointerSquareDashed, PlusCircle, Trash2, ListOrdered, ArrowUpCircle, ArrowDownCircle, Code, Type, Radio as RadioIcon, Puzzle, GripVertical, Star, Trophy } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -31,13 +31,12 @@ import {
 } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { playSound } from '@/lib/sounds';
-
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface ExerciseViewProps {
   exerciseId: string;
 }
 
-// Componente para item arrastável
 function DraggableItem({ id, children, isSubmitted, isCorrect }: { id: string; children: React.ReactNode; isSubmitted?: boolean; isCorrect?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: id,
@@ -67,7 +66,6 @@ function DraggableItem({ id, children, isSubmitted, isCorrect }: { id: string; c
   );
 }
 
-// Componente para categoria (zona de soltura)
 function DroppableCategory({ id, children, title }: { id: string; children: React.ReactNode; title: string }) {
   const { isOver, setNodeRef } = useDroppable({
     id: id,
@@ -97,6 +95,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const { toast } = useToast();
+  const { completeExercise, userProfile, loading: authLoading } = useAuth(); // Get completeExercise from context
 
   const [itemsA, setItemsA] = useState<ExerciseOption[]>([]);
   const [itemsB, setItemsB] = useState<ExerciseOption[]>([]);
@@ -106,18 +105,22 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
 
   const [orderedItems, setOrderedItems] = useState<ExerciseOption[]>([]);
 
-  // State for drag-and-drop (categorization) exercises
   const [unassignedItems, setUnassignedItems] = useState<ExerciseOption[]>([]);
-  const [categorizedItemsMap, setCategorizedItemsMap] = useState<Record<string, ExerciseOption[]>>({}); // categoryId -> items[]
-  const [userCategorizations, setUserCategorizations] = useState<Record<string, string>>({}); // itemId -> categoryId
+  const [categorizedItemsMap, setCategorizedItemsMap] = useState<Record<string, ExerciseOption[]>>({});
+  const [userCategorizations, setUserCategorizations] = useState<Record<string, string>>({});
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
   const [itemFeedback, setItemFeedback] = useState<Record<string, boolean>>({});
-
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
+
+  const isExerciseAlreadyCompleted = useMemo(() => {
+    if (authLoading || !userProfile || !exercise) return false;
+    return userProfile.completedExercises.includes(exercise.id);
+  }, [userProfile, exercise, authLoading]);
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -156,16 +159,27 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
         const initialMap: Record<string, ExerciseOption[]> = {};
         foundExercise.targetCategories?.forEach(cat => initialMap[cat.id] = []);
         setCategorizedItemsMap(initialMap);
-        setUserCategorizations({}); // Reset previous categorizations
+        setUserCategorizations({});
       }
     }
+    // Se o exercício já foi completado, mostrar como submetido e correto
+    if (userProfile && foundExercise && userProfile.completedExercises.includes(foundExercise.id)) {
+        setIsSubmitted(true);
+        setIsCorrect(true); 
+        // Restaurar o estado da resposta correta seria ideal aqui, mas complexo sem salvar a resposta do usuário.
+        // Por ora, apenas marcamos como correto se já estiver no perfil.
+        // A lógica de mostrar o feedback visual correto para cada tipo precisaria ser mais elaborada
+        // se quisermos mostrar a resposta correta salva.
+    } else {
+        setIsSubmitted(false);
+        setIsCorrect(null);
+    }
     setTimeout(() => setIsLoading(false), 300);
-    setIsSubmitted(false);
-    setIsCorrect(null);
-  }, [exerciseId]);
+  }, [exerciseId, userProfile]); // Adicionado userProfile à dependência
 
 
   const handleAddAssociation = () => {
+    if (isSubmitted && isCorrect) return;
     if (selectedItemA && selectedItemB && exercise) {
       const itemAExists = itemsA.find(item => item.id === selectedItemA);
       const itemBExists = itemsB.find(item => item.id === selectedItemB);
@@ -200,6 +214,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   };
 
   const handleRemoveAssociation = (indexToRemove: number) => {
+    if (isSubmitted && isCorrect) return;
     setFormedAssociations(prev => prev.filter((_, index) => index !== indexToRemove));
     if(isSubmitted) { setIsSubmitted(false); setIsCorrect(null); }
   };
@@ -223,44 +238,44 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isSubmitted && isCorrect) return;
     setActiveDragId(event.active.id);
     if (isSubmitted) { setIsSubmitted(false); setIsCorrect(null); setItemFeedback({}); }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isSubmitted && isCorrect) return;
     setActiveDragId(null);
     const { active, over } = event;
 
     if (active && over && exercise && exercise.options) {
       const draggedItemId = active.id as string;
-      const targetContainerId = over.id as string; // Can be a category ID or 'unassigned-items'
+      const targetContainerId = over.id as string;
 
-      // Remove item from its current location
       let itemToMove: ExerciseOption | undefined;
-      const newUnassignedItems = unassignedItems.filter(item => {
-        if (item.id === draggedItemId) {
-          itemToMove = item;
-          return false;
-        }
-        return true;
-      });
-      
+      let newUnassignedItems = [...unassignedItems];
       const newCategorizedItemsMap = { ...categorizedItemsMap };
-      Object.keys(newCategorizedItemsMap).forEach(catId => {
-        newCategorizedItemsMap[catId] = newCategorizedItemsMap[catId].filter(item => {
-          if (item.id === draggedItemId) {
-            itemToMove = item; // Item might be found here
-            return false;
+
+      // Tenta remover de unassignedItems
+      const unassignedIndex = newUnassignedItems.findIndex(item => item.id === draggedItemId);
+      if (unassignedIndex > -1) {
+        itemToMove = newUnassignedItems[unassignedIndex];
+        newUnassignedItems.splice(unassignedIndex, 1);
+      } else { // Se não estava em unassigned, procura nas categorias
+        Object.keys(newCategorizedItemsMap).forEach(catId => {
+          const catIndex = newCategorizedItemsMap[catId].findIndex(item => item.id === draggedItemId);
+          if (catIndex > -1) {
+            itemToMove = newCategorizedItemsMap[catId][catIndex];
+            newCategorizedItemsMap[catId].splice(catIndex, 1);
           }
-          return true;
         });
-      });
+      }
+      
+      if (!itemToMove) return;
 
-      if (!itemToMove) return; // Should not happen if active.id is valid
-
-      // Add item to the new location
+      // Adiciona ao novo local
       if (targetContainerId === 'unassigned-items-droppable') {
-        setUnassignedItems([...newUnassignedItems, itemToMove]);
+        newUnassignedItems.push(itemToMove);
         const newCategorizations = { ...userCategorizations };
         delete newCategorizations[draggedItemId];
         setUserCategorizations(newCategorizations);
@@ -268,17 +283,17 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
         newCategorizedItemsMap[targetContainerId] = [...(newCategorizedItemsMap[targetContainerId] || []), itemToMove];
         setUserCategorizations(prev => ({ ...prev, [draggedItemId]: targetContainerId }));
       } else {
-        // Dropped somewhere invalid, put it back in unassigned (or its original category if complex)
-        setUnassignedItems([...newUnassignedItems, itemToMove]);
-         const newCategorizations = { ...userCategorizations };
+        newUnassignedItems.push(itemToMove);
+        const newCategorizations = { ...userCategorizations };
         delete newCategorizations[draggedItemId];
         setUserCategorizations(newCategorizations);
       }
       setCategorizedItemsMap(newCategorizedItemsMap);
-      setUnassignedItems(newUnassignedItems); // Update unassigned after potential move
-      setUserAnswer(userCategorizations); // Keep userAnswer updated
+      setUnassignedItems(newUnassignedItems);
+      setUserAnswer(userCategorizations); // Mantenha userAnswer atualizado se for usar para submit
     }
   };
+
 
   const draggedItem = useMemo(() => {
     if (!activeDragId || !exercise || !exercise.options) return null;
@@ -289,7 +304,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!exercise) return;
+    if (!exercise || (isSubmitted && isCorrect) || isExerciseAlreadyCompleted) return; // Não submete se já completou
 
     let answerProvided = false;
     if (exercise.type === 'association') {
@@ -309,8 +324,8 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     } else {
       answerProvided = userAnswer !== undefined && userAnswer !== "" && (!Array.isArray(userAnswer) || userAnswer.length > 0);
     }
-    
-    if (!answerProvided){
+
+    if (!answerProvided && exercise.type !== 'coding'){ // Coding pode ser enviado em branco para "concluir" placeholder
         toast({
           title: "Resposta Incompleta",
           description: `Por favor, ${exercise.type === 'drag-and-drop' ? 'categorize todos os itens' : 'forneça uma resposta'} antes de enviar.`,
@@ -320,8 +335,8 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     }
 
     setIsSubmitted(true);
-    setItemFeedback({}); 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    setItemFeedback({});
+    // await new Promise(resolve => setTimeout(resolve, 500)); // Removido delay desnecessário
 
     let correct = false;
     let currentItemFeedback: Record<string, boolean> = {};
@@ -333,7 +348,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       const correctAnswerToCompare = exercise.options && exercise.options.length > 0 ? exercise.correctAnswer : exercise.correctAnswer.trim().toLowerCase();
       correct = answerToCompare === correctAnswerToCompare;
     } else if (exercise.type === 'association' && typeof exercise.correctAnswer === 'object' && Array.isArray(exercise.correctAnswer)) {
-        const correctAnswersArray = exercise.correctAnswer as string[]; 
+        const correctAnswersArray = exercise.correctAnswer as string[];
         if (formedAssociations.length !== correctAnswersArray.length) {
             correct = false;
         } else {
@@ -350,11 +365,11 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     } else if (exercise.type === 'drag-and-drop' && typeof exercise.correctAnswer === 'object' && !Array.isArray(exercise.correctAnswer) && exercise.options) {
         const correctAnswersMap = exercise.correctAnswer as Record<string, string>;
         let allCorrect = true;
-        
-        if (Object.keys(userCategorizations).length !== exercise.options.length) { 
-             allCorrect = false; 
+
+        if (Object.keys(userCategorizations).length !== exercise.options.length) {
+             allCorrect = false;
         } else {
-            for (const itemId of Object.keys(userCategorizations)) { 
+            for (const itemId of Object.keys(userCategorizations)) {
                  const isItemCorrect = userCategorizations[itemId] === correctAnswersMap[itemId];
                  currentItemFeedback[itemId] = isItemCorrect;
                  if (!isItemCorrect) {
@@ -364,69 +379,43 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
             for (const correctItemId of Object.keys(correctAnswersMap)) {
                 if (!userCategorizations[correctItemId]) {
                     allCorrect = false;
-                    currentItemFeedback[correctItemId] = false; 
+                    currentItemFeedback[correctItemId] = false;
                 }
             }
         }
         setItemFeedback(currentItemFeedback);
         correct = allCorrect;
-
     } else if (['coding'].includes(exercise.type)) {
-      correct = true; 
-      let toastTitle = "Exercício Enviado (Placeholder)";
-      let toastDesc = "Este tipo de exercício está em construção. Considerado completo por agora.";
+      correct = true; // Placeholder
       toast({
-        title: toastTitle,
-        description: toastDesc,
-        variant: "default",
+        title: "Exercício de Código Enviado",
+        description: "Este tipo de exercício está em construção e será considerado completo por agora.",
         className: "bg-blue-500 dark:bg-blue-700 text-white dark:text-white",
       });
     }
 
     setIsCorrect(correct);
 
-    if (correct && exercise.type !== 'coding') {
-      playSound('pointGain'); 
+    if (correct && !isExerciseAlreadyCompleted) {
+      await completeExercise(exercise.id); // Chama a função do AuthContext
+      // Toasts de pontos e conquistas são tratados pelo AuthContext
+    } else if (!correct) {
       toast({
-        title: "✨ Pontos Ganhos!",
-        description: `Você ganhou ${exercise.points} pontos por acertar!`,
-        className: "bg-accent text-accent-foreground",
+          title: "Incorreto 😕",
+          description: "Tente novamente ou verifique o feedback.",
+          variant: "destructive",
       });
-
-      // Simulated achievement unlock
-      if (exercise.id === 'm1-e1.1.1') { // Specific exercise ID to trigger achievement
-        const achievementToUnlock = mockAchievements.find(ach => ach.id === 'ach2'); // "Explorador de Trilhas"
-        if (achievementToUnlock) {
-          // In a real app, we'd check if it's already unlocked and update user profile
-          // For now, just show the notification
-          playSound('achievementUnlock');
-          toast({
-            title: (
-              <div className="flex items-center">
-                <Trophy className="h-5 w-5 mr-2 text-yellow-400" />
-                Conquista Desbloqueada!
-              </div>
-            ),
-            description: `${achievementToUnlock.title} - ${achievementToUnlock.description}`,
-            className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-            duration: 5000,
-          });
-        }
-      }
-    }
-
-
-    if (exercise.type !== 'coding') { 
-      toast({
-          title: correct ? "Correto! 🎉" : "Incorreto 😕",
-          description: correct ? `Você ganhou ${exercise.points} pontos!` : "Tente novamente ou verifique o feedback.",
-          variant: correct ? "default" : "destructive",
-          className: correct ? "bg-green-500 dark:bg-green-700 text-white dark:text-white" : "",
-      });
+    } else if (isExerciseAlreadyCompleted && correct) {
+        toast({
+            title: "Já Concluído!",
+            description: "Você já acertou este exercício anteriormente.",
+            className: "bg-blue-500 text-white dark:bg-blue-600"
+        });
     }
   };
 
-  if (isLoading) {
+
+  if (isLoading || authLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -450,7 +439,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                 if(isSubmitted) { setIsSubmitted(false); setIsCorrect(null); }
               }
             }}
-            disabled={isSubmitted && isCorrect === true}
+            disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
           >
             {exercise.options.map((option: ExerciseOption) => (
               <div key={option.id} className="flex items-center space-x-2 mb-2 p-3 border rounded-md hover:bg-muted/50 has-[[data-state=checked]]:bg-muted">
@@ -471,7 +460,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                   if(isSubmitted) { setIsSubmitted(false); setIsCorrect(null); }
                 }
               }}
-              disabled={isSubmitted && isCorrect === true}
+              disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
               className="space-y-2"
             >
               {exercise.options.map((option: ExerciseOption) => (
@@ -495,7 +484,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
             }}
             placeholder="Sua resposta aqui..."
             className="text-base"
-            disabled={isSubmitted && isCorrect === true}
+            disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
           />
         );
       case 'coding':
@@ -514,7 +503,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                 if(isSubmitted) { setIsSubmitted(false); setIsCorrect(null); }
               }}
               value={userAnswer as string || ""}
-              disabled={isSubmitted && isCorrect === true}
+              disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
             />
           </div>
         );
@@ -537,7 +526,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                     <Button
                       key={item.id}
                       variant={selectedItemA === item.id ? "default" : "outline"}
-                      className={cn("w-full justify-start text-left h-auto py-2 px-3 whitespace-normal", 
+                      className={cn("w-full justify-start text-left h-auto py-2 px-3 whitespace-normal",
                                    formedAssociations.some(fa => fa.itemAId === item.id) && "opacity-50 cursor-not-allowed"
                       )}
                       onClick={() => {
@@ -545,7 +534,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                           if (!formedAssociations.some(fa => fa.itemAId === item.id)) setSelectedItemA(item.id);
                         }
                       }}
-                      disabled={(isSubmitted && isCorrect === true) || formedAssociations.some(fa => fa.itemAId === item.id)}
+                      disabled={(isSubmitted && isCorrect === true) || formedAssociations.some(fa => fa.itemAId === item.id) || isExerciseAlreadyCompleted}
                     >
                       {item.text}
                     </Button>
@@ -567,7 +556,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                           if (!formedAssociations.some(fa => fa.itemBId === item.id)) setSelectedItemB(item.id);
                         }
                       }}
-                      disabled={(isSubmitted && isCorrect === true) || formedAssociations.some(fa => fa.itemBId === item.id)}
+                      disabled={(isSubmitted && isCorrect === true) || formedAssociations.some(fa => fa.itemBId === item.id) || isExerciseAlreadyCompleted}
                     >
                       {item.text}
                     </Button>
@@ -579,7 +568,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
               <Button
                 type="button"
                 onClick={handleAddAssociation}
-                disabled={!selectedItemA || !selectedItemB || (isSubmitted && isCorrect === true)}
+                disabled={!selectedItemA || !selectedItemB || (isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
                 variant="secondary"
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -593,7 +582,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                   {formedAssociations.map((assoc, index) => (
                     <li key={index} className="flex items-center justify-between p-2 border rounded-md bg-muted/50 text-sm">
                       <span>{assoc.itemAText} <Link2 className="inline h-3 w-3 mx-1 text-primary"/> {assoc.itemBText}</span>
-                      {(!isSubmitted || (isSubmitted && !isCorrect)) && (
+                      {(!isSubmitted || (isSubmitted && !isCorrect)) && !isExerciseAlreadyCompleted && (
                         <Button variant="ghost" size="icon" onClick={() => handleRemoveAssociation(index)} className="h-6 w-6">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -619,14 +608,14 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
               {orderedItems.map((item, index) => (
                 <li key={item.id} className="flex items-center justify-between p-3 border rounded-md bg-muted/30 hover:bg-muted/50">
                   <span className="flex-grow">{index + 1}. {item.text}</span>
-                  {(!isSubmitted || (isSubmitted && !isCorrect)) && (
+                  {(!isSubmitted || (isSubmitted && !isCorrect)) && !isExerciseAlreadyCompleted && (
                     <div className="flex gap-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => handleMoveItem(index, 'up')}
-                        disabled={index === 0 || (isSubmitted && isCorrect === true)}
+                        disabled={index === 0 || (isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
                         className="h-7 w-7"
                         aria-label={`Mover ${item.text} para cima`}
                       >
@@ -637,7 +626,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleMoveItem(index, 'down')}
-                        disabled={index === orderedItems.length - 1 || (isSubmitted && isCorrect === true)}
+                        disabled={index === orderedItems.length - 1 || (isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
                         className="h-7 w-7"
                         aria-label={`Mover ${item.text} para baixo`}
                       >
@@ -669,20 +658,19 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                 Arraste os itens abaixo para as categorias corretas.
               </p>
 
-              {/* Unassigned Items Area */}
               <DroppableCategory id="unassigned-items-droppable" title="Itens para Categorizar">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {unassignedItems.map(item => (
-                     <DraggableItem 
-                        key={item.id} 
+                     <DraggableItem
+                        key={item.id}
                         id={item.id}
-                        isSubmitted={isSubmitted}
-                        isCorrect={isSubmitted && itemFeedback[item.id] !== undefined ? itemFeedback[item.id] : undefined}
+                        isSubmitted={isSubmitted || isExerciseAlreadyCompleted}
+                        isCorrect={isSubmitted && itemFeedback[item.id] !== undefined ? itemFeedback[item.id] : (isExerciseAlreadyCompleted ? true : undefined)}
                      >
                       {item.text}
-                      {isSubmitted && itemFeedback[item.id] !== undefined && (
-                          itemFeedback[item.id] ? 
-                          <CheckCircle className="h-4 w-4 ml-auto text-green-500" /> : 
+                      {(isSubmitted || isExerciseAlreadyCompleted) && itemFeedback[item.id] !== undefined && (
+                          itemFeedback[item.id] || isExerciseAlreadyCompleted ?
+                          <CheckCircle className="h-4 w-4 ml-auto text-green-500" /> :
                           <XCircle className="h-4 w-4 ml-auto text-red-500" />
                       )}
                     </DraggableItem>
@@ -691,22 +679,21 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
                 </div>
               </DroppableCategory>
 
-              {/* Target Categories */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {exercise.targetCategories.map(category => (
                   <DroppableCategory key={category.id} id={category.id} title={category.text}>
                      <div className="grid grid-cols-1 gap-2">
                         {(categorizedItemsMap[category.id] || []).map(item => (
-                          <DraggableItem 
-                            key={item.id} 
+                          <DraggableItem
+                            key={item.id}
                             id={item.id}
-                            isSubmitted={isSubmitted}
-                            isCorrect={isSubmitted && itemFeedback[item.id] !== undefined ? itemFeedback[item.id] : undefined}
+                            isSubmitted={isSubmitted || isExerciseAlreadyCompleted}
+                            isCorrect={isSubmitted && itemFeedback[item.id] !== undefined ? itemFeedback[item.id] : (isExerciseAlreadyCompleted ? true : undefined)}
                           >
                             {item.text}
-                            {isSubmitted && itemFeedback[item.id] !== undefined && (
-                                itemFeedback[item.id] ? 
-                                <CheckCircle className="h-4 w-4 ml-auto text-green-500" /> : 
+                            {(isSubmitted || isExerciseAlreadyCompleted) && itemFeedback[item.id] !== undefined && (
+                                itemFeedback[item.id] || isExerciseAlreadyCompleted ?
+                                <CheckCircle className="h-4 w-4 ml-auto text-green-500" /> :
                                 <XCircle className="h-4 w-4 ml-auto text-red-500" />
                             )}
                           </DraggableItem>
@@ -742,7 +729,12 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     }
   };
 
-  const allowRetry = isSubmitted && !isCorrect && exercise?.type !== 'coding';
+  const allowRetry = isSubmitted && !isCorrect && !isExerciseAlreadyCompleted;
+  const buttonText = isLoading && isSubmitted ? "Verificando..." :
+                     isExerciseAlreadyCompleted ? "Já Concluído" :
+                     (isSubmitted && isCorrect === true && exercise.type !== 'coding') ? "Correto!" :
+                     allowRetry ? "Tentar Novamente" : "Enviar Resposta";
+
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -751,13 +743,14 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
           <CardTitle className="text-2xl font-bold">{exercise.title}</CardTitle>
           <CardDescription>
             Tipo: <span className="capitalize">{exercise.type.replace(/-/g, ' ')}</span> | Pontos: {exercise.points} | Tempo Estimado: {exercise.estimatedTime}
+            {isExerciseAlreadyCompleted && <Badge variant="default" className="ml-2 bg-green-500">Concluído</Badge>}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent>
             <p className="text-lg mb-6">{exercise.question}</p>
             {renderExerciseContent()}
-            {isSubmitted && isCorrect !== null && exercise.type !== 'coding' && exercise.type !== 'drag-and-drop' && (
+            {isSubmitted && isCorrect !== null && exercise.type !== 'coding' && exercise.type !== 'drag-and-drop' && !isExerciseAlreadyCompleted && (
               <Alert variant={isCorrect ? "default" : "destructive"} className={`mt-6 ${isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30'}`}>
                 {isCorrect ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
                 <AlertTitle className={isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>{isCorrect ? "Correto!" : "Incorreto"}</AlertTitle>
@@ -768,17 +761,13 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
             )}
           </CardContent>
           <CardFooter>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={(isSubmitted && isCorrect === true && exercise.type !== 'coding')} 
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={(isSubmitted && isCorrect === true && exercise.type !== 'coding') || isExerciseAlreadyCompleted}
             >
               {isLoading && isSubmitted ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-              {isLoading && isSubmitted ? "Verificando..." : 
-               (isSubmitted && isCorrect === true && exercise.type !== 'coding') ? "Respondido Corretamente" :
-               allowRetry ? "Tentar Novamente" :
-               "Enviar Resposta"
-              }
+              {buttonText}
             </Button>
           </CardFooter>
         </form>
@@ -786,4 +775,3 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     </div>
   );
 }
-
