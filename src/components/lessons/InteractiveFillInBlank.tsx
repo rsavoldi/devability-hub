@@ -4,7 +4,7 @@
 import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, shuffleArray } from '@/lib/utils';
-import { ChevronDown, ChevronUp } from 'lucide-react'; // Check, X, Edit2 removidos
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -54,10 +54,12 @@ export function InteractiveFillInBlank({
 
   useEffect(() => {
     const textToMeasure = filledAnswer || blankPlaceholder;
-    const emojiPlaceholderWidth = isSubmitted || (filledAnswer && isCorrect === false) ? 12 : 12; // Estimativa para largura do emoji e pequeno espaço
-    const baseLength = Math.max(textToMeasure.length * 6, blankPlaceholder.length * 7);
-    const paddingAndChevron = 20;
-    const minWidth = 80; // Largura mínima para acomodar placeholder e chevrons
+    // Ajuste a largura do placeholder do emoji para 'text-sm'. O emoji em si tem uma largura,
+    // e 'text-sm' é maior que 'text-xs'.
+    const emojiPlaceholderWidth = isSubmitted || (filledAnswer && isCorrect === false) ? 16 : 16; // Aumentado ligeiramente
+    const baseLength = Math.max(textToMeasure.length * 7, blankPlaceholder.length * 8); // Ajustado multiplicador para 'text-sm'
+    const paddingAndChevron = 24; // Aumentado ligeiramente para acomodar padding e chevron com texto maior
+    const minWidth = 90; // Aumentado ligeiramente
     setButtonWidth(`${Math.max(baseLength + emojiPlaceholderWidth + paddingAndChevron, minWidth)}px`);
   }, [filledAnswer, blankPlaceholder, isSubmitted, isCorrect]);
 
@@ -74,27 +76,27 @@ export function InteractiveFillInBlank({
 
   let triggerContent;
   let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-3 w-3 opacity-70 shrink-0 ml-1" />;
-  let textColorClass = "text-primary dark:text-primary-foreground/80"; // Removido hover de cor de texto para evitar sublinhado herdado
-  let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary"; // Adicionado focus-visible
+  let textColorClass = "text-primary dark:text-primary-foreground/80";
+  let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
   let cursorClass = "cursor-pointer";
   let mainText = blankPlaceholder;
-  let prefixEmoji = "✏️"; // Emoji de lápis para estado inicial/edição
+  let prefixEmoji = "✏️";
 
   if (isSubmitted) {
-    prefixEmoji = "✅"; // Emoji de check para submetido e correto
+    prefixEmoji = "✅";
     mainText = filledAnswer || correctAnswer;
     textColorClass = "text-green-700 dark:text-green-300";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
     cursorClass = "cursor-default";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
-    prefixEmoji = "❌"; // Emoji de X para resposta incorreta
+    prefixEmoji = "❌";
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 bg-red-100 dark:bg-red-900/30 dark:border-red-700";
   } else if (filledAnswer && isCorrect === null) {
      mainText = filledAnswer;
-     prefixEmoji = ""; // Sem emoji se apenas preenchido mas não verificado (ou pode ser ✏️)
+     prefixEmoji = ""; 
   }
 
 
@@ -111,18 +113,18 @@ export function InteractiveFillInBlank({
   return (
     <Popover open={isPopoverOpen && !isSubmitted} onOpenChange={(openState) => { if (!isSubmitted) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isSubmitted}>
-        <button // Mudado para button para melhor semântica e controle de foco/estilo
-            type="button" // Garante que não submete formulários
+        <button
+            type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "inline-flex items-center justify-between gap-1 px-1.5 py-0.5 text-xs leading-tight transition-all duration-200 rounded group align-baseline not-prose",
+            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose", // Alterado para text-sm, px-2, py-1
             borderColorClass,
             textColorClass,
             cursorClass,
             isSubmitted ? "border" : "border border-dashed",
-            !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20" // Adicionado hover background
+            !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
-            style={{ minWidth: buttonWidth, height: '1.5rem' }} // altura fixa para consistência
+            style={{ minWidth: buttonWidth, height: '1.75rem' }} // Aumentada altura para 1.75rem (28px) para acomodar text-sm
             aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
@@ -143,7 +145,7 @@ export function InteractiveFillInBlank({
             variant="ghost"
             size="sm"
             onClick={() => handleOptionClick(opt)}
-            className="justify-start text-xs h-auto py-1 px-2 text-left"
+            className="justify-start text-sm h-auto py-1.5 px-2.5 text-left" // Alterado para text-sm e ajustado padding
           >
             {opt}
           </Button>
@@ -152,3 +154,4 @@ export function InteractiveFillInBlank({
     </Popover>
   );
 }
+
