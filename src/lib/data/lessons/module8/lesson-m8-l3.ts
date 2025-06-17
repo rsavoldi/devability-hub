@@ -38,7 +38,7 @@ Uma relação profissional ética, inclusiva e emancipatória com pessoas com de
 `,
   estimatedTime: '12-15 mins', 
   coverImage: 'https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjYXJpbmd4bGVudCUyMGNvbW11bmljYXRpb24lMjBldGhpY3N8ZW58MHx8fHwxNzIwNDkwNTQ5fDA&ixlib=rb-4.0.3&q=80&w=1080',
-  aiHint: 'comunicação ética deficiência consentimento sigilo direitos humanos LBI CDPD psicologia', // Adicionado mais termos
+  aiHint: 'comunicação ética deficiência consentimento sigilo direitos humanos LBI CDPD psicologia', 
   references: [
     "Beauchamp, T. L., & Childress, J. F. (2019). *Principles of biomedical ethics* (8th ed.). Oxford University Press.",
     "Brasil. (2009). Decreto nº 6.949, de 25 de agosto de 2009. Promulga a Convenção Internacional sobre os Direitos das Pessoas com Deficiência e seu Protocolo Facultativo. <a href='http://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/decreto/d6949.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",

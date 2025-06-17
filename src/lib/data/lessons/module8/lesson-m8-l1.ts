@@ -53,7 +53,7 @@ Estes princípios éticos não são receitas prontas ou um checklist a ser meram
 `,
   estimatedTime: '12-15 mins', 
   coverImage: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlY29uc2VudCUyMGRvY3VtZW50fGVufDB8fHx8MTcyMDQ4MzEwNnww&ixlib=rb-4.1.0&q=80&w=1080',
-  aiHint: 'ética deficiência direitos humanos CFP LBI CDPD consentimento sigilo autonomia justiça equidade anticapacitismo', 
+  aiHint: 'ética deficiência direitos humanos CFP LBI CDPD consentimento sigilo autonomia justiça equidade anticapacitismo', // Adicionado mais termos
   references: [
     "Barros, L. O. (2018). Avaliação psicológica de pessoas com deficiência: reflexões para práticas inclusivas. In CFP (Org.), *Prêmio Profissional Avaliação Psicológica direcionada a pessoas com deficiência* (pp. 34-48). CFP. <a href='https://site.cfp.org.br/wp-content/uploads/2019/06/Pr%C3%AAmio-Profissional-AP-PCD_web.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>",
     "Beauchamp, T. L., & Childress, J. F. (2019). *Principles of biomedical ethics* (8th ed.). Oxford University Press.",
