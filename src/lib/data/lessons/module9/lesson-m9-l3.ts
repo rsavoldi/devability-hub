@@ -59,7 +59,7 @@ Apesar dos avanços legais e de algumas experiências exitosas, a inclusão labo
 
 A inclusão laboral de pessoas com deficiência não é apenas uma questão de cumprir a lei, de responsabilidade social empresarial ou de "boa vontade". É, fundamentalmente, uma questão de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*direitos humanos;justiça social;desenvolvimento econômico;todas] -->, de reconhecimento do potencial e da contribuição de todos os cidadãos para a sociedade. Uma sociedade e um mercado de trabalho que valorizam a diversidade, que promovem a inclusão e que removem barreiras são, invariavelmente, mais <!-- INTERACTIVE_FILL_IN_BLANK: [ricos, inovadores, justos e produtivos|eficientes, competitivos, homogêneos e padronizados|simples, fáceis de gerenciar, padronizados e controlados] -->. A inclusão é um <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*investimento;custo;fardo] -->.
 `,
-  estimatedTime: '130-160 mins', // Ajustado devido à expansão massiva e interatividade
+  estimatedTime: '13-16 mins', 
   coverImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c7da?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxpbmNsdXNpdmUlMjB3b3JrcGxhY2V8ZW58MHx8fHwxNzIwNTA1NjM5fDA&ixlib=rb-4.0.3&q=80&w=1080',
   aiHint: 'inclusão laboral trabalho deficiência direitos cotas acessibilidade capacitismo emprego apoiado cultura organizacional', // Adicionado mais termos
   references: [
