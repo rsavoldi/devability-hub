@@ -52,7 +52,7 @@ A eficácia das ações afirmativas depende de sua <!-- INTERACTIVE_WORD_CHOICE:
 
 A inclusão social e comunitária é um processo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*contínuo;finalizado;impossível] -->, dinâmico e multifacetado que exige o compromisso e a ação coordenada de todos os setores da sociedade – governo (em todas as esferas), organizações da sociedade civil, setor privado, instituições de ensino e pesquisa, e cada cidadão e cidadã. Ela se constrói no <!-- INTERACTIVE_FILL_IN_BLANK: [cotidiano|planejamento|discurso] -->, nas atitudes, nas políticas e na garantia efetiva de que todos os espaços, oportunidades e relações sejam verdadeiramente para <!-- INTERACTIVE_FILL_IN_BLANK: [todos|alguns poucos|os mais capazes] -->, sem exceção. É um investimento na riqueza da diversidade humana e na construção de uma sociedade mais <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*justa, democrática e solidária;eficiente, competitiva e produtiva;homogênea, controlada e padronizada] -->. A inclusão é uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*responsabilidade coletiva;tarefa individual;missão divina] -->.
 `,
-  estimatedTime: '130-160 mins', // Ajustado devido à expansão massiva e interatividade
+  estimatedTime: '13-16 mins', 
   coverImage: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxhZHVsdHMlMjBmcmllbmRzJTIwY29tbXVuaXR5fGVufDB8fHx8MTcxOTk1ODU5Nnww&ixlib=rb-4.0.3&q=80&w=1080',
   aiHint: 'inclusão social comunidade deficiência direitos acessibilidade participação cidadania capacitismo políticas públicas', // Adicionado mais termos
   references: [
