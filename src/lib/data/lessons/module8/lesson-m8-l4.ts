@@ -48,7 +48,7 @@ A avaliação da pessoa com deficiência é, idealmente e frequentemente na prá
 
 Uma avaliação psicológica e multidisciplinar ética no campo da deficiência é, portanto, culturalmente sensível, tecnicamente adequada, funcionalmente orientada, ecologicamente contextualizada e profundamente respeitosa dos direitos e da autonomia da pessoa. Ela se configura como uma ferramenta poderosa não para rotular ou excluir, mas para promover a compreensão, a inclusão, o empoderamento e a garantia de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*direitos e oportunidades;classificação e controle;normalização e adaptação] --> (Barros, 2019). A ética é o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*fundamento;acessório;limite] --> de uma prática transformadora.
 `,
-  estimatedTime: '13-16 mins', 
+  estimatedTime: '13-15 mins', 
   coverImage: 'https://images.unsplash.com/photo-1516542076529-1ea3854896f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtdWx0aWRpc2NpcGxpbmFyeSUyMHRlYW0lMjBtZWV0aW5nfGVufDB8fHx8MTcyMDQ4OTYzM3ww&ixlib=rb-4.0.3&q=80&w=1080',
   aiHint: 'avaliação multidisciplinar deficiência ética CIF UDA cultura instrumentos direitos', // Adicionado mais termos
   references: [

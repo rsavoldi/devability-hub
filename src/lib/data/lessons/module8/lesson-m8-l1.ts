@@ -51,7 +51,7 @@ A **Competência Profissional** é um imperativo ético fundamental. O Código d
 
 Estes princípios éticos não são receitas prontas ou um checklist a ser meramente cumprido. São, antes de tudo, guias para uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*reflexão crítica;decisão rápida;ação padronizada] -->, uma tomada de decisão responsável e uma prática profissional humanizada em cada situação singular e complexa que se apresenta. Conforme Beauchamp & Childress (2019) argumentam em sua obra seminal sobre princípios da ética biomédica (mas aplicável a todas as profissões de cuidado), a aplicação desses princípios requer <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*sensibilidade ao contexto;rigidez dogmática;intuição pura] -->, ponderação de valores muitas vezes conflitantes, e consideração atenta das particularidades, desejos e direitos de cada indivíduo. A prática ética com pessoas com deficiência é um processo de aprendizado contínuo e inacabado, que exige não apenas conhecimento técnico, mas também empatia <!-- INTERACTIVE_FILL_IN_BLANK: [crítica|cega|seletiva] -->, respeito profundo pela alteridade e um compromisso genuíno e inabalável com a promoção da justiça social, da equidade e da emancipação. A ética é uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*práxis;teoria;lei] -->.
 `,
-  estimatedTime: '12-15 mins', 
+  estimatedTime: '12-14 mins', 
   coverImage: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxlY29uc2VudCUyMGRvY3VtZW50fGVufDB8fHx8MTcyMDQ4MzEwNnww&ixlib=rb-4.1.0&q=80&w=1080',
   aiHint: 'ética deficiência direitos humanos CFP LBI CDPD consentimento sigilo autonomia justiça equidade anticapacitismo', 
   references: [
