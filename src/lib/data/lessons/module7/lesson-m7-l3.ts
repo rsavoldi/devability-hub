@@ -63,23 +63,23 @@ A pesquisa qualitativa, especialmente quando adota abordagens participativas, co
     "Bardin, L. (2016). *Análise de conteúdo* (Edição revista e atualizada). Edições 70.",
     "Braun, V., & Clarke, V. (2021). *Thematic analysis: A practical guide*. Sage.",
     "Braun, V., & Clarke, V. (2022). Conceptual and design thinking for thematic analysis. *Qualitative Psychology, 9*(1), 3–26. <a href='https://doi.org/10.1037/qup0000196' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
-    "Clandinin, D. J. (2013). *Engaging in narrative inquiry*. Left Coast Press.", // Mais recente que o de 2011
-    "Flick, U. (2022). *Introdução à pesquisa qualitativa* (4ª ed.). Penso.", // Edição mais recente
+    "Clandinin, D. J. (2013). *Engaging in narrative inquiry*. Left Coast Press.", 
+    "Flick, U. (2022). *Introdução à pesquisa qualitativa* (4ª ed.). Penso.", 
     "Forero, C. G., et al. (2022). Consolidated criteria for reporting qualitative research (COREQ): a 32-item checklist for interviews and focus groups. *International Journal for Quality in Health Care, 34*(Supplement_1), 1-2. <a href='https://doi.org/10.1093/intqhc/mzac075' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>DOI: 10.1093/intqhc/mzac075</a>",
     "Freire, P. (2019). *Pedagogia do oprimido* (67ª ed.). Paz e Terra. (Obra clássica fundamental para pesquisa participante e emancipatória)",
     "Giorgi, A. P. (2021). *The descriptive phenomenological psychological method*. Duquesne University Press. (Referência mais recente sobre o método fenomenológico descritivo de Giorgi)",
-    "Hammersley, M., & Atkinson, P. (2019). *Ethnography: Principles in practice* (4th ed.). Routledge.", // Edição mais recente
+    "Hammersley, M., & Atkinson, P. (2019). *Ethnography: Principles in practice* (4th ed.). Routledge.", 
     "Holanda, A. F. (2006). Pesquisa qualitativa e psicologia: Aportes da fenomenologia. *Revista da Abordagem Gestáltica, 12*(1), 85-96. <a href='http://pepsic.bvsalud.org/scielo.php?script=sci_arttext&pid=S1809-68672006000100010' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>",
-    "Kemmis, S., McTaggart, R., & Nixon, R. (2014). *The action research planner: Doing critical participatory action research*. Springer.", // Mais recente sobre pesquisa-ação
+    "Kemmis, S., McTaggart, R., & Nixon, R. (2014). *The action research planner: Doing critical participatory action research*. Springer.", 
     "Lincoln, Y. S., Guba, E. G., & Pilcher, D. M. (2018). Naturalistic inquiry. In N. K. Denzin & Y. S. Lincoln (Eds.), *The SAGE handbook of qualitative research* (5th ed., pp. 95-146). Sage. (Capítulo em handbook mais recente consolidando os critérios)",
     "Minayo, M. C. S. (2014). *O desafio do conhecimento: Pesquisa qualitativa em saúde* (14ª ed.). Hucitec.",
     "Nind, M. (2014). *What is inclusive research?*. Bloomsbury Publishing.",
     "Oliver, M. (1992). Changing the social relations of research production?. *Disability, Handicap & Society, 7*(2), 101-114.",
     "Reason, P., & Bradbury, H. (Eds.). (2008). *The SAGE handbook of action research: Participative inquiry and practice* (2nd ed.). Sage.",
     "Riessman, C. K. (2008). *Narrative methods for the human sciences*. Sage.",
-    "Stake, R. E. (2006). *Multiple case study analysis*. Guilford Press.", // Foco em múltiplos casos
+    "Stake, R. E. (2006). *Multiple case study analysis*. Guilford Press.", 
     "Thiollent, M. (2011). *Metodologia da pesquisa-ação* (18ª ed.). Cortez.",
     "Tracy, S. J. (2010). Qualitative quality: Eight “big-tent” criteria for excellent qualitative research. *Qualitative Inquiry, 16*(10), 837-851. <a href='https://doi.org/10.1177/1077800410383121' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
-    "Yin, R. K. (2017). *Case study research and applications: Design and methods* (6th ed.). Sage." // Edição mais recente
+    "Yin, R. K. (2017). *Case study research and applications: Design and methods* (6th ed.). Sage." 
   ]
 };

@@ -90,7 +90,7 @@ A definição cuidadosa e crítica do tópico e da pergunta de pesquisa, juntame
   references: [
     "Ainscow, M. (2020). Promoting inclusion and equity in education: lessons from international experiences. *Nordic Journal of Studies in Educational Policy, 6*(1), 7-16. <a href='https://doi.org/10.1080/20020317.2020.1729587' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Akotirene, C. (2019). *Interseccionalidade*. Pólen.",
-    "Aranha, M. S. F. (2001). Paradigmas da relação da sociedade com as pessoas com deficiência. *Revista do Ministério Público do Trabalho, 11*(21), 160-173. <a href='https://periodicos.pgt.mpt.mp.br/revista_mpt/article/view/1016' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", // Contexto histórico
+    "Aranha, M. S. F. (2001). Paradigmas da relação da sociedade com as pessoas com deficiência. *Revista do Ministério Público do Trabalho, 11*(21), 160-173. <a href='https://claudialopes.psc.br/wp-content/uploads/2021/08/Paradigmas.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
     "Bersch, R. (2017). *Tecnologia assistiva*. Memnon.",
     "Booth, A., Sutton, A., & Papaioannou, D. (2016). *Systematic approaches to a successful literature review* (3rd ed.). Sage.",
     "Campbell, F. K. (2009). Contours of Ableism: The Production of Disability and Abledness. Palgrave Macmillan.",
@@ -98,16 +98,16 @@ A definição cuidadosa e crítica do tópico e da pergunta de pesquisa, juntame
     "Creswell, J. W., & Clark, V. L. P. (2017). *Designing and conducting mixed methods research* (3rd ed.). Sage.",
     "Crenshaw, K. W. (1989). Demarginalizing the Intersection of Race and Sex: A Black Feminist Critique of Antidiscrimination Doctrine, Feminist Theory and Antiracist Politics. *University of Chicago Legal Forum, 1989*(1), 139-167.",
     "Dessen, M. A., & Silva, N. L. P. (2004). Famílias de pessoas com deficiência: desafios e perspectivas. In M. A. Dessen & A. L. Costa Júnior (Orgs.), *A ciência do desenvolvimento humano: tendências atuais e perspectivas futuras* (pp. 212-228). Artmed.",
-    "Dias, S. S., & Oliveira, M. C. S. L. (2013). Deficiência intelectual na perspectiva histórico-cultural: contribuições ao estudo do desenvolvimento adulto e envelhecimento. *Revista Brasileira de Educação Especial, 19*(2), 209-222. <a href='https://www.scielo.br/j/rbee/a/NTjZyP4Y4Z9xG9x8K7q3Qwb/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
+    "Dias, S. S., & Oliveira, M. C. S. L. (2013). Deficiência intelectual na perspectiva histórico-cultural: contribuições ao estudo do desenvolvimento adulto e envelhecimento. *Revista Brasileira de Educação Especial, 19*(2), 209-222. <a href='https://www.scielo.br/j/rbee/a/HQwb73v6jhsrVZdwJfhXvhc/?format=pdf&lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Diniz, D. (2007). *O que é deficiência*. Brasiliense.",
     "Fiamenghi Jr, G. A., & Messa, A. A. (2007). *Pais, filhos e deficiência: estudos sobre as relações familiares*. São Paulo: Vetor.",
     "Galvão Filho, T. A., & Damasceno, L. L. (2008). Tecnologias assistivas para autonomia do aluno com necessidades educacionais especiais. *Inclusão: Revista da Educação Especial, 4*(2), 25-32.",
     "Glat, R., & Blanco, L. M. V. (2009). *Educação Especial no contexto de uma Educação Inclusiva*. Sou Sete Letras.",
     "Hulley, S. B., Cummings, S. R., Browner, W. S., Grady, D. G., & Newman, T. B. (2013). *Delineando a pesquisa clínica* (4ª ed.). Artmed.",
-    "Jannuzzi, G. M. (2012). *A educação do deficiente no Brasil: dos primórdios ao início do século XXI* (3ª ed.). Autores Associados.", // Edição mais recente
+    "Jannuzzi, G. M. (2012). *A educação do deficiente no Brasil: dos primórdios ao início do século XXI* (3ª ed.). Autores Associados.", 
     "Mazzotta, M. J. S., & D’Antino, M. E. F. (2011). *Educação especial no Brasil: história e políticas públicas* (6ª ed.). Cortez.",
-    "Mello, A. G., & Nuernberg, A. H. (2012). Gênero e deficiência: interseções e perspectivas. *Revista Estudos Feministas, 20*(3), 635-655. <a href='https://www.scielo.br/j/ref/a/v699x98QkP9zG9J9q3s6mCz/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
-    "Mendes, E. G. (2006). A radicalização do debate sobre inclusão escolar no Brasil. *Revista Brasileira de Educação, 11*(33), 387-405. <a href='https://www.scielo.br/j/rbedu/a/Y5B3GFYkvyq4yqN3M5PqLsh/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
+    "Mello, A. G., & Nuernberg, A. H. (2012). Gênero e deficiência: interseções e perspectivas. *Revista Estudos Feministas, 20*(3), 635-655. <a href='https://www.scielo.br/j/ref/a/rDWXgMRzzPFVTtQDLxr7Q4H/?format=pdf&lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
+    "Mendes, E. G. (2006). A radicalização do debate sobre inclusão escolar no Brasil. *Revista Brasileira de Educação, 11*(33), 387-405. <a href='https://www.scielo.br/j/rbedu/a/KgF8xDrQfyy5GwyLzGhJ67m/?format=pdf&lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Sassaki, R. K. (2010). *Inclusão: Construindo uma sociedade para todos* (8ª ed.). WVA.",
     "Shakespeare, T. (2013). *Disability rights and wrongs revisited* (2nd ed.). Routledge.",
     "Shogren, K. A., Wehmeyer, M. L., Palmer, S. B., Forber-Pratt, A. J., Little, T. D., & Lopez, S. (2015). Causal agency theory: Reconceptualizing a functional model of self-determination. *Education and Training in Autism and Developmental Disabilities, 50*(3), 251-263."

@@ -86,7 +86,7 @@ Muitos pesquisadores no campo da deficiência, reconhecendo essas limitações, 
 `,
   estimatedTime: '11-14 mins', 
   coverImage: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxleGNlbHxlbnwwfHx8fDE3NDkyMzM1OTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-  aiHint: 'pesquisa quantitativa deficiência estatística epidemiologia instrumentos validade confiabilidade amostragem ética', // Adicionado mais termos
+  aiHint: 'pesquisa quantitativa deficiência estatística epidemiologia instrumentos validade confiabilidade amostragem ética', 
   references: [
     "American Educational Research Association, American Psychological Association, & National Council on Measurement in Education. (2014). *Standards for educational and psychological testing*. AERA.", // Standards for tests
     "Conselho Federal de Psicologia (CFP). (2019). *Nota Técnica nº 4/2019/GTEC/CG*. Orientações sobre construção, adaptação e estudos de equivalência de testes psicológicos para pessoas com deficiência. <a href='https://site.cfp.org.br/wp-content/uploads/2019/04/Nota-T%C3%A9cnica-04.2019-03.04.2019-FINAL.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
