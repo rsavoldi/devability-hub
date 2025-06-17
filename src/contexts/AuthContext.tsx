@@ -2,10 +2,10 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import type { UserProfile, Achievement, Lesson, Exercise, Module } from '@/lib/types'; // Module importado
+import type { UserProfile, Achievement, Lesson, Exercise, Module } from '@/lib/types';
 import { Loader2, Trophy } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { auth, db } from '@/lib/firebase'; // db importado para futuras integrações, auth já estava
+import { auth, db } from '@/lib/firebase';
 import {
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -13,15 +13,19 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile as updateFirebaseProfile, // Renomeado para evitar conflito com a função do contexto
+  updateProfile as updateFirebaseProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
 import {
-  markLessonAsCompleted as completeLessonAction,
-  markExerciseAsCompleted as completeExerciseAction,
-  markModuleAsCompleted as completeModuleAction,
+  markLessonAsCompleted as markLessonCompletedAction,
+  markExerciseAsCompleted as markExerciseCompletedAction,
+  markModuleAsCompleted as markModuleCompletedAction,
+  completeLessonLogic, // Importar a lógica pura
+  completeExerciseLogic, // Importar a lógica pura
+  completeModuleLogic, // Importar a lógica pura
+  checkAndUnlockAchievementsLogic
 } from '@/app/actions/userProgressActions';
 import { mockAchievements } from '@/lib/mockData';
 
@@ -55,7 +59,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   points: 0,
   completedLessons: [],
   completedExercises: [],
-  unlockedAchievements: ['ach1'], // Garante que a conquista "Pioneiro" seja padrão
+  unlockedAchievements: ['ach1'],
   completedModules: [],
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
@@ -73,18 +77,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUserProfile = useCallback((updates: Partial<UserProfile>, persist: boolean = true) => {
     setUserProfileState(prevProfile => {
       const activeUserId = currentUser?.uid || GUEST_USER_ID;
-      // Se prevProfile é null (ex: primeiro carregamento ou após limpar progresso),
-      // precisamos criar um perfil base para mesclar com as 'updates'.
-      // Se estamos atualizando um usuário logado, tentamos usar infos do currentUser.
-      // Se for convidado ou currentUser ainda não está populado com nome/avatar, cai nos defaults.
       const baseProfileForMerge = prevProfile || createDefaultProfile(
-        activeUserId, 
-        currentUser?.displayName, 
-        currentUser?.email, 
+        activeUserId,
+        currentUser?.displayName,
+        currentUser?.email,
         currentUser?.photoURL
       );
       
-      const updated = { ...baseProfileForMerge, ...updates, id: activeUserId };
+      let updated = { ...baseProfileForMerge, ...updates, id: activeUserId };
+
+      // Verificar conquistas por pontos aqui, pois os pontos são atualizados em 'updates'
+      if (updates.points !== undefined && prevProfile && updates.points > prevProfile.points) {
+        const achievementCheck = checkAndUnlockAchievementsLogic(updated, 'points');
+        if (achievementCheck.newAchievements.length > 0) {
+            updated.unlockedAchievements = [...new Set([...updated.unlockedAchievements, ...achievementCheck.newAchievements])];
+            // Os pontos das conquistas já foram somados em `updated.points` pelas `complete...Logic`
+            // Disparar toasts para essas conquistas de pontos
+            achievementCheck.unlockedDetails.forEach((ach) => {
+                playSound('achievementUnlock');
+                toast({
+                    title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
+                    description: `${ach.title} - ${ach.description}`,
+                    className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+                });
+            });
+        }
+      }
       
       if (persist && typeof window !== 'undefined') {
         const storageKey = getProfileStorageKey(currentUser?.uid || null);
@@ -92,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return updated;
     });
-  }, [currentUser, getProfileStorageKey]);
+  }, [currentUser, getProfileStorageKey, toast]);
 
 
   const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null) => {
@@ -123,32 +141,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.setItem(storageKey, JSON.stringify(profile));
       setUserProfileState(profile);
+      return profile; // Retornar o perfil carregado/criado
     }
+    return null;
   }, [getProfileStorageKey]);
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setCurrentUser(firebaseUser);
+      let loadedProfile: UserProfile | null = null;
       if (firebaseUser) {
-        loadProfile(firebaseUser.uid, firebaseUser);
-        // Lógica de conquista de Login
-        // Precisamos garantir que userProfileState seja carregado antes de tentar atualizá-lo
-        // Uma forma é chamar loadProfile e *depois* verificar a conquista.
-        // Uma alternativa é atrasar a verificação da conquista ou fazê-la dentro de um useEffect que dependa de userProfileState.
-        // Por ora, vamos usar um pequeno delay para a checagem de conquista de login, ou melhor,
-        // faremos a verificação após a chamada de `loadProfile`.
-        const currentKey = getProfileStorageKey(firebaseUser.uid);
-        const storedProfile = JSON.parse(localStorage.getItem(currentKey) || '{}') as UserProfile;
+        loadedProfile = loadProfile(firebaseUser.uid, firebaseUser);
         
-        if (storedProfile && !storedProfile.unlockedAchievements.includes('ach_login')) {
+        // Lógica de conquista de Login
+        if (loadedProfile && !loadedProfile.unlockedAchievements.includes('ach_login')) {
           const achievement = mockAchievements.find(a => a.id === 'ach_login');
           if (achievement) {
-            const newAchievements = [...(storedProfile.unlockedAchievements || []), 'ach_login'];
-            const newPoints = (storedProfile.points || 0) + (achievement.pointsAwarded || 0);
-            const updatedProfileForAchievement = { ...storedProfile, unlockedAchievements: newAchievements, points: newPoints, id: firebaseUser.uid };
-            localStorage.setItem(currentKey, JSON.stringify(updatedProfileForAchievement));
-            setUserProfileState(updatedProfileForAchievement); // Atualiza o estado global também
+            const updatedAchievements = [...new Set([...(loadedProfile.unlockedAchievements || []), 'ach_login'])];
+            const updatedPoints = (loadedProfile.points || 0) + (achievement.pointsAwarded || 0);
+            
+            updateUserProfile({
+              unlockedAchievements: updatedAchievements,
+              points: updatedPoints
+            }, true); // Persiste
             
             playSound('achievementUnlock');
             toast({
@@ -160,12 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
       } else {
-        loadProfile(null, null); // Carrega/cria perfil de convidado
+        loadProfile(null, null); 
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [loadProfile, toast, getProfileStorageKey]); // Removido userProfileState da dependência para evitar loops de login
+  }, [loadProfile, toast, updateUserProfile]); 
 
 
   const refreshUserProfile = useCallback(() => {
@@ -181,7 +197,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged irá lidar com a atualização do perfil e estado de loading
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       const errorCode = error.code;
@@ -192,30 +207,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         friendlyMessage = "Login com Google cancelado.";
       }
       toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      setLoading(false); // Garante que loading seja false em caso de erro
+      setLoading(false);
     }
-    // Não definir setLoading(false) aqui se o login for bem sucedido, onAuthStateChanged cuidará disso.
   };
 
   const signOutFirebase = async () => {
     setLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged irá carregar o perfil de convidado e setar loading para false
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
-      setLoading(false); // Garante que loading seja false em caso de erro
+      setLoading(false);
     }
   };
 
   const clearCurrentUserProgress = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const activeUserId = currentUser?.uid || null;
+      const activeUserId = currentUser?.uid || null; // Usar null para convidado
       const storageKey = getProfileStorageKey(activeUserId);
       localStorage.removeItem(storageKey);
       
-      // Recarrega/recria o perfil padrão para o estado atual (logado ou convidado)
       loadProfile(activeUserId, currentUser); 
       
       toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
@@ -229,16 +241,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
       
-      // Forçar a atualização do currentUser e recarregar o perfil
-      // Isso é importante porque onAuthStateChanged pode não pegar o displayName atualizado imediatamente.
       const updatedFirebaseUser = auth.currentUser;
-      setCurrentUser(updatedFirebaseUser); // Atualiza o estado do currentUser no contexto
+      setCurrentUser(updatedFirebaseUser); 
       
       if (updatedFirebaseUser) {
-        loadProfile(updatedFirebaseUser.uid, updatedFirebaseUser); // Cria e salva o perfil local para o novo usuário
+        loadProfile(updatedFirebaseUser.uid, updatedFirebaseUser); 
       }
       
-      setLoading(false);
+      setLoading(false); 
       toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
       return userCredential.user;
     } catch (error: any) {
@@ -259,8 +269,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged irá lidar com a atualização do perfil e estado de loading.
-      // setLoading(false) será chamado dentro do onAuthStateChanged.
       toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
       return userCredential.user;
     } catch (error: any) {
@@ -270,24 +278,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         friendlyMessage = "Email ou senha incorretos. Por favor, verifique seus dados.";
       }
       toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      setLoading(false); // Garante que loading seja false em caso de erro de login
+      setLoading(false);
       return null;
     }
   };
 
-  const handleProgressUpdate = useCallback(async (actionPromise: Promise<any>) => {
-    if (!userProfileState) { // Usar userProfileState aqui
-      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
-      return;
-    }
-    try {
-      const result = await actionPromise;
+  const handleProgressUpdate = useCallback((result: UpdateResult) => {
       if (result.success && result.updatedProfile) {
-        updateUserProfile(result.updatedProfile); // Isso agora usa o currentUser?.uid internamente
+        updateUserProfile(result.updatedProfile, true); // Persiste
         if (result.pointsAdded && result.pointsAdded > 0) {
-          playSound('pointGain');
+          playSound('pointGain'); // ou som específico da tarefa
         }
-        result.unlockedAchievementsDetails?.forEach((ach: Achievement) => {
+        result.unlockedAchievementsDetails?.forEach((ach) => {
           playSound('achievementUnlock');
           toast({
             title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
@@ -300,31 +302,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         toast({ title: "Erro ao Salvar Progresso", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
       }
-    } catch (error) {
-      console.error("Erro ao atualizar progresso:", error);
-      toast({ title: "Erro Inesperado", description: "Ocorreu um erro ao salvar seu progresso.", variant: "destructive" });
-    }
-  }, [userProfileState, updateUserProfile, toast]); // Adicionado userProfileState
+  }, [updateUserProfile, toast]);
 
   const completeLesson = useCallback(async (lessonId: string) => {
-    await handleProgressUpdate(completeLessonAction(userProfileState, lessonId));
-  }, [userProfileState, handleProgressUpdate]);
+    if (!userProfileState) {
+      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
+      return;
+    }
+    let result;
+    if (currentUser) { // Usuário Firebase logado
+      result = await markLessonCompletedAction(userProfileState, lessonId);
+    } else { // Convidado
+      result = completeLessonLogic(userProfileState, lessonId); // Chama a lógica pura localmente
+    }
+    handleProgressUpdate(result);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
-    await handleProgressUpdate(completeExerciseAction(userProfileState, exerciseId));
-  }, [userProfileState, handleProgressUpdate]);
+    if (!userProfileState) {
+      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
+      return;
+    }
+    let result;
+    if (currentUser) {
+      result = await markExerciseCompletedAction(userProfileState, exerciseId);
+    } else {
+      result = completeExerciseLogic(userProfileState, exerciseId);
+    }
+    handleProgressUpdate(result);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
-    await handleProgressUpdate(completeModuleAction(userProfileState, moduleId));
-  }, [userProfileState, handleProgressUpdate]);
+    if (!userProfileState) {
+      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
+      return;
+    }
+    let result;
+    if (currentUser) {
+      result = await markModuleCompletedAction(userProfileState, moduleId);
+    } else {
+      result = completeModuleLogic(userProfileState, moduleId);
+    }
+    handleProgressUpdate(result);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
 
   if (loading && typeof window !== 'undefined') {
-    // Evita renderizar o children se ainda estiver carregando o estado inicial do Firebase
     return (
-      <div className="flex justify-center items-center h-screen w-screen bg-background">
+      <div className="flex justify-center items-center h-screen w-screen bg-background text-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-foreground">Carregando...</p>
+        <p className="ml-4 text-lg">Carregando...</p>
       </div>
     );
   }
@@ -332,7 +359,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       currentUser,
-      userProfile: userProfileState, // Usar userProfileState
+      userProfile: userProfileState,
       loading,
       refreshUserProfile,
       updateUserProfile,

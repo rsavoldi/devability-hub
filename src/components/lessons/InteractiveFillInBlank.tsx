@@ -54,12 +54,10 @@ export function InteractiveFillInBlank({
 
   useEffect(() => {
     const textToMeasure = filledAnswer || blankPlaceholder;
-    // Ajuste a largura do placeholder do emoji para 'text-sm'. O emoji em si tem uma largura,
-    // e 'text-sm' é maior que 'text-xs'.
-    const emojiPlaceholderWidth = isSubmitted || (filledAnswer && isCorrect === false) ? 16 : 16; // Aumentado ligeiramente
-    const baseLength = Math.max(textToMeasure.length * 7, blankPlaceholder.length * 8); // Ajustado multiplicador para 'text-sm'
-    const paddingAndChevron = 24; // Aumentado ligeiramente para acomodar padding e chevron com texto maior
-    const minWidth = 90; // Aumentado ligeiramente
+    const emojiPlaceholderWidth = isSubmitted || (filledAnswer && isCorrect === false) ? 16 : 16; 
+    const baseLength = Math.max(textToMeasure.length * 8, blankPlaceholder.length * 8); // Multiplicador para text-sm
+    const paddingAndChevron = 28; // Aumentado para text-sm e chevron
+    const minWidth = 100; // Aumentado para text-sm
     setButtonWidth(`${Math.max(baseLength + emojiPlaceholderWidth + paddingAndChevron, minWidth)}px`);
   }, [filledAnswer, blankPlaceholder, isSubmitted, isCorrect]);
 
@@ -75,7 +73,7 @@ export function InteractiveFillInBlank({
   };
 
   let triggerContent;
-  let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-3 w-3 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-3 w-3 opacity-70 shrink-0 ml-1" />;
+  let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-4 w-4 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   let textColorClass = "text-primary dark:text-primary-foreground/80";
   let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
   let cursorClass = "cursor-pointer";
@@ -88,22 +86,22 @@ export function InteractiveFillInBlank({
     textColorClass = "text-green-700 dark:text-green-300";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
     cursorClass = "cursor-default";
-    chevronIcon = null;
+    chevronIcon = null; // Remover chevron quando submetido e correto
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = "❌";
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 bg-red-100 dark:bg-red-900/30 dark:border-red-700";
-  } else if (filledAnswer && isCorrect === null) {
+  } else if (filledAnswer && isCorrect === null) { // Estado quando uma opção é selecionada mas ainda não validada (ou validada como errada e resetada)
      mainText = filledAnswer;
-     prefixEmoji = ""; 
+     prefixEmoji = ""; // Nenhum emoji se apenas preenchido ou após erro e antes de nova seleção
   }
 
 
   triggerContent = (
     <span className="flex items-center justify-between w-full">
       <span className="flex items-center overflow-hidden">
-        {prefixEmoji && <span className="mr-1 shrink-0">{prefixEmoji}</span>}
+        {prefixEmoji && <span className={cn("shrink-0", prefixEmoji === "✅" ? "mr-0.5" : "mr-1")}>{prefixEmoji}</span>}
         <span className="truncate">{mainText}</span>
       </span>
       {chevronIcon}
@@ -117,14 +115,14 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose", // Alterado para text-sm, px-2, py-1
+            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
             borderColorClass,
             textColorClass,
             cursorClass,
             isSubmitted ? "border" : "border border-dashed",
             !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
-            style={{ minWidth: buttonWidth, height: '1.75rem' }} // Aumentada altura para 1.75rem (28px) para acomodar text-sm
+            style={{ minWidth: buttonWidth, height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
@@ -135,8 +133,8 @@ export function InteractiveFillInBlank({
           className="w-auto p-1.5 border-border shadow-lg flex flex-col space-y-1 min-w-max"
           side="bottom"
           align="start"
-          hidden={isSubmitted}
-          onOpenAutoFocus={(e) => e.preventDefault()}
+          hidden={isSubmitted} // Esconder popover se submetido
+          onOpenAutoFocus={(e) => e.preventDefault()} // Evita foco automático que pode fechar
       >
         {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
           <Button
@@ -145,7 +143,7 @@ export function InteractiveFillInBlank({
             variant="ghost"
             size="sm"
             onClick={() => handleOptionClick(opt)}
-            className="justify-start text-sm h-auto py-1.5 px-2.5 text-left" // Alterado para text-sm e ajustado padding
+            className="justify-start text-sm h-auto py-1.5 px-2.5 text-left"
           >
             {opt}
           </Button>
@@ -155,3 +153,4 @@ export function InteractiveFillInBlank({
   );
 }
 
+    
