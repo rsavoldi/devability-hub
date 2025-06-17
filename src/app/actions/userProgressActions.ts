@@ -1,9 +1,7 @@
-
 "use server";
 
 import type { UserProfile, Achievement, Lesson, Exercise, Module } from "@/lib/types";
-import { mockAchievements, mockLessons, mockExercises, mockModules, mockRoadmapData } from "@/lib/mockData";
-import { LOCAL_STORAGE_KEYS } from '@/constants';
+import { mockAchievements, mockLessons, mockExercises, mockModules } from "@/lib/mockData"; // mockRoadmapData não é necessário aqui
 
 interface UpdateResult {
   success: boolean;
@@ -15,7 +13,7 @@ interface UpdateResult {
 
 // Helper para criar um perfil padrão se necessário
 function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId: string): UserProfile {
-  if (currentProfile) return { ...currentProfile };
+  if (currentProfile) return { ...currentProfile }; // Retorna uma cópia para evitar mutação direta do estado anterior
   return {
     id: userId,
     name: userId === "guest_user" ? "Convidado(a)" : "Usuário Anônimo",
@@ -24,25 +22,25 @@ function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId
     points: 0,
     completedLessons: [],
     completedExercises: [],
-    unlockedAchievements: ['ach1'],
+    unlockedAchievements: ['ach1'], // Garante que 'ach1' (Pioneiro) esteja sempre presente
     completedModules: [],
     roles: userId === "guest_user" ? ['guest'] : ['user'],
   };
 }
 
-
-// Função interna para lógica de verificação e desbloqueio de conquistas
-// Retorna apenas dados serializáveis
+// Marcada como async para compatibilidade com o ambiente "use server" do Next.js,
+// mesmo que não realize operações `await` internamente.
 export async function checkAndUnlockAchievementsLogic(
-  profile: UserProfile,
+  profile: UserProfile, // Recebe o perfil já com as atualizações básicas (pontos, lições, etc.)
   actionType: 'lesson' | 'exercise' | 'module' | 'points',
-  relatedId?: string
+  relatedId?: string // ID da lição, exercício ou módulo concluído, se aplicável
 ): Promise<{ newAchievements: string[], newPointsFromAchievements: number, unlockedDetails: Array<Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>> }> {
   const newlyUnlockedIds: string[] = [];
   let pointsFromAchievements = 0;
   const unlockedDetails: Array<Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>> = [];
 
   mockAchievements.forEach(achievement => {
+    // Verifica se a conquista já foi desbloqueada OU se já concedeu pontos (para o caso de conquistas de login/pontos que poderiam ser re-verificadas)
     if (!profile.unlockedAchievements.includes(achievement.id)) {
       let conditionMet = false;
       switch (achievement.id) {
@@ -59,7 +57,17 @@ export async function checkAndUnlockAchievementsLogic(
           conditionMet = actionType === 'module' && profile.completedModules.length >= 1;
           break;
         case 'ach_points100': // 100 pontos
+          // A verificação de 'actionType === 'points'' é importante para que essa conquista
+          // não seja indevidamente verificada em cada conclusão de lição/exercício/módulo,
+          // a menos que a chamada para checkAndUnlockAchievementsLogic especifique 'points'.
           conditionMet = actionType === 'points' && profile.points >= 100;
+          break;
+        case 'ach_login':
+          // Esta é geralmente tratada no AuthContext no momento do login, mas pode ser incluída aqui para robustez se actionType 'points' for usado de forma genérica.
+          // Para evitar re-concessão, a verificação principal é `!profile.unlockedAchievements.includes(achievement.id)`
+          // Se a lógica de 'ach_login' for exclusivamente no AuthContext, este case pode ser removido ou ajustado.
+          // Por ora, mantemos a lógica simples: se não está desbloqueada e a ação for de 'points' (ou outra genérica), pode ser considerada.
+          // Mas o ideal é que 'ach_login' e 'ach_profile_complete' sejam tratadas em momentos específicos.
           break;
         // Adicionar mais casos se necessário
       }
@@ -67,10 +75,10 @@ export async function checkAndUnlockAchievementsLogic(
       if (conditionMet) {
         newlyUnlockedIds.push(achievement.id);
         pointsFromAchievements += achievement.pointsAwarded || 0;
-        const { icon, ...serializableAchievementData } = achievement;
+        const { icon, ...serializableAchievementData } = achievement; // Omitir 'icon'
         unlockedDetails.push({
           ...serializableAchievementData,
-          isUnlocked: true, 
+          isUnlocked: true,
           dateUnlocked: new Date().toLocaleDateString('pt-BR')
         });
       }
@@ -79,8 +87,7 @@ export async function checkAndUnlockAchievementsLogic(
   return { newAchievements: newlyUnlockedIds, newPointsFromAchievements: pointsFromAchievements, unlockedDetails };
 }
 
-
-// Função de lógica pura para marcar lição como completa (usada por Server Action e localmente)
+// Função de lógica pura para marcar lição como completa
 export async function completeLessonLogic(
   currentProfile: UserProfile | null,
   lessonId: string
@@ -101,9 +108,10 @@ export async function completeLessonLogic(
   }
 
   profileToUpdate.completedLessons = [...new Set([...profileToUpdate.completedLessons, lessonId])];
-  const pointsForLesson = lesson.points || 10;
+  const pointsForLesson = lesson.points || 10; // Usar os pontos da lição ou um padrão
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForLesson;
 
+  // Passa o perfil já com os pontos da lição para verificar conquistas
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'lesson', lessonId);
   profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
   profileToUpdate.points += achievementCheck.newPointsFromAchievements;
@@ -124,7 +132,6 @@ export async function markLessonAsCompleted(
 ): Promise<UpdateResult> {
   return completeLessonLogic(currentProfile, lessonId);
 }
-
 
 // Função de lógica pura para marcar exercício como completo
 export async function completeExerciseLogic(
@@ -147,7 +154,7 @@ export async function completeExerciseLogic(
   }
 
   profileToUpdate.completedExercises = [...new Set([...profileToUpdate.completedExercises, exerciseId])];
-  const pointsForExercise = exercise.points;
+  const pointsForExercise = exercise.points; // Usar os pontos do exercício
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForExercise;
 
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'exercise', exerciseId);
@@ -190,15 +197,21 @@ export async function completeModuleLogic(
     return { success: true, message: "Módulo já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
 
+  // Verificar se todas as lições e exercícios do módulo estão de fato completos
   const allLessonsDone = module.lessons.every(l => profileToUpdate.completedLessons.includes(l.id));
-  const allExercisesDone = module.exercises.every(e => profileToUpdate.completedExercises.includes(e.id));
+  const moduleExercisesForThisModule = mockExercises.filter(ex => ex.moduleId === module.id);
+  const allExercisesDone = moduleExercisesForThisModule.every(e => profileToUpdate.completedExercises.includes(e.id));
 
-  if (!allLessonsDone || !allExercisesDone) {
-    return { success: false, message: "Ainda há lições ou exercícios pendentes neste módulo.", updatedProfile: profileToUpdate };
+  if (!allLessonsDone || (moduleExercisesForThisModule.length > 0 && !allExercisesDone) ) {
+    return { 
+        success: false, 
+        message: "Ainda há lições ou exercícios pendentes neste módulo para marcá-lo como completo.", 
+        updatedProfile: profileToUpdate 
+    };
   }
 
   profileToUpdate.completedModules = [...new Set([...profileToUpdate.completedModules, moduleId])];
-  const pointsForModule = 50; 
+  const pointsForModule = 50; // Pontuação padrão para completar um módulo
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForModule;
 
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'module', moduleId);
@@ -221,5 +234,3 @@ export async function markModuleAsCompleted(
 ): Promise<UpdateResult> {
   return completeModuleLogic(currentProfile, moduleId);
 }
-
-    
