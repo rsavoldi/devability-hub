@@ -2,10 +2,10 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import type { UserProfile, Achievement, Lesson, Exercise, Module } from '@/lib/types';
+import type { UserProfile, Achievement } from '@/lib/types';
 import { Loader2, Trophy } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import {
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -27,6 +27,7 @@ import {
   markExerciseAsCompleted as markExerciseCompletedAction,
   markModuleAsCompleted as markModuleCompletedAction,
 } from '@/app/actions/userProgressActions';
+import type { UpdateResult } from '@/app/actions/userProgressActions'; // Assuming UpdateResult is exported
 import { mockAchievements } from '@/lib/mockData';
 
 
@@ -35,7 +36,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   refreshUserProfile: () => void;
-  updateUserProfile: (updates: Partial<UserProfile>, persist?: boolean) => Promise<void>;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
   clearCurrentUserProgress: () => void;
@@ -64,75 +65,21 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
 
+const getProfileStorageKey = (userId: string | null): string => {
+  return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfileState, setUserProfileState] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const getProfileStorageKey = useCallback((userId: string | null) => {
-    return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
-  }, []);
-
-  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>, persist: boolean = true) => {
-    let finalUpdatedProfileGlobal: UserProfile | null = null;
-    setUserProfileState(prevProfile => {
-      const activeUserId = currentUser?.uid || GUEST_USER_ID;
-      const baseProfileForMerge = prevProfile || createDefaultProfile(
-        activeUserId,
-        currentUser?.displayName,
-        currentUser?.email,
-        currentUser?.photoURL
-      );
-      
-      let updated = { ...baseProfileForMerge, ...updates, id: activeUserId };
-      
-      updated.unlockedAchievements = Array.isArray(updated.unlockedAchievements) ? [...new Set([...updated.unlockedAchievements, 'ach1'])] : ['ach1'];
-      
-      if (persist && typeof window !== 'undefined') {
-        const storageKey = getProfileStorageKey(currentUser?.uid || null);
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-      }
-      finalUpdatedProfileGlobal = updated; // Store for post-state update logic
-      return updated;
-    });
-
-    // Moved point-based achievement check here, to operate on the 'finalUpdatedProfileGlobal'
-    // which reflects the state *after* the points update would have been applied by setUserProfileState
-    if (finalUpdatedProfileGlobal && updates.points !== undefined && userProfileState && updates.points > userProfileState.points) {
-        const achievementCheck = await checkAndUnlockAchievementsLogic(finalUpdatedProfileGlobal, 'points');
-        if (achievementCheck.newAchievements.length > 0) {
-            const profileWithPointAchievements = {
-                ...finalUpdatedProfileGlobal,
-                unlockedAchievements: [...new Set([...finalUpdatedProfileGlobal.unlockedAchievements, ...achievementCheck.newAchievements])],
-                points: (finalUpdatedProfileGlobal.points || 0) + achievementCheck.newPointsFromAchievements
-            };
-            setUserProfileState(profileWithPointAchievements); 
-             if (persist && typeof window !== 'undefined') {
-                const storageKey = getProfileStorageKey(currentUser?.uid || null);
-                localStorage.setItem(storageKey, JSON.stringify(profileWithPointAchievements));
-            }
-
-            achievementCheck.unlockedDetails.forEach((ach) => {
-                playSound('achievementUnlock');
-                toast({
-                    title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
-                    description: `${ach.title} - ${ach.description}`,
-                    className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-                });
-            });
-        }
-    }
-
-  }, [currentUser, getProfileStorageKey, toast, userProfileState]);
-
-
-  const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null): UserProfile | null => {
+  const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null): UserProfile => {
+    let profile: UserProfile;
     if (typeof window !== 'undefined') {
       const storageKey = getProfileStorageKey(userId);
       const storedProfileRaw = localStorage.getItem(storageKey);
-      let profile: UserProfile;
-
       if (storedProfileRaw) {
         try {
           profile = JSON.parse(storedProfileRaw) as UserProfile;
@@ -146,62 +93,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profile.unlockedAchievements = Array.isArray(profile.unlockedAchievements) ? [...new Set([...profile.unlockedAchievements, 'ach1'])] : ['ach1'];
           profile.completedModules = Array.isArray(profile.completedModules) ? profile.completedModules : [];
           profile.roles = Array.isArray(profile.roles) ? profile.roles : (userId === GUEST_USER_ID || !userId ? ['guest'] : ['user']);
-
         } catch (e) {
-          console.error("Erro ao parsear perfil do localStorage, resetando:", e);
+          console.error("Erro ao parsear perfil do localStorage, criando perfil padrão:", e);
           profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
         }
       } else {
         profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
       }
-      localStorage.setItem(storageKey, JSON.stringify(profile));
-      setUserProfileState(profile);
-      return profile;
+    } else {
+      profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
     }
-    return null;
-  }, [getProfileStorageKey]);
+    return profile;
+  }, []);
+
+  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    setUserProfileState(prevProfile => {
+      const activeUserId = currentUser?.uid || GUEST_USER_ID;
+      // Certifique-se de que o prevProfile não é null antes de espalhar,
+      // ou use createDefaultProfile como base se for null.
+      const baseProfileForMerge = prevProfile || createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
+      
+      let finalUpdatedProfile = { ...baseProfileForMerge, ...updates, id: activeUserId };
+
+      // Garante que os arrays não sejam sobrescritos com undefined se updates não os contiver
+      finalUpdatedProfile.unlockedAchievements = [...new Set([...(baseProfileForMerge.unlockedAchievements || ['ach1']), ...(updates.unlockedAchievements || [])])];
+      finalUpdatedProfile.completedLessons = [...new Set([...(baseProfileForMerge.completedLessons || []), ...(updates.completedLessons || [])])];
+      finalUpdatedProfile.completedExercises = [...new Set([...(baseProfileForMerge.completedExercises || []), ...(updates.completedExercises || [])])];
+      finalUpdatedProfile.completedModules = [...new Set([...(baseProfileForMerge.completedModules || []), ...(updates.completedModules || [])])];
+      
+      // Persistir no localStorage
+      if (typeof window !== 'undefined') {
+        const storageKey = getProfileStorageKey(activeUserId);
+        localStorage.setItem(storageKey, JSON.stringify(finalUpdatedProfile));
+      }
+      return finalUpdatedProfile;
+    });
+  }, [currentUser]);
+
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setCurrentUser(firebaseUser);
-      let loadedProfile = loadProfile(firebaseUser?.uid || null, firebaseUser);
-      
-      if (firebaseUser && loadedProfile) {
-        if (!loadedProfile.unlockedAchievements.includes('ach_login')) {
-          const achievement = mockAchievements.find(a => a.id === 'ach_login');
-          if (achievement) {
-            const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
-            // Chamar updateUserProfile para que ele lide com a lógica de salvar e atualizar o estado
-            await updateUserProfile({
-              unlockedAchievements: [...new Set([...(loadedProfile.unlockedAchievements || []), 'ach_login'])],
-              points: (loadedProfile.points || 0) + pointsFromLoginAchievement
-            }, true);
-            // O toast de conquista será disparado por updateUserProfile se a conquista for nova para o estado atualizado
-            // Para esta conquista específica, podemos disparar um aqui também ou garantir que updateUserProfile o faça.
-            // Para simplificar, e como updateUserProfile já tem lógica de toast para conquistas de pontos,
-            // vamos deixar a lógica de toast para 'ach_login' aqui, pois é um evento de login.
-             playSound('achievementUnlock');
-             toast({
-               title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
-               description: `${achievement.title} - ${achievement.description}`,
-               className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-             });
-          }
-        }
-      }
+      const loadedUserProfile = loadProfile(firebaseUser?.uid || null, firebaseUser);
+      setUserProfileState(loadedUserProfile);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [loadProfile, toast, updateUserProfile]);
+  }, [loadProfile]);
 
+  // Efeito separado para lidar com a conquista de login após o perfil estar no estado
+  useEffect(() => {
+    if (currentUser && userProfileState && !userProfileState.loadingAuthContext) { // 'loadingAuthContext' é apenas um placeholder para uma verificação mais robusta
+        if (!userProfileState.unlockedAchievements.includes('ach_login')) {
+            const achievement = mockAchievements.find(a => a.id === 'ach_login');
+            if (achievement) {
+                const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
+                const profileUpdates: Partial<UserProfile> = {
+                    unlockedAchievements: [...userProfileState.unlockedAchievements, 'ach_login'],
+                    points: (userProfileState.points || 0) + pointsFromLoginAchievement
+                };
+                
+                // Chamada async para updateUserProfile
+                (async () => {
+                    await updateUserProfile(profileUpdates);
+                    // O toast agora é disparado após a atualização do estado ter sido processada
+                    setTimeout(() => {
+                        playSound('achievementUnlock');
+                        toast({
+                            title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
+                            description: `${achievement.title} - ${achievement.description}`,
+                            className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+                        });
+                    }, 0);
+                })();
+            }
+        }
+    }
+  }, [currentUser, userProfileState, updateUserProfile, toast]);
 
   const refreshUserProfile = useCallback(() => {
-    if (currentUser) {
-      loadProfile(currentUser.uid, currentUser);
-    } else {
-      loadProfile(null, null);
-    }
+    const activeUserId = currentUser?.uid || null;
+    const refreshedProfile = loadProfile(activeUserId, currentUser);
+    setUserProfileState(refreshedProfile);
   }, [currentUser, loadProfile]);
 
   const signInWithGoogle = async () => {
@@ -209,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged irá lidar com o carregamento do perfil e setLoading(false)
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       const errorCode = error.code;
@@ -216,7 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
         friendlyMessage = "Login com Google cancelado ou janela fechada.";
       }
-      toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
+      }, 0);
       setLoading(false);
     }
   };
@@ -225,25 +202,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signOut(auth);
+      // onAuthStateChanged irá lidar com o carregamento do perfil de convidado e setLoading(false)
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
-      toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
+      setTimeout(() => {
+        toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
+      }, 0);
       setLoading(false);
     }
   };
 
   const clearCurrentUserProgress = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const activeUserId = currentUser?.uid || null;
+      const activeUserId = currentUser?.uid || GUEST_USER_ID;
       const storageKey = getProfileStorageKey(activeUserId);
       localStorage.removeItem(storageKey);
       
-      loadProfile(activeUserId, currentUser); 
+      const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
+      setUserProfileState(defaultProfile); // Atualiza o estado
+      // Não chama updateUserProfile aqui, pois loadProfile não salva mais. A persistência do perfil zerado acontecerá na próxima ação ou login.
+      // Para garantir, podemos salvar o perfil zerado aqui explicitamente se for um convidado.
+      if (activeUserId === GUEST_USER_ID) {
+         localStorage.setItem(storageKey, JSON.stringify(defaultProfile));
+      }
       
-      toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
-      console.log(`Progresso limpo para a chave: ${storageKey}`);
+      setTimeout(() => {
+        toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
+      },0);
     }
-  }, [currentUser, getProfileStorageKey, loadProfile, toast]);
+  }, [currentUser, loadProfile]);
+
+  const handleProgressUpdate = useCallback(async (resultPromise: Promise<UpdateResult>) => {
+    try {
+      const result = await resultPromise; // Aguarda a promessa (seja local ou server action)
+      if (result.success && result.updatedProfile) {
+        await updateUserProfile(result.updatedProfile);
+
+        if (result.pointsAdded && result.pointsAdded > 0) {
+          setTimeout(() => playSound('pointGain'), 0);
+        }
+        
+        result.unlockedAchievementsDetails?.forEach((ach: Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>) => {
+          setTimeout(() => {
+            playSound('achievementUnlock');
+            toast({
+              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
+              description: `${ach.title} - ${ach.description}`,
+              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+            });
+          }, 100); // Pequeno delay para toasts de conquista
+        });
+
+        if (result.message && (result.message.includes("concluída") || result.message.includes("concluído"))) {
+           setTimeout(() => {
+             toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
+           }, 0);
+        }
+      } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) {
+        setTimeout(() => {
+          toast({ title: "Erro ao Salvar Progresso", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
+        }, 0);
+      }
+    } catch (error) {
+        console.error("Erro ao manusear atualização de progresso:", error);
+        setTimeout(() => {
+          toast({ title: "Erro Crítico", description: "Ocorreu um erro inesperado ao atualizar seu progresso.", variant: "destructive" });
+        }, 0);
+    }
+  }, [updateUserProfile, toast]);
+
+  const completeLesson = useCallback(async (lessonId: string) => {
+    if (!userProfileState) {
+      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
+      return;
+    }
+    if (userProfileState.completedLessons.includes(lessonId) && !currentUser) {
+        return;
+    }
+    
+    const logicFunction = () => completeLessonLogic(userProfileState, lessonId);
+    const actionFunction = () => markLessonCompletedAction(userProfileState, lessonId);
+    
+    await handleProgressUpdate(currentUser ? actionFunction() : logicFunction());
+  }, [userProfileState, currentUser, handleProgressUpdate, toast]);
+
+  const completeExercise = useCallback(async (exerciseId: string) => {
+    if (!userProfileState) {
+      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
+      return;
+    }
+    if (userProfileState.completedExercises.includes(exerciseId) && !currentUser) {
+        return;
+    }
+    const logicFunction = () => completeExerciseLogic(userProfileState, exerciseId);
+    const actionFunction = () => markExerciseCompletedAction(userProfileState, exerciseId);
+
+    await handleProgressUpdate(currentUser ? actionFunction() : logicFunction());
+  }, [userProfileState, currentUser, handleProgressUpdate, toast]);
+
+  const completeModule = useCallback(async (moduleId: string) => {
+    if (!userProfileState) {
+      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
+      return;
+    }
+     if (userProfileState.completedModules.includes(moduleId) && !currentUser) {
+        return;
+    }
+    const logicFunction = () => completeModuleLogic(userProfileState, moduleId);
+    const actionFunction = () => markModuleCompletedAction(userProfileState, moduleId);
+    
+    await handleProgressUpdate(currentUser ? actionFunction() : logicFunction());
+  }, [userProfileState, currentUser, handleProgressUpdate, toast]);
+
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
     setLoading(true);
@@ -251,16 +321,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
       
-      const updatedFirebaseUser = auth.currentUser;
-      if (updatedFirebaseUser) {
-        setCurrentUser(updatedFirebaseUser);
-        loadProfile(updatedFirebaseUser.uid, updatedFirebaseUser); 
-      }
+      // Seta o currentUser aqui para que o useEffect de onAuthStateChanged possa reagir e carregar o perfil
+      // Isso é importante porque o displayName pode não estar imediatamente disponível no `auth.currentUser`
+      // que `onAuthStateChanged` pega inicialmente.
+      setCurrentUser(auth.currentUser); 
+      // O restante do carregamento do perfil e `ach_login` será tratado pelo `onAuthStateChanged` effect
       
-      toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
-      // setLoading(false) é chamado por onAuthStateChanged
+      setTimeout(() => toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` }), 0);
+      // setLoading(false) será chamado por onAuthStateChanged effect
       return userCredential.user;
-    } catch (error: any) {
+    } catch (error: any) { // Adicionada a chave de abertura aqui
       console.error("Erro ao registrar com email:", error);
       let friendlyMessage = "Não foi possível registrar.";
       if (error.code === 'auth/email-already-in-use') {
@@ -268,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (error.code === 'auth/weak-password') {
         friendlyMessage = "A senha é muito fraca. Por favor, use uma senha mais forte.";
       }
-      toast({ title: "Erro no Registro", description: error.message || friendlyMessage, variant: "destructive" });
+      setTimeout(() => toast({ title: "Erro no Registro", description: error.message || friendlyMessage, variant: "destructive" }), 0);
       setLoading(false);
       return null;
     }
@@ -278,100 +348,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
-      // setLoading(false) é chamado por onAuthStateChanged
+      setTimeout(() => toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` }), 0);
+      // setLoading(false) será chamado por onAuthStateChanged effect
       return userCredential.user;
-    } catch (error: any) {
-      console.error("Erro ao fazer login com email:", error);
-      let friendlyMessage = "Email ou senha inválidos.";
+    } catch (error: any) { // Adicionada a chave de abertura aqui
+       let friendlyMessage = "Email ou senha inválidos.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         friendlyMessage = "Email ou senha incorretos. Por favor, verifique seus dados.";
       }
-      toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
+      setTimeout(() => toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" }), 0);
       setLoading(false);
       return null;
     }
   };
-
-  const handleProgressUpdate = useCallback(async (resultPromise: Promise<any> | any) => {
-      try {
-        const result = await resultPromise; 
-        if (result.success && result.updatedProfile) {
-          await updateUserProfile(result.updatedProfile, true); 
-          if (result.pointsAdded && result.pointsAdded > 0) {
-            playSound('pointGain');
-          }
-          result.unlockedAchievementsDetails?.forEach((ach: Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>) => {
-            playSound('achievementUnlock');
-            toast({
-              title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
-              description: `${ach.title} - ${ach.description}`,
-              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-            });
-          });
-          // O toast de sucesso principal (lição/exercício/módulo) é disparado pela função chamadora, se necessário
-          // ou pode ser padronizado aqui. Por ora, mantendo como estava.
-          if (result.message && (result.message.includes("concluída") || result.message.includes("concluído"))) {
-             toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
-          }
-
-        } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) { // Não mostrar erro se já estava completo
-          toast({ title: "Erro ao Salvar Progresso", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
-        }
-      } catch (error) {
-          console.error("Erro ao manusear atualização de progresso:", error);
-          toast({ title: "Erro Crítico", description: "Ocorreu um erro inesperado ao atualizar seu progresso.", variant: "destructive" });
-      }
-  }, [updateUserProfile, toast]);
-
-  const completeLesson = useCallback(async (lessonId: string) => {
-    if (!userProfileState) {
-      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
-      return;
-    }
-    if (userProfileState.completedLessons.includes(lessonId)) {
-      // Não precisa mostrar toast se já estava completa e o usuário só revisitou/clicou de novo.
-      // console.log("Lição já estava completa, não atualizando.");
-      return;
-    }
-    if (currentUser) {
-      await handleProgressUpdate(markLessonCompletedAction(userProfileState, lessonId));
-    } else {
-      await handleProgressUpdate(completeLessonLogic(userProfileState, lessonId));
-    }
-  }, [userProfileState, currentUser, handleProgressUpdate]);
-
-  const completeExercise = useCallback(async (exerciseId: string) => {
-    if (!userProfileState) {
-      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
-      return;
-    }
-     if (userProfileState.completedExercises.includes(exerciseId)) {
-      // console.log("Exercício já estava completo, não atualizando.");
-      return;
-    }
-    if (currentUser) {
-      await handleProgressUpdate(markExerciseCompletedAction(userProfileState, exerciseId));
-    } else {
-      await handleProgressUpdate(completeExerciseLogic(userProfileState, exerciseId));
-    }
-  }, [userProfileState, currentUser, handleProgressUpdate]);
-
-  const completeModule = useCallback(async (moduleId: string) => {
-    if (!userProfileState) {
-      toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
-      return;
-    }
-    if (userProfileState.completedModules.includes(moduleId)) {
-        // console.log("Módulo já estava completo, não atualizando.");
-        return;
-    }
-    if (currentUser) {
-     await handleProgressUpdate(markModuleCompletedAction(userProfileState, moduleId));
-    } else {
-     await handleProgressUpdate(completeModuleLogic(userProfileState, moduleId));
-    }
-  }, [userProfileState, currentUser, handleProgressUpdate]);
 
 
   if (loading) {
