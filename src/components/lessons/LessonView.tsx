@@ -15,8 +15,6 @@ import { cn, shuffleArray } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-// Ação de completar lição será chamada através do AuthContext
-// import { markLessonAsCompleted as markLessonCompletedAction } from '@/app/actions/userProgressActions';
 import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
@@ -101,7 +99,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson } = useAuth(); // completeLesson do contexto
+  const { userProfile, loading: authLoading, completeLesson } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -112,6 +110,12 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const [totalInteractiveElements, setTotalInteractiveElements] = useState(0);
   const [completedInteractionIds, setCompletedInteractionIds] = useState<Set<string>>(new Set());
+
+  const isLessonAlreadyCompletedByProfile = useMemo(() => {
+    if (authLoading || !userProfile || !lesson) return false;
+    return userProfile.completedLessons.includes(lesson.id);
+  }, [userProfile, lesson, authLoading]);
+
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
     setCompletedInteractionIds(prev => {
@@ -166,6 +170,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 options={shuffleArray(parsedOptions)}
                 correctAnswer={correctAnswer}
                 onCorrect={handleInteractionCorrect}
+                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile} // Passar prop
               />
             );
           } else {
@@ -187,6 +192,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
                 onCorrect={handleInteractionCorrect}
+                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile} // Passar prop
               />
             );
           } else {
@@ -203,7 +209,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
     return elements;
-  }, [lesson?.id, handleInteractionCorrect]);
+  }, [lesson?.id, handleInteractionCorrect, isLessonAlreadyCompletedByProfile]); // Adicionada isLessonAlreadyCompletedByProfile como dependência
 
 
   const processedContentElements = useMemo(() => {
@@ -215,33 +221,35 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   useEffect(() => {
       let count = 0;
+      const interactionIdsFromContent: string[] = [];
       processedContentElements.forEach(el => {
           if (React.isValidElement(el) && (el.type === InteractiveWordChoice || el.type === InteractiveFillInBlank)) {
               count++;
+              if(el.props.interactionId) {
+                interactionIdsFromContent.push(el.props.interactionId);
+              }
           }
       });
       setTotalInteractiveElements(count);
-  }, [processedContentElements]);
+
+      // Se a lição já foi completada pelo perfil, popular completedInteractionIds com todas as interações
+      if (isLessonAlreadyCompletedByProfile) {
+        setCompletedInteractionIds(new Set(interactionIdsFromContent));
+      }
+
+  }, [processedContentElements, isLessonAlreadyCompletedByProfile]);
 
 
-  const allInteractionsCompleted = useMemo(() => {
+  const allInteractionsCompletedThisSessionOrPreviously = useMemo(() => {
+    if (isLessonAlreadyCompletedByProfile) return true; // Se já está no perfil, todas estão "concluídas" para o botão
     return totalInteractiveElements === 0 || completedInteractionIds.size === totalInteractiveElements;
-  }, [totalInteractiveElements, completedInteractionIds]);
+  }, [totalInteractiveElements, completedInteractionIds, isLessonAlreadyCompletedByProfile]);
 
-
-  const isCompleted = useMemo(() => {
-    if (authLoading) return false;
-    if (userProfile && lesson) {
-      return userProfile.completedLessons.includes(lesson.id);
-    }
-    return false;
-  }, [userProfile, lesson, authLoading]);
 
   useEffect(() => {
-    setCompletedInteractionIds(new Set());
-    setIsMarkingComplete(false);
-
-    if (typeof window !== 'undefined' && lesson && userProfile) {
+    // Esta parte inicializa o completedInteractionIds do localStorage, mas APENAS se a lição NÃO estiver já completa no perfil.
+    // Se já estiver completa, o useEffect acima (que depende de processedContentElements) já terá populado com todas as interações.
+    if (typeof window !== 'undefined' && lesson && userProfile && !isLessonAlreadyCompletedByProfile) {
         const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
         if (storedInteractions) {
@@ -253,12 +261,17 @@ export function LessonView({ lesson }: LessonViewProps) {
             } catch (error) {
                 console.error("Error parsing stored interactions:", error);
             }
+        } else {
+           setCompletedInteractionIds(new Set()); // Reset se não houver nada salvo para esta sessão
         }
+    } else if (!isLessonAlreadyCompletedByProfile) {
+        setCompletedInteractionIds(new Set()); // Reset para convidado ou se o perfil mudar e a lição não estiver completa
     }
+
+    setIsMarkingComplete(false);
 
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
-
       if (currentIndex > -1) {
         setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
         setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
@@ -270,15 +283,13 @@ export function LessonView({ lesson }: LessonViewProps) {
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [lesson, userProfile]);
+  }, [lesson, userProfile, isLessonAlreadyCompletedByProfile]); // Adicionada isLessonAlreadyCompletedByProfile à dependência
 
 
   const handleMarkAsCompleted = async () => {
-    if (isCompleted || isMarkingComplete || !allInteractionsCompleted || !lesson || !userProfile) return;
+    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompletedThisSessionOrPreviously || !lesson || !userProfile) return;
     setIsMarkingComplete(true);
-
-    await completeLesson(lesson.id); // Chama a função do AuthContext
-
+    await completeLesson(lesson.id);
     setIsMarkingComplete(false);
   };
 
@@ -376,28 +387,28 @@ export function LessonView({ lesson }: LessonViewProps) {
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0 order-first sm:order-none">
             <Button
-              variant={isCompleted ? "default" : "secondary"}
+              variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
               size="lg"
               className={cn(
                 "w-full max-w-xs sm:w-auto",
-                isCompleted ? "bg-green-500 hover:bg-green-600" :
-                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
+                (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isCompleted || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0)}
             >
                 {isMarkingComplete ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : isCompleted ? (
+                ) : isLessonAlreadyCompletedByProfile ? (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 ) : (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 )}
                 {isMarkingComplete
                     ? "Marcando..."
-                    : isCompleted
+                    : isLessonAlreadyCompletedByProfile
                         ? "Concluída"
-                        : (!allInteractionsCompleted && totalInteractiveElements > 0)
+                        : (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0)
                             ? "Complete Interações"
                             : "Marcar Concluída"
                 }

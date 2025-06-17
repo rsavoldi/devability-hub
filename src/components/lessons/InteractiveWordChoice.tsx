@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ interface InteractiveWordChoiceProps {
   correctAnswer: string;
   interactionId: string;
   onCorrect: (interactionId: string) => void;
+  isLessonAlreadyCompleted?: boolean; // Nova prop
 }
 
 export function InteractiveWordChoice({
@@ -17,17 +18,30 @@ export function InteractiveWordChoice({
   correctAnswer,
   interactionId,
   onCorrect,
+  isLessonAlreadyCompleted, // Nova prop
 }: InteractiveWordChoiceProps) {
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(
+    isLessonAlreadyCompleted ? correctAnswer : null
+  );
+  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(
+    isLessonAlreadyCompleted ? true : null
+  );
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(
+    isLessonAlreadyCompleted || false
+  );
+
+  useEffect(() => {
+    if (isLessonAlreadyCompleted) {
+      setSelectedOption(correctAnswer);
+      setIsCorrectSelection(true);
+      setIsSubmitted(true);
+    }
+  }, [isLessonAlreadyCompleted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
-    if (isSubmitted) return;
+    if (isSubmitted) return; // Se já submetido (ou lição já completa), não faz nada
 
-    if (selectedOption === option) {
-      // Se clicou na mesma opção, desmarca (se não for correta e submetida)
-      // Ou se for correta mas ainda não submetida, permite desmarcar
+    if (selectedOption === option && isCorrectSelection === false) {
       setSelectedOption(null);
       setIsCorrectSelection(null);
     } else {
@@ -36,7 +50,7 @@ export function InteractiveWordChoice({
       setIsCorrectSelection(isCorrect);
 
       if (isCorrect) {
-        setIsSubmitted(true); // Marca como submetido APENAS se a seleção for correta
+        setIsSubmitted(true);
         onCorrect(interactionId);
       }
     }
@@ -46,29 +60,33 @@ export function InteractiveWordChoice({
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
       {options.map((option, index) => {
         const isSelected = selectedOption === option;
+        const isCorrectAndSubmitted = isSubmitted && option === correctAnswer;
+        const isIncorrectAndSelected = isSelected && isCorrectSelection === false && !isSubmitted; // Apenas antes da submissão correta
 
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let prefixEmoji = "";
         let additionalClasses = "";
+        let buttonIsDisabled = isSubmitted && option !== correctAnswer; // Desabilita outras opções após submissão correta
 
-        if (isSubmitted && option === correctAnswer) { // Apenas a opção correta fica destacada após submissão
+        if (isCorrectAndSubmitted) {
           variant = "default";
           prefixEmoji = "✅";
           additionalClasses = "bg-green-500 hover:bg-green-500 text-white dark:bg-green-600 dark:hover:bg-green-600 cursor-default";
-        } else if (isSubmitted && option !== correctAnswer) { // Outras opções ficam desabilitadas e menos destacadas
-            additionalClasses = "opacity-60 cursor-not-allowed text-muted-foreground";
-        } else { // Antes da submissão final (ou seja, quando isSubmitted é false)
+          buttonIsDisabled = true; // Bloqueia a opção correta também
+        } else if (isSubmitted && option !== correctAnswer) {
+           additionalClasses = "opacity-60 cursor-not-allowed text-muted-foreground";
+        } else { // Antes da submissão final (ou seja, quando isSubmitted é false, ou lição não completa inicialmente)
           if (isSelected) {
             if (isCorrectSelection === true) { // Selecionou a correta, vai submeter
               variant = "default";
               prefixEmoji = "✅";
               additionalClasses = "bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700 focus-visible:ring-green-400";
-            } else if (isCorrectSelection === false) { // Selecionou a errada
+            } else if (isIncorrectAndSelected) { // Selecionou a errada
               variant = "destructive";
               prefixEmoji = "❌";
               additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
             }
-          } else { // Não selecionada
+          } else {
              additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
           }
         }
@@ -79,15 +97,15 @@ export function InteractiveWordChoice({
             variant={variant}
             size="sm"
             onClick={() => handleOptionClick(option)}
-            disabled={isSubmitted && option !== correctAnswer} // Desabilita outras opções após submissão correta
+            disabled={buttonIsDisabled}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses
             )}
-            style={{gap: prefixEmoji && option === correctAnswer ? '0' : (prefixEmoji ? '0.2rem' : '0')}} // Remove gap para opção correta
+            style={{gap: (prefixEmoji && isCorrectAndSubmitted) ? '0.1rem' : (prefixEmoji ? '0.2rem' : '0')}}
           >
-            {prefixEmoji && <span className={cn("shrink-0", option === correctAnswer && isSubmitted ? "mr-0.5" : "-ml-0.5")}>{prefixEmoji}</span>}
+            {prefixEmoji && <span className={cn("shrink-0", (isCorrectAndSubmitted) ? "mr-0.5" : "-ml-0.5")}>{prefixEmoji}</span>}
             <span>{option}</span>
           </Button>
         );
@@ -95,5 +113,3 @@ export function InteractiveWordChoice({
     </span>
   );
 }
-
-    
