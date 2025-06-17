@@ -47,7 +47,7 @@ A intervenção e o acompanhamento éticos no campo da deficiência são process
 `,
   estimatedTime: '13-16 mins',
   coverImage: 'https://images.unsplash.com/photo-1504208434309-cb69f40ddf60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxpbnRlcnZlbnRpb24lMjBwc3ljaG9sb2d5fGVufDB8fHx8MTcyMDQ5Mjg4Nnww&ixlib=rb-4.0.3&q=80&w=1080',
-  aiHint: 'ética intervenção deficiência acompanhamento inclusão respeito autonomia direitos humanos consentimento confidencialidade não-maleficência', // Adicionado mais termos
+  aiHint: 'ética intervenção deficiência acompanhamento inclusão respeito autonomia direitos humanos consentimento confidencialidade não-maleficência', 
   references: [
     "Amaral, L. A. (1998). Sobre crocodilos e avestruzes: falando de (d)eficiências, preconceitos e seus filhos. In L. A. Amaral (Org.), *Corpo e deficiência: falando sobre o corpo* (pp. 11-24). São Paulo: Cortez.",
     "Beauchamp, T. L., & Childress, J. F. (2019). *Principles of biomedical ethics* (8th ed.). Oxford University Press.",

@@ -68,7 +68,7 @@ A prática psicológica (e de outras profissões de ajuda) não ocorre em um vá
 
 Em conclusão, uma prática profissional ética, respeitosa, inclusiva e emancipatória com pessoas com deficiência é aquela que consistentemente coloca a pessoa no centro de todas as decisões, respeita sua autonomia e protagonismo, reconhece e valoriza suas potencialidades e sua diversidade, combate ativamente o capacitismo em todas as suas formas, garante acessibilidade integral, se baseia em conhecimento científico sólido e atualizado, e se compromete inabalavelmente com a promoção da justiça social e dos direitos humanos. É uma jornada que exige <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*conhecimento;habilidade;sensibilidade;todas] -->, e, acima de tudo, um profundo respeito pela <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*diversidade e dignidade;normalidade e padrão;eficiência e produtividade] --> inerente e inalienável a cada ser humano. Que estas diretrizes consolidadas sirvam como um farol e um convite à reflexão e à ação para uma atuação profissional cada vez mais inclusiva, ética e transformadora. A ética é uma <!-- INTERACTIVE_FILL_IN_BLANK: [bússola constante|meta final|lista de regras] -->.
 `,
-  estimatedTime: '13-16 mins', 
+  estimatedTime: '13-15 mins', 
   coverImage: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxldGhpY2FsJTIwZ3VpZGVsaW5lcyUyMGNvbGxhYm9yYXRpb258ZW58MHx8fHwxNzIwNDk2MzYxfDA&ixlib=rb-4.0.3&q=80&w=1080',
   aiHint: 'ética diretrizes deficiência inclusão direitos humanos psicologia autonomia anticapacitismo acessibilidade', // Adicionado mais termos
   references: [

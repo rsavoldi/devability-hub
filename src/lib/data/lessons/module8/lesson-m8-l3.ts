@@ -36,7 +36,7 @@ Os **limites da confidencialidade** e do sigilo profissional devem ser explicita
 
 Uma relação profissional ética, inclusiva e emancipatória com pessoas com deficiência é construída sobre os pilares da comunicação acessível e respeitosa, do consentimento genuinamente livre e esclarecido, e da proteção rigorosa da confidencialidade e do sigilo. Esses elementos, quando praticados com <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*consciência crítica;automatismo;superficialidade] --> e compromisso, promovem a dignidade, a cidadania, a confiança e fortalecem as pessoas com deficiência como sujeitos <!-- INTERACTIVE_FILL_IN_BLANK: [ativos, protagonistas e detentores de direitos|passivos, objetos de cuidado e dependentes de decisões alheias|dependentes, frágeis e incapazes de participar de forma significativa] --> em todas as decisões que afetam suas vidas. A ética é uma construção <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*cotidiana;teórica;legalista] -->.
 `,
-  estimatedTime: '12-15 mins', 
+  estimatedTime: '12-14 mins', 
   coverImage: 'https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjYXJpbmd4bGVudCUyMGNvbW11bmljYXRpb24lMjBldGhpY3N8ZW58MHx8fHwxNzIwNDkwNTQ5fDA&ixlib=rb-4.0.3&q=80&w=1080',
   aiHint: 'comunicação ética deficiência consentimento sigilo direitos humanos LBI CDPD psicologia', 
   references: [
