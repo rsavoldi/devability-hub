@@ -19,13 +19,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
 import {
-  markLessonAsCompleted as markLessonCompletedAction,
-  markExerciseAsCompleted as markExerciseCompletedAction,
-  markModuleAsCompleted as markModuleCompletedAction,
+  checkAndUnlockAchievementsLogic,
   completeLessonLogic,
   completeExerciseLogic,
   completeModuleLogic,
-  checkAndUnlockAchievementsLogic
+  markLessonAsCompleted as markLessonCompletedAction,
+  markExerciseAsCompleted as markExerciseCompletedAction,
+  markModuleAsCompleted as markModuleCompletedAction,
 } from '@/app/actions/userProgressActions';
 import { mockAchievements } from '@/lib/mockData';
 
@@ -35,7 +35,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   refreshUserProfile: () => void;
-  updateUserProfile: (updates: Partial<UserProfile>, persist?: boolean) => Promise<void>; // Tornada async
+  updateUserProfile: (updates: Partial<UserProfile>, persist?: boolean) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
   clearCurrentUserProgress: () => void;
@@ -74,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
   }, []);
 
-  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>, persist: boolean = true) => { // Tornada async
+  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>, persist: boolean = true) => {
+    let finalUpdatedProfileGlobal: UserProfile | null = null;
     setUserProfileState(prevProfile => {
       const activeUserId = currentUser?.uid || GUEST_USER_ID;
       const baseProfileForMerge = prevProfile || createDefaultProfile(
@@ -86,53 +87,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       let updated = { ...baseProfileForMerge, ...updates, id: activeUserId };
       
-      // Garante que as listas de conquistas sejam inicializadas se não existirem
-      updated.unlockedAchievements = updated.unlockedAchievements || ['ach1'];
-      if (!updated.unlockedAchievements.includes('ach1')) {
-        updated.unlockedAchievements.push('ach1');
-      }
+      updated.unlockedAchievements = Array.isArray(updated.unlockedAchievements) ? [...new Set([...updated.unlockedAchievements, 'ach1'])] : ['ach1'];
       
       if (persist && typeof window !== 'undefined') {
         const storageKey = getProfileStorageKey(currentUser?.uid || null);
         localStorage.setItem(storageKey, JSON.stringify(updated));
       }
+      finalUpdatedProfileGlobal = updated; // Store for post-state update logic
       return updated;
     });
 
-    // A verificação de conquista por pontos é movida para depois do setState para usar o estado atualizado
-    // e garantir que a chamada a checkAndUnlockAchievementsLogic seja aguardada.
-    // No entanto, como updateUserProfile agora é async e apenas o setUserProfileState é síncrono,
-    // precisamos buscar o perfil atualizado de uma forma que possa ser usado com await.
-    // Para simplificar, vamos assumir que o setUserProfileState já refletiu a mudança de pontos
-    // e vamos chamar checkAndUnlockAchievementsLogic diretamente com o 'updated' que seria o novo estado.
-    // Este fluxo ainda pode ser um pouco complicado devido à natureza síncrona de setUserProfileState.
-    // Uma abordagem mais robusta seria usar um useEffect para conquistas baseadas em pontos que observa userProfileState.points.
-    // Por ora, para a correção imediata do erro, vamos focar no await.
-
-    if (updates.points !== undefined && userProfileState && updates.points > userProfileState.points) {
-        // Criamos uma cópia do que seria o novo perfil para a verificação de conquistas
-        const profileForAchievementCheck = { 
-            ...(userProfileState || createDefaultProfile(currentUser?.uid || GUEST_USER_ID)),
-            ...updates,
-            id: currentUser?.uid || GUEST_USER_ID
-        };
-        // Garante que as listas de conquistas sejam inicializadas se não existirem
-        profileForAchievementCheck.unlockedAchievements = profileForAchievementCheck.unlockedAchievements || ['ach1'];
-         if (!profileForAchievementCheck.unlockedAchievements.includes('ach1')) {
-           profileForAchievementCheck.unlockedAchievements.push('ach1');
-         }
-
-        const achievementCheck = await checkAndUnlockAchievementsLogic(profileForAchievementCheck, 'points');
+    // Moved point-based achievement check here, to operate on the 'finalUpdatedProfileGlobal'
+    // which reflects the state *after* the points update would have been applied by setUserProfileState
+    if (finalUpdatedProfileGlobal && updates.points !== undefined && userProfileState && updates.points > userProfileState.points) {
+        const achievementCheck = await checkAndUnlockAchievementsLogic(finalUpdatedProfileGlobal, 'points');
         if (achievementCheck.newAchievements.length > 0) {
-            const finalUpdatedProfile = {
-                ...profileForAchievementCheck,
-                unlockedAchievements: [...new Set([...profileForAchievementCheck.unlockedAchievements, ...achievementCheck.newAchievements])],
-                // Pontos por conquistas de pontos já foram adicionados aqui por `checkAndUnlockAchievementsLogic`
+            const profileWithPointAchievements = {
+                ...finalUpdatedProfileGlobal,
+                unlockedAchievements: [...new Set([...finalUpdatedProfileGlobal.unlockedAchievements, ...achievementCheck.newAchievements])],
+                points: (finalUpdatedProfileGlobal.points || 0) + achievementCheck.newPointsFromAchievements
             };
-            setUserProfileState(finalUpdatedProfile); // Atualiza o estado novamente com as novas conquistas
+            setUserProfileState(profileWithPointAchievements); 
              if (persist && typeof window !== 'undefined') {
                 const storageKey = getProfileStorageKey(currentUser?.uid || null);
-                localStorage.setItem(storageKey, JSON.stringify(finalUpdatedProfile));
+                localStorage.setItem(storageKey, JSON.stringify(profileWithPointAchievements));
             }
 
             achievementCheck.unlockedDetails.forEach((ach) => {
@@ -146,10 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }
 
-  }, [currentUser, getProfileStorageKey, toast, userProfileState]); // Adicionado userProfileState como dependência
+  }, [currentUser, getProfileStorageKey, toast, userProfileState]);
 
 
-  const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null) => {
+  const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null): UserProfile | null => {
     if (typeof window !== 'undefined') {
       const storageKey = getProfileStorageKey(userId);
       const storedProfileRaw = localStorage.getItem(storageKey);
@@ -168,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profile.unlockedAchievements = Array.isArray(profile.unlockedAchievements) ? [...new Set([...profile.unlockedAchievements, 'ach1'])] : ['ach1'];
           profile.completedModules = Array.isArray(profile.completedModules) ? profile.completedModules : [];
           profile.roles = Array.isArray(profile.roles) ? profile.roles : (userId === GUEST_USER_ID || !userId ? ['guest'] : ['user']);
+
         } catch (e) {
           console.error("Erro ao parsear perfil do localStorage, resetando:", e);
           profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
@@ -189,22 +168,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let loadedProfile = loadProfile(firebaseUser?.uid || null, firebaseUser);
       
       if (firebaseUser && loadedProfile) {
-        // Lógica de conquista de Login (apenas se o perfil foi carregado/criado)
         if (!loadedProfile.unlockedAchievements.includes('ach_login')) {
           const achievement = mockAchievements.find(a => a.id === 'ach_login');
           if (achievement) {
             const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
-            await updateUserProfile({ // Await aqui, pois updateUserProfile é async
+            // Chamar updateUserProfile para que ele lide com a lógica de salvar e atualizar o estado
+            await updateUserProfile({
               unlockedAchievements: [...new Set([...(loadedProfile.unlockedAchievements || []), 'ach_login'])],
               points: (loadedProfile.points || 0) + pointsFromLoginAchievement
             }, true);
-            
-            playSound('achievementUnlock');
-            toast({
-              title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
-              description: `${achievement.title} - ${achievement.description}`,
-              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-            });
+            // O toast de conquista será disparado por updateUserProfile se a conquista for nova para o estado atualizado
+            // Para esta conquista específica, podemos disparar um aqui também ou garantir que updateUserProfile o faça.
+            // Para simplificar, e como updateUserProfile já tem lógica de toast para conquistas de pontos,
+            // vamos deixar a lógica de toast para 'ach_login' aqui, pois é um evento de login.
+             playSound('achievementUnlock');
+             toast({
+               title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
+               description: `${achievement.title} - ${achievement.description}`,
+               className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+             });
           }
         }
       }
@@ -227,7 +209,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged cuidará de atualizar o estado e carregar o perfil
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       const errorCode = error.code;
@@ -236,22 +217,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         friendlyMessage = "Login com Google cancelado ou janela fechada.";
       }
       toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      setLoading(false); // Garantir que o loading pare em caso de erro
+      setLoading(false);
     }
-    // setLoading(false) será chamado por onAuthStateChanged após sucesso
   };
 
   const signOutFirebase = async () => {
     setLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged cuidará de atualizar o estado para convidado
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
-      setLoading(false); // Garantir que o loading pare em caso de erro
+      setLoading(false);
     }
-     // setLoading(false) será chamado por onAuthStateChanged
   };
 
   const clearCurrentUserProgress = useCallback(() => {
@@ -273,15 +251,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
       
-      const updatedFirebaseUser = auth.currentUser; // Pega o usuário atualizado do Firebase
-      setCurrentUser(updatedFirebaseUser); // Atualiza o estado local
-      
+      const updatedFirebaseUser = auth.currentUser;
       if (updatedFirebaseUser) {
-        loadProfile(updatedFirebaseUser.uid, updatedFirebaseUser); // Carrega/cria o perfil local
+        setCurrentUser(updatedFirebaseUser);
+        loadProfile(updatedFirebaseUser.uid, updatedFirebaseUser); 
       }
       
       toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
-      // setLoading(false) será chamado por onAuthStateChanged
+      // setLoading(false) é chamado por onAuthStateChanged
       return userCredential.user;
     } catch (error: any) {
       console.error("Erro ao registrar com email:", error);
@@ -302,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
-      // setLoading(false) será chamado por onAuthStateChanged
+      // setLoading(false) é chamado por onAuthStateChanged
       return userCredential.user;
     } catch (error: any) {
       console.error("Erro ao fazer login com email:", error);
@@ -316,15 +293,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const handleProgressUpdate = useCallback(async (resultPromise: Promise<UpdateResult> | UpdateResult) => {
+  const handleProgressUpdate = useCallback(async (resultPromise: Promise<any> | any) => {
       try {
-        const result = await resultPromise; // Aguarda a promessa se for uma
+        const result = await resultPromise; 
         if (result.success && result.updatedProfile) {
-          await updateUserProfile(result.updatedProfile, true); // Aguarda a atualização do perfil
+          await updateUserProfile(result.updatedProfile, true); 
           if (result.pointsAdded && result.pointsAdded > 0) {
             playSound('pointGain');
           }
-          result.unlockedAchievementsDetails?.forEach((ach) => {
+          result.unlockedAchievementsDetails?.forEach((ach: Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>) => {
             playSound('achievementUnlock');
             toast({
               title: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div> ),
@@ -332,9 +309,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
             });
           });
-          toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
+          // O toast de sucesso principal (lição/exercício/módulo) é disparado pela função chamadora, se necessário
+          // ou pode ser padronizado aqui. Por ora, mantendo como estava.
+          if (result.message && (result.message.includes("concluída") || result.message.includes("concluído"))) {
+             toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
+          }
 
-        } else {
+        } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) { // Não mostrar erro se já estava completo
           toast({ title: "Erro ao Salvar Progresso", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
         }
       } catch (error) {
@@ -348,16 +329,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
       return;
     }
+    if (userProfileState.completedLessons.includes(lessonId)) {
+      // Não precisa mostrar toast se já estava completa e o usuário só revisitou/clicou de novo.
+      // console.log("Lição já estava completa, não atualizando.");
+      return;
+    }
     if (currentUser) {
       await handleProgressUpdate(markLessonCompletedAction(userProfileState, lessonId));
     } else {
       await handleProgressUpdate(completeLessonLogic(userProfileState, lessonId));
     }
-  }, [userProfileState, currentUser, handleProgressUpdate, markLessonCompletedAction, completeLessonLogic]);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
     if (!userProfileState) {
       toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
+      return;
+    }
+     if (userProfileState.completedExercises.includes(exerciseId)) {
+      // console.log("Exercício já estava completo, não atualizando.");
       return;
     }
     if (currentUser) {
@@ -365,22 +355,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       await handleProgressUpdate(completeExerciseLogic(userProfileState, exerciseId));
     }
-  }, [userProfileState, currentUser, handleProgressUpdate, markExerciseCompletedAction, completeExerciseLogic]);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
     if (!userProfileState) {
       toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" });
       return;
     }
+    if (userProfileState.completedModules.includes(moduleId)) {
+        // console.log("Módulo já estava completo, não atualizando.");
+        return;
+    }
     if (currentUser) {
      await handleProgressUpdate(markModuleCompletedAction(userProfileState, moduleId));
     } else {
      await handleProgressUpdate(completeModuleLogic(userProfileState, moduleId));
     }
-  }, [userProfileState, currentUser, handleProgressUpdate, markModuleCompletedAction, completeModuleLogic]);
+  }, [userProfileState, currentUser, handleProgressUpdate]);
 
 
-  if (loading && typeof window !== 'undefined') {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen w-screen bg-background text-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -417,5 +411,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
