@@ -24,7 +24,7 @@ A **importância da estimulação precoce e dos apoios** no ambiente escolar e f
 Para que as intervenções sejam eficazes, **abordagens integradas e interdisciplinares** são essenciais. Isso significa que profissionais de diferentes áreas (saúde, educação, assistência social) devem trabalhar em <!-- INTERACTIVE_FILL_IN_BLANK: [colaboração com a família e entre si|isolamento para maior especialização|competição para melhores resultados] -->, compartilhando conhecimentos e planejando ações conjuntas que considerem a criança em sua <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*totalidade e contexto;condição médica apenas;performance acadêmica isoladamente] -->. A colaboração visa um atendimento mais <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*holístico;segmentado;simplificado] -->.
 
 Ao longo deste módulo, exploraremos como as deficiências podem impactar os domínios do desenvolvimento físico-motor, cognitivo e socioafetivo, sempre sob a ótica da <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*inclusão;exclusão;segregação] -->, do respeito à diversidade e da importância dos suportes adequados. O foco é sempre na <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*pessoa e suas potencialidades;deficiência e suas limitações;norma e seus desvios] -->.`,
-  estimatedTime: '25-30 mins',
+  estimatedTime: '10-15 mins',
   coverImage: '/images/Dev1.1.png',
   aiHint: 'crescimento desenvolvimento',
   references: [
