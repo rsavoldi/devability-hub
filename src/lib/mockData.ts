@@ -1,15 +1,5 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
-// Ícones Lucide que AINDA SÃO USADOS em outros lugares (ex: Achievements fallback, ExerciseView feedback)
-// ou ícones funcionais que decidimos manter.
-// Ícones que eram SÓ para exerciseCategories foram removidos da importação.
-import { 
-    Zap, Target, BookOpen, CheckCircle, Link2, Shuffle, MousePointerSquareDashed, Type, Trophy, Award, 
-    ListOrdered, Code, Puzzle, // Estes eram para exerciseCategories, agora são emojis. Se não usados em outro lugar, poderiam ser removidos.
-    UsersRound, PersonStanding, ToyBrick, Brain, Microscope, BarChart3, FileText, Scale, Landmark, Accessibility, GraduationCap, HelpingHand, 
-    PackageSearch, Home, Loader2 
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
 // Importações dos arquivos de dados modulares
 import { mockUserProfile as userProfileData } from './data/userProfile';
