@@ -61,7 +61,7 @@ O desenvolvimento socioafetivo é um fenômeno de extrema complexidade, influenc
 
 Compreender as nuances, a diversidade e a complexidade do desenvolvimento social e afetivo em crianças e adolescentes com deficiência, sob uma perspectiva crítica, anticapacitista, interseccional e de direitos humanos, permite-nos ir muito além da simples tolerância, da caridade ou da busca por uma "normalização" forçada. Permite-nos, como sociedade, criar ambientes, relações, políticas e suportes que verdadeiramente fomentem relacionamentos saudáveis e recíprocos, uma autoimagem positiva e autêntica, o senso de pertencimento e valor, a agência pessoal e coletiva, e a plena participação social em todas as esferas da vida. Isso significa reconhecer e celebrar a deficiência não como uma tragédia ou limitação individual a ser superada ou escondida, mas como uma expressão valiosa e potente da inesgotável <!-- INTERACTIVE_FILL_IN_BLANK: [diversidade humana|uniformidade ideal|fragilidade inerente] -->. A inclusão é um <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*imperativo ético;objetivo secundário;custo social] -->.
 `,
-  estimatedTime: '140-170 mins', // Ajustado devido à expansão massiva e interatividade
+  estimatedTime: '14-17 mins', // Ajustado devido à expansão massiva e interatividade
   coverImage: '/images/Dev1.4.png',
   aiHint: 'desenvolvimento socioafetivo deficiência criança adolescente inclusão família escola comunidade Erikson Piaget Vygotsky Wallon Bronfenbrenner direitos humanos capacitismo interseccionalidade neurodiversidade', // Adicionado mais termos
   references: [
