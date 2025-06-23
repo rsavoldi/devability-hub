@@ -10,9 +10,6 @@ import { lessonM7L5 } from './lessons/module7/lesson-m7-l5';
 import { lessonM7L6 } from './lessons/module7/lesson-m7-l6';
 import { lessonM7L7 } from './lessons/module7/lesson-m7-l7'; // Nova lição importada
 
-// Importação dos exercícios do Módulo 7
-import { module7Exercises } from './exercises/module7';
-
 export const module7Lessons: Lesson[] = [
   lessonM7L1,
   lessonM7L2,
@@ -22,9 +19,5 @@ export const module7Lessons: Lesson[] = [
   lessonM7L6,
   lessonM7L7, // Nova lição adicionada
 ];
-
-export { module7Exercises };
-
-    
 
     

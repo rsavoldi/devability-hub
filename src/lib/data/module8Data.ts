@@ -10,9 +10,6 @@ import { lessonM8L5 } from './lessons/module8/lesson-m8-l5';
 import { lessonM8L6 } from './lessons/module8/lesson-m8-l6';
 import { lessonM8L7 } from './lessons/module8/lesson-m8-l7'; 
 
-// Importação dos exercícios do Módulo 8
-import { module8Exercises } from './exercises/module8';
-
 export const module8Lessons: Lesson[] = [
   lessonM8L1, // Princípios Éticos Fundamentais
   lessonM8L2, // Normativas, Códigos e Legislações Essenciais
@@ -22,8 +19,5 @@ export const module8Lessons: Lesson[] = [
   lessonM8L6, // Estudos de Caso e Análise de Dilemas Éticos Comuns
   lessonM8L7, // Diretrizes Consolidadas para uma Prática Profissional Ética e Respeitosa
 ];
-
-export { module8Exercises };
-    
 
     

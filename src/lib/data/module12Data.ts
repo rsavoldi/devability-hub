@@ -9,10 +9,6 @@ import { lessonM12L4 } from './lessons/module12/lesson-m12-l4';
 import { lessonM12L5 } from './lessons/module12/lesson-m12-l5';
 import { lessonM12L6 } from './lessons/module12/lesson-m12-l6';
 
-// Importação dos exercícios do Módulo 12 (a partir do index.ts da pasta de exercícios)
-import { module12Exercises } from './exercises/module12';
-
-
 export const module12Lessons: Lesson[] = [
   lessonM12L1,
   lessonM12L2,
@@ -22,4 +18,4 @@ export const module12Lessons: Lesson[] = [
   lessonM12L6,
 ];
 
-export { module12Exercises };
+    

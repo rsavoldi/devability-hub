@@ -354,6 +354,7 @@ if (uncategorizedLessons.length > 0) {
   }
 }
 
+// ATUALIZAÇÃO AQUI: exerciseCategories agora usa 'emoji' em vez de 'icon'
 export const exerciseCategories: { name: string; emoji: string; exercises: Exercise[] }[] = [
   { name: "Múltipla Escolha", emoji: '🔘', exercises: mockExercises.filter(e => e.type === 'multiple-choice') },
   { name: "Preencher Lacunas", emoji: '✍️', exercises: mockExercises.filter(e => e.type === 'fill-in-the-blank') },

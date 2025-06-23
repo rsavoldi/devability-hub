@@ -9,9 +9,6 @@ import { lessonM2L5 } from './lessons/module2/lesson-m2-l5';
 import { lessonM2L6 } from './lessons/module2/lesson-m2-l6';
 import { lessonM2L7 } from './lessons/module2/lesson-m2-l7';
 
-// Os exercícios são importados do seu próprio arquivo index
-import { module2Exercises } from './exercises/module2';
-
 export const module2Lessons: Lesson[] = [
   lessonM2L1,
   lessonM2L2,
@@ -22,5 +19,4 @@ export const module2Lessons: Lesson[] = [
   lessonM2L7,
 ];
 
-// A exportação de module2Exercises permanece
-export { module2Exercises };
+    

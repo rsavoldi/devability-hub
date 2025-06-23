@@ -14,9 +14,6 @@ import { lessonM4L9 } from './lessons/module4/lesson-m4-l9';
 import { lessonM4L10 } from './lessons/module4/lesson-m4-l10';
 
 
-// Importação dos exercícios do Módulo 4
-import { module4Exercises } from './exercises/module4';
-
 export const module4Lessons: Lesson[] = [
   lessonM4L1,
   lessonM4L2,
@@ -30,16 +27,4 @@ export const module4Lessons: Lesson[] = [
   lessonM4L10,
 ];
 
-export { module4Exercises };
-
     
-
-    
-
-
-
-
-
-
-
-

@@ -11,9 +11,6 @@ import { lessonM3L6 } from './lessons/module3/lesson-m3-l6';
 import { lessonM3L7 } from './lessons/module3/lesson-m3-l7';
 import { lessonM3L8 } from './lessons/module3/lesson-m3-l8'; // Nova lição importada
 
-// Importação dos exercícios do Módulo 3
-import { module3Exercises } from './exercises/module3';
-
 export const module3Lessons: Lesson[] = [
   lessonM3L1,
   lessonM3L2,
@@ -25,4 +22,4 @@ export const module3Lessons: Lesson[] = [
   lessonM3L8, // Nova lição adicionada ao array
 ];
 
-export { module3Exercises };
+    
