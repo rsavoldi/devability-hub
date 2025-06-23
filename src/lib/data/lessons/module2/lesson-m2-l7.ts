@@ -77,7 +77,7 @@ A proteção legal da pessoa idosa com deficiência no Brasil se dá pela comple
 
 A jornada do envelhecimento para pessoas com deficiência é, portanto, multifacetada, marcada por desafios únicos e complexos, mas também por <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*resiliência;fragilidade;passividade] -->, sabedoria acumulada e potencialidades que precisam ser reconhecidas e valorizadas. Uma sociedade verdadeiramente inclusiva e justa é aquela que reconhece a dignidade e o valor intrínseco de cada pessoa em todas as fases da vida, provendo os suportes necessários para que o envelhecimento ocorra com <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*qualidade, autonomia e participação;resignação, dependência e isolamento;medicalização, institucionalização e controle] -->, independentemente das deficiências que possam estar presentes ou surgir ao longo do caminho. A compreensão de que o <!-- INTERACTIVE_FILL_IN_BLANK: [protagonismo da pessoa|controle familiar|poder médico] --> idosa com deficiência em suas próprias vidas e decisões é fundamental, aliada a políticas públicas eficazes e a uma mudança cultural profunda que combata o etarismo e o capacitismo, pavimenta o caminho para discussões mais aprofundadas e para a construção de um futuro mais justo, digno e inclusivo para todos que envelhecem. O respeito é a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*base;consequência;exceção] -->.
 `,
-  estimatedTime: '90-110 mins',
+  estimatedTime: '9-11 mins',
   coverImage: '/images/Dev2.7.png',
   aiHint: 'idoso deficiência envelhecimento qualidade vida direitos etarismo capacitismo condições secundárias autonomia políticas intersecionalidade', 
   references: [
