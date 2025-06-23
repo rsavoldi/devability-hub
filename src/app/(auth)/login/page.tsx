@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { LogIn, Mail, KeyRound, Loader2 } from "lucide-react"; // Removido Award
+import { LogIn, Mail, KeyRound, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ import { useState } from "react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um email válido." }),
-  password: z.string().min(1, { message: "Por favor, insira sua senha." }), // Mínimo 1 para não ser vazio
+  password: z.string().min(1, { message: "Por favor, insira sua senha." }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -46,23 +46,21 @@ export default function LoginPage() {
     const user = await signInWithEmail(data.email, data.password);
     setFormLoading(false);
     if (user) {
-      router.push("/"); // Redireciona para a home após login bem-sucedido
+      router.push("/");
     }
-    // Erros são tratados pelo toast no AuthContext
   };
 
   const handleGoogleSignIn = async () => {
-    setFormLoading(true); // Reutiliza o formLoading para o botão do Google
+    setFormLoading(true);
     await signInWithGoogle();
     setFormLoading(false);
-    // O onAuthStateChanged cuidará do redirecionamento ou atualização do estado
   };
 
 
   return (
     <Card className="w-full max-w-md shadow-xl">
       <CardHeader className="space-y-1 text-center">
-        <LogIn className="mx-auto h-10 w-10 text-primary" /> {/* Alterado Award para LogIn */}
+        <LogIn className="mx-auto h-10 w-10 text-primary" />
         <CardTitle className="text-2xl font-bold">Acesso à Conta</CardTitle>
         <CardDescription>
           Use seu email e senha ou entre com o Google.
@@ -143,5 +141,3 @@ export default function LoginPage() {
     </Card>
   );
 }
-
-    

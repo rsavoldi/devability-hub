@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react"; // Adicionado Trash2
+import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import { ChatbotDialog } from "@/components/chatbot/ChatbotDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-// import { LOCAL_STORAGE_KEYS } from "@/constants"; // Não é mais necessário aqui diretamente
 
 const mainNavItems: NavItem[] = [
   { href: "/", label: "Roadmap", emoji: "🗺️" },
@@ -33,22 +32,20 @@ const mainNavItems: NavItem[] = [
 ];
 
 const toolNavItems: NavItem[] = [
-  // { href: "/dashboard", label: "Dashboard", emoji: "📊" },
 ];
 
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth(); // Adicionado clearCurrentUserProgress
+  const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth();
   const router = useRouter();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
   const handleClearProgress = () => {
-    // Adicionar uma confirmação seria uma boa prática aqui
     if (confirm("Tem certeza que deseja limpar seu progresso local? Esta ação não pode ser desfeita.")) {
       clearCurrentUserProgress();
-      router.push('/'); // Opcional: redirecionar para home após limpar
+      router.push('/');
     }
   };
 
@@ -158,7 +155,7 @@ export function AppHeader() {
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onClick={handleClearProgress}>
-                  <Trash2 className="mr-2 h-4 w-4 text-destructive" /> {/* Ícone de lixeira */}
+                  <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                   <span className="text-destructive">Limpar Progresso Local</span>
                 </DropdownMenuItem>
 
@@ -171,14 +168,16 @@ export function AppHeader() {
                   </DropdownMenuItem>
                 ) : (
                   <>
-                    <DropdownMenuItem onClick={signInWithGoogle}>
-                       <LogIn className="mr-2 h-4 w-4" />
-                       <span>Login com Google</span>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        <span>Login</span>
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/register">
                          <UserPlus className="mr-2 h-4 w-4" /> 
-                         <span>Registrar (Em implantação)</span>
+                         <span>Registrar</span>
                       </Link>
                     </DropdownMenuItem>
                   </>
@@ -223,5 +222,3 @@ export function AppHeader() {
     </header>
   );
 }
-
-    

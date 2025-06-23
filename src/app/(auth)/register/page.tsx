@@ -48,17 +48,14 @@ export default function RegisterPage() {
     const user = await registerWithEmail(data.email, data.password, data.name);
     setFormLoading(false);
     if (user) {
-      router.push("/"); // Redireciona para a home após registro bem-sucedido
+      router.push("/");
     }
-    // Erros são tratados pelo toast no AuthContext
   };
   
   const handleGoogleSignIn = async () => {
-    setFormLoading(true); // Reutiliza o formLoading para o botão do Google
+    setFormLoading(true);
     await signInWithGoogle();
     setFormLoading(false);
-    // O onAuthStateChanged cuidará do redirecionamento ou atualização do estado
-    // Se um usuário novo se registra com Google, será redirecionado para a home
   };
 
   return (
@@ -160,5 +157,3 @@ export default function RegisterPage() {
     </Card>
   );
 }
-
-    
