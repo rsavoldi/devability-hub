@@ -30,27 +30,54 @@ const combinedRegex = new RegExp(
   `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
   "g"
 );
-const boldRegexGlobal = /\*\*(.*?)\*\*/g;
 
-const renderTextWithBold = (text: string, baseKey: string): React.ReactNode[] => {
+// Regex para **bold** e *italic* que não captura espaços adjacentes aos delimitadores.
+const boldRegex = /\*\*(\S(?:.*?\S)?)\*\*/g;
+const italicRegex = /\*(\S(?:.*?\S)?)\*/g;
+
+// Função para renderizar itálico dentro de um segmento de texto
+const renderWithItalics = (text: string, baseKey: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
+  italicRegex.lastIndex = 0; // Reseta o estado do regex global
   let match;
-  boldRegexGlobal.lastIndex = 0;
-
-  while ((match = boldRegexGlobal.exec(text)) !== null) {
+  while ((match = italicRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
-    parts.push(<strong key={`${baseKey}-bold-${match.index}`}>{match[1]}</strong>);
-    lastIndex = boldRegexGlobal.lastIndex;
+    // match[1] é o conteúdo capturado entre os asteriscos
+    parts.push(<em key={`${baseKey}-i-${match.index}`}>{match[1]}</em>);
+    lastIndex = italicRegex.lastIndex;
   }
-
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
   return parts;
 };
+
+// Nova função principal para formatação, que lida com negrito e chama a função de itálico
+const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  boldRegex.lastIndex = 0; // Reseta o estado do regex global
+  let match;
+  while ((match = boldRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      // Processa o texto antes da parte em negrito para itálico
+      parts.push(...renderWithItalics(text.substring(lastIndex, match.index), `${baseKey}-pre-${match.index}`));
+    }
+    // Processa o conteúdo dentro da tag de negrito para itálico (suporta aninhamento)
+    const boldContent = renderWithItalics(match[1], `${baseKey}-in-${match.index}`);
+    parts.push(<strong key={`${baseKey}-b-${match.index}`}>{boldContent}</strong>);
+    lastIndex = boldRegex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    // Processa o restante do texto para itálico
+    parts.push(...renderWithItalics(text.substring(lastIndex), `${baseKey}-post`));
+  }
+  return parts;
+};
+
 
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
   const outputParagraphs: JSX.Element[] = [];
@@ -77,7 +104,8 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
         if (segment === '\\n' || segment === '\n') {
           finalizeParagraph();
         } else if (segment && segment.trim() !== '') {
-          currentParagraphChildren.push(...renderTextWithBold(segment, segmentKey));
+          // Chama a nova função que lida com negrito e itálico
+          currentParagraphChildren.push(...renderTextWithFormatting(segment, segmentKey));
         }
       });
     } else if (React.isValidElement(element)) {
@@ -170,7 +198,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 options={shuffleArray(parsedOptions)}
                 correctAnswer={correctAnswer}
                 onCorrect={handleInteractionCorrect}
-                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile} // Passar prop
+                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile}
               />
             );
           } else {
@@ -192,7 +220,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
                 onCorrect={handleInteractionCorrect}
-                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile} // Passar prop
+                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile}
               />
             );
           } else {
@@ -209,7 +237,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
     return elements;
-  }, [lesson?.id, handleInteractionCorrect, isLessonAlreadyCompletedByProfile]); // Adicionada isLessonAlreadyCompletedByProfile como dependência
+  }, [lesson?.id, handleInteractionCorrect, isLessonAlreadyCompletedByProfile]);
 
 
   const processedContentElements = useMemo(() => {
@@ -232,7 +260,6 @@ export function LessonView({ lesson }: LessonViewProps) {
       });
       setTotalInteractiveElements(count);
 
-      // Se a lição já foi completada pelo perfil, popular completedInteractionIds com todas as interações
       if (isLessonAlreadyCompletedByProfile) {
         setCompletedInteractionIds(new Set(interactionIdsFromContent));
       }
@@ -241,14 +268,12 @@ export function LessonView({ lesson }: LessonViewProps) {
 
 
   const allInteractionsCompletedThisSessionOrPreviously = useMemo(() => {
-    if (isLessonAlreadyCompletedByProfile) return true; // Se já está no perfil, todas estão "concluídas" para o botão
+    if (isLessonAlreadyCompletedByProfile) return true;
     return totalInteractiveElements === 0 || completedInteractionIds.size === totalInteractiveElements;
   }, [totalInteractiveElements, completedInteractionIds, isLessonAlreadyCompletedByProfile]);
 
 
   useEffect(() => {
-    // Esta parte inicializa o completedInteractionIds do localStorage, mas APENAS se a lição NÃO estiver já completa no perfil.
-    // Se já estiver completa, o useEffect acima (que depende de processedContentElements) já terá populado com todas as interações.
     if (typeof window !== 'undefined' && lesson && userProfile && !isLessonAlreadyCompletedByProfile) {
         const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile.id}`;
         const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
@@ -262,10 +287,10 @@ export function LessonView({ lesson }: LessonViewProps) {
                 console.error("Error parsing stored interactions:", error);
             }
         } else {
-           setCompletedInteractionIds(new Set()); // Reset se não houver nada salvo para esta sessão
+           setCompletedInteractionIds(new Set());
         }
     } else if (!isLessonAlreadyCompletedByProfile) {
-        setCompletedInteractionIds(new Set()); // Reset para convidado ou se o perfil mudar e a lição não estiver completa
+        setCompletedInteractionIds(new Set());
     }
 
     setIsMarkingComplete(false);
@@ -283,7 +308,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       setPrevLesson(null);
       setNextLesson(null);
     }
-  }, [lesson, userProfile, isLessonAlreadyCompletedByProfile]); // Adicionada isLessonAlreadyCompletedByProfile à dependência
+  }, [lesson, userProfile, isLessonAlreadyCompletedByProfile]);
 
 
   const handleMarkAsCompleted = async () => {
