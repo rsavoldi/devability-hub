@@ -141,7 +141,7 @@ O foco deve ser sempre na <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*pessoa e suas 
 
 A transformação da sociedade para uma que verdadeiramente inclui e valoriza a diversidade corporal e neurológica é uma responsabilidade coletiva que exige <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*ação política e mudança estrutural;apenas boa vontade individual;tempo e paciência] --> de todos os setores da sociedade.
 `,
-  estimatedTime: '35-45 mins',
+  estimatedTime: '10-15 mins',
   coverImage: '/images/Dev1.2.png',
   aiHint: 'criança movimento corpo paralisia cerebral anticapacitismo estudos da deficiência política diversidade neuroplasticidade autonomia',
   references: [
