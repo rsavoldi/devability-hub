@@ -31,53 +31,37 @@ const combinedRegex = new RegExp(
   "g"
 );
 
-// Regex para **bold** e *italic* que não captura espaços adjacentes aos delimitadores.
-const boldRegex = /\*\*(\S(?:.*?\S)?)\*\*/g;
-const italicRegex = /\*(\S(?:.*?\S)?)\*/g;
+// Regex para **bold** e *italic*. A de itálico é cuidadosa para não pegar marcadores de lista.
+const markdownRegex = /(\*\*.*?\*\*|\*(\S(?:.*?\S)?)\*)/g;
 
-// Função para renderizar itálico dentro de um segmento de texto
-const renderWithItalics = (text: string, baseKey: string): React.ReactNode[] => {
+const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  italicRegex.lastIndex = 0; // Reseta o estado do regex global
+  
+  // Usar uma cópia do regex para cada chamada para resetar seu estado
+  const localRegex = new RegExp(markdownRegex);
   let match;
-  while ((match = italicRegex.exec(text)) !== null) {
+  
+  while ((match = localRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
-    // match[1] é o conteúdo capturado entre os asteriscos
-    parts.push(<em key={`${baseKey}-i-${match.index}`}>{match[1]}</em>);
-    lastIndex = italicRegex.lastIndex;
+    
+    const matchedText = match[0];
+    if (matchedText.startsWith('**')) {
+      parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
+    } else if (matchedText.startsWith('*')) {
+      parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
+    }
+    
+    lastIndex = localRegex.lastIndex;
   }
+
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
   return parts;
 };
-
-// Nova função principal para formatação, que lida com negrito e chama a função de itálico
-const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  boldRegex.lastIndex = 0; // Reseta o estado do regex global
-  let match;
-  while ((match = boldRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      // Processa o texto antes da parte em negrito para itálico
-      parts.push(...renderWithItalics(text.substring(lastIndex, match.index), `${baseKey}-pre-${match.index}`));
-    }
-    // Processa o conteúdo dentro da tag de negrito para itálico (suporta aninhamento)
-    const boldContent = renderWithItalics(match[1], `${baseKey}-in-${match.index}`);
-    parts.push(<strong key={`${baseKey}-b-${match.index}`}>{boldContent}</strong>);
-    lastIndex = boldRegex.lastIndex;
-  }
-  if (lastIndex < text.length) {
-    // Processa o restante do texto para itálico
-    parts.push(...renderWithItalics(text.substring(lastIndex), `${baseKey}-post`));
-  }
-  return parts;
-};
-
 
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
   const outputParagraphs: JSX.Element[] = [];
@@ -104,7 +88,6 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
         if (segment === '\\n' || segment === '\n') {
           finalizeParagraph();
         } else if (segment && segment.trim() !== '') {
-          // Chama a nova função que lida com negrito e itálico
           currentParagraphChildren.push(...renderTextWithFormatting(segment, segmentKey));
         }
       });
@@ -123,6 +106,16 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
     );
   }
   return outputParagraphs;
+};
+
+// Helper function to parse markdown-like syntax into HTML for the references section
+const parseMarkdownForHTML = (text: string): string => {
+  return text
+    // Bold: **text** -> <strong>text</strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic: *text* -> <em>text</em>
+    // This regex is crafted to not match list item markers like '* '
+    .replace(/\*(\S(?:.*?\S)?)\*/g, '<em>$1</em>');
 };
 
 
@@ -150,7 +143,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       const newSet = new Set(prev);
       newSet.add(interactionId);
       if (typeof window !== 'undefined' && lesson) {
-          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile?.id || 'guest'}`;
+          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile?.id || 'guest_user'}`;
           localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
       }
       return newSet;
@@ -202,7 +195,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               />
             );
           } else {
-            elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
+             elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
           }
         } else {
            elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
@@ -385,7 +378,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                           <li
                           key={`ref-${index}`}
                           className="text-sm text-muted-foreground"
-                          dangerouslySetInnerHTML={{ __html: ref }}
+                          dangerouslySetInnerHTML={{ __html: parseMarkdownForHTML(ref) }}
                           />
                       ))}
                       </ul>
