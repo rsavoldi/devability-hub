@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { Lesson } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface InteractiveFillInBlankProps {
   lesson: Lesson;
@@ -33,14 +34,13 @@ export function InteractiveFillInBlank({
   isInteractionCompleted,
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const isSubmitted = isInteractionCompleted || false;
 
-
   useEffect(() => {
-     if (isInteractionCompleted) {
+    if (isInteractionCompleted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
     } else {
@@ -48,7 +48,6 @@ export function InteractiveFillInBlank({
       setIsCorrect(null);
     }
   }, [isInteractionCompleted, correctAnswer]);
-
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
@@ -93,8 +92,9 @@ export function InteractiveFillInBlank({
   if (isSubmitted) {
     prefixEmoji = '✅';
     mainText = correctAnswer;
-    textColorClass = "text-green-700 dark:text-green-300";
-    borderColorClass = "border-green-500 bg-green-100 dark:bg-green-900/30 dark:border-green-700";
+    // Solid colors for better consistency and contrast
+    textColorClass = "text-green-800 dark:text-green-200";
+    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900 dark:border-green-700";
     cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
