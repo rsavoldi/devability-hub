@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types'; 
-import { useState, useEffect, useMemo } from 'react'; 
+import { useState, useEffect, useMemo, useCallback } from 'react'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { countInteractions } from '@/lib/utils';
 
