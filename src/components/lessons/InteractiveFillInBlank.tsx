@@ -4,7 +4,7 @@
 import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, shuffleArray } from '@/lib/utils';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -17,6 +17,7 @@ interface InteractiveFillInBlankProps {
   interactionId: string;
   onCorrect: (interactionId: string) => void;
   isCompleted?: boolean;
+  isLessonAlreadyCompleted?: boolean;
 }
 
 export function InteractiveFillInBlank({
@@ -25,15 +26,14 @@ export function InteractiveFillInBlank({
   interactionId,
   onCorrect,
   isCompleted,
+  isLessonAlreadyCompleted,
 }: InteractiveFillInBlankProps) {
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(
-    isCompleted ? correctAnswer : null
-  );
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(
-    isCompleted ? true : null
-  );
+  const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
+  const [isSubmitted, setIsSubmitted] = useState(isLessonAlreadyCompleted || isCompleted);
+
 
   const blankPlaceholder = "______";
 
@@ -42,16 +42,20 @@ export function InteractiveFillInBlank({
   }, [options]);
 
   useEffect(() => {
-    if (isCompleted) {
+     if (isLessonAlreadyCompleted || isCompleted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
-      setIsPopoverOpen(false);
+      setIsSubmitted(true);
+    } else {
+      setFilledAnswer(null);
+      setIsCorrect(null);
+      setIsSubmitted(false);
     }
-  }, [isCompleted, correctAnswer]);
+  }, [isLessonAlreadyCompleted, isCompleted, correctAnswer]);
 
 
   const handleOptionClick = (option: string) => {
-    if (isCompleted) return;
+    if (isSubmitted) return;
 
     setFilledAnswer(option);
     const currentIsCorrect = option === correctAnswer;
@@ -59,6 +63,7 @@ export function InteractiveFillInBlank({
     setIsPopoverOpen(false);
 
     if (currentIsCorrect) {
+      setIsSubmitted(true);
       onCorrect(interactionId);
     }
   };
@@ -67,16 +72,16 @@ export function InteractiveFillInBlank({
 
   useEffect(() => {
     const textToMeasure = filledAnswer || blankPlaceholder;
-    const emojiPlaceholderWidth = (isCompleted || (filledAnswer && isCorrect === false)) ? 16 : 16;
+    const emojiPlaceholderWidth = 20; 
     const baseLength = Math.max(textToMeasure.length * 8, blankPlaceholder.length * 8);
-    const paddingAndChevron = 28;
+    const paddingAndChevron = 32;
     const minWidth = 100;
-    setButtonWidth(`${Math.max(baseLength + emojiPlaceholderWidth + paddingAndChevron, minWidth)}px`);
-  }, [filledAnswer, blankPlaceholder, isCompleted, isCorrect]);
+    setButtonWidth(`${Math.max(baseLength + emojiPlaceholderWidth, minWidth)}px`);
+  }, [filledAnswer, blankPlaceholder]);
 
 
   const handleTriggerClick = () => {
-    if (isCompleted) return;
+    if (isSubmitted) return;
 
     if (filledAnswer && isCorrect === false) {
       setFilledAnswer(null);
@@ -90,17 +95,17 @@ export function InteractiveFillInBlank({
   let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
   let cursorClass = "cursor-pointer";
   let mainText = blankPlaceholder;
-  let prefixEmoji = "✏️";
+  let prefixEmoji: React.ReactNode = "✏️";
 
-  if (isCompleted) {
-    prefixEmoji = "✅";
+  if (isSubmitted) {
+    prefixEmoji = <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />;
     mainText = correctAnswer;
     textColorClass = "text-green-700 dark:text-green-300";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
     cursorClass = "cursor-default";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
-    prefixEmoji = "❌";
+    prefixEmoji = <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />;
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 bg-red-100 dark:bg-red-900/30 dark:border-red-700";
@@ -111,8 +116,8 @@ export function InteractiveFillInBlank({
 
   const triggerContent = (
     <span className="flex items-center justify-between w-full">
-      <span className="flex items-center overflow-hidden">
-        {prefixEmoji && <span className={cn("shrink-0", prefixEmoji === "✅" ? "mr-0.5" : "mr-1")}>{prefixEmoji}</span>}
+      <span className="flex items-center overflow-hidden gap-1">
+        {prefixEmoji && <span className="shrink-0">{prefixEmoji}</span>}
         <span className="truncate">{mainText}</span>
       </span>
       {chevronIcon}
@@ -120,8 +125,8 @@ export function InteractiveFillInBlank({
   );
 
   return (
-    <Popover open={isPopoverOpen && !isCompleted} onOpenChange={(openState) => { if (!isCompleted) setIsPopoverOpen(openState);}}>
-      <PopoverTrigger asChild disabled={isCompleted}>
+    <Popover open={isPopoverOpen && !isSubmitted} onOpenChange={(openState) => { if (!isSubmitted) setIsPopoverOpen(openState);}}>
+      <PopoverTrigger asChild disabled={isSubmitted}>
         <button
             type="button"
             onClick={handleTriggerClick}
@@ -130,11 +135,11 @@ export function InteractiveFillInBlank({
             borderColorClass,
             textColorClass,
             cursorClass,
-            isCompleted ? "border" : "border border-dashed",
-            !isCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
+            isSubmitted ? "border" : "border border-dashed",
+            !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
             style={{ minWidth: buttonWidth, height: '1.75rem' }}
-            aria-expanded={isPopoverOpen && !isCompleted}
+            aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
             {triggerContent}
@@ -144,10 +149,10 @@ export function InteractiveFillInBlank({
           className="w-auto p-1.5 border-border shadow-lg flex flex-col space-y-1 min-w-max"
           side="bottom"
           align="start"
-          hidden={isCompleted}
+          hidden={isSubmitted}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {!isCompleted && shuffledDisplayOptions.map((opt, index) => (
+        {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
           <Button
             key={index}
             type="button"

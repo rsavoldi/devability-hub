@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import type { UserProfile, Achievement } from '@/lib/types';
+import type { UserProfile, Achievement, LessonProgress } from '@/lib/types';
 import { Loader2, Trophy } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { auth } from '@/lib/firebase';
@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
-import { mockAchievements } from '@/lib/mockData';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -68,6 +67,10 @@ const loadGuestProfile = (): UserProfile => {
       profile.name = profile.name || "Convidado(a)";
       profile.roles = profile.roles || ['guest'];
       profile.lessonProgress = profile.lessonProgress || {};
+      profile.completedExercises = profile.completedExercises || [];
+      profile.unlockedAchievements = profile.unlockedAchievements || [];
+      profile.completedModules = profile.completedModules || [];
+
       return profile;
     } catch (e) {
       console.error("Error parsing guest profile from localStorage", e);
@@ -78,12 +81,12 @@ const loadGuestProfile = (): UserProfile => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [userProfileState, setUserProfileState] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const updateUserProfileState = useCallback(async (newProfileData: UserProfile) => {
-    setUserProfileState(newProfileData);
+    setUserProfile(newProfileData);
     if (newProfileData.id === GUEST_USER_ID) {
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
@@ -133,9 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [updateUserProfileState, toast]);
 
   const saveInteractionProgress = useCallback(async (lessonId: string, interactionId: string) => {
-    if (!userProfileState) return;
+    if (!userProfile) return;
 
-    const newProfile = { ...userProfileState };
+    // Create a deep copy to avoid direct state mutation
+    const newProfile = JSON.parse(JSON.stringify(userProfile));
+
     const currentLessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
     
     if (!currentLessonProgress.completedInteractions.includes(interactionId)) {
@@ -146,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         await updateUserProfileState(newProfile);
     }
-  }, [userProfileState, updateUserProfileState]);
+  }, [userProfile, updateUserProfileState]);
 
 
   useEffect(() => {
@@ -160,10 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
           await saveUserProfileToFirestore(firebaseUser.uid, profile);
         }
-        setUserProfileState(profile);
+        setUserProfile(profile);
       } else {
         // Guest user
-        setUserProfileState(loadGuestProfile());
+        setUserProfile(loadGuestProfile());
       }
       setLoading(false);
     });
@@ -173,32 +178,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUserProfile = useCallback(async () => {
     if (currentUser) {
       const refreshedProfile = await getUserProfile(currentUser.uid);
-      if(refreshedProfile) setUserProfileState(refreshedProfile);
+      if(refreshedProfile) setUserProfile(refreshedProfile);
     } else {
-      setUserProfileState(loadGuestProfile());
+      setUserProfile(loadGuestProfile());
     }
   }, [currentUser]);
 
   const completeLesson = useCallback(async (lessonId: string) => {
-    if (!userProfileState) return;
-    if (userProfileState.lessonProgress[lessonId]?.completed) return;
-    const resultPromise = completeLessonLogic(userProfileState, lessonId);
+    if (!userProfile) return;
+    if (userProfile.lessonProgress[lessonId]?.completed) return;
+    const resultPromise = completeLessonLogic(userProfile, lessonId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, handleProgressUpdate]);
+  }, [userProfile, handleProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
-    if (!userProfileState) return;
-    if (userProfileState.completedExercises.includes(exerciseId)) return;
-    const resultPromise = completeExerciseLogic(userProfileState, exerciseId);
+    if (!userProfile) return;
+    if (userProfile.completedExercises.includes(exerciseId)) return;
+    const resultPromise = completeExerciseLogic(userProfile, exerciseId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, handleProgressUpdate]);
+  }, [userProfile, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
-    if (!userProfileState) return;
-    if (userProfileState.completedModules.includes(moduleId)) return;
-    const resultPromise = completeModuleLogic(userProfileState, moduleId);
+    if (!userProfile) return;
+    if (userProfile.completedModules.includes(moduleId)) return;
+    const resultPromise = completeModuleLogic(userProfile, moduleId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, handleProgressUpdate]);
+  }, [userProfile, handleProgressUpdate]);
 
 
   const signInWithGoogle = async () => {
@@ -290,7 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       currentUser,
-      userProfile: userProfileState,
+      userProfile,
       loading,
       refreshUserProfile,
       signInWithGoogle,
