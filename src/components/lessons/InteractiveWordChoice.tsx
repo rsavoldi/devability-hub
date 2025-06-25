@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, shuffleArray } from '@/lib/utils';
-import { CheckCircle, XCircle } from 'lucide-react';
 
 interface InteractiveWordChoiceProps {
   options: string[];
@@ -12,7 +11,6 @@ interface InteractiveWordChoiceProps {
   interactionId: string;
   onCorrect: (interactionId: string) => void;
   isCompleted?: boolean;
-  isLessonAlreadyCompleted?: boolean;
 }
 
 export function InteractiveWordChoice({
@@ -21,12 +19,11 @@ export function InteractiveWordChoice({
   interactionId,
   onCorrect,
   isCompleted,
-  isLessonAlreadyCompleted,
 }: InteractiveWordChoiceProps) {
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(isLessonAlreadyCompleted || isCompleted);
+  const [isSubmitted, setIsSubmitted] = useState(isCompleted);
   
   const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
 
@@ -35,7 +32,7 @@ export function InteractiveWordChoice({
   }, [options]);
 
   useEffect(() => {
-    if (isLessonAlreadyCompleted || isCompleted) {
+    if (isCompleted) {
       setSelectedOption(correctAnswer);
       setIsCorrectSelection(true);
       setIsSubmitted(true);
@@ -44,7 +41,7 @@ export function InteractiveWordChoice({
       setIsCorrectSelection(null);
       setIsSubmitted(false);
     }
-  }, [isLessonAlreadyCompleted, isCompleted, correctAnswer]);
+  }, [isCompleted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isSubmitted) return;
@@ -71,12 +68,12 @@ export function InteractiveWordChoice({
         let buttonIsDisabled = isSubmitted;
 
         if (isSubmitted && isCorrectChoice) {
-          variant = "default";
-          prefixEmoji = <CheckCircle className="h-3 w-3" />;
-          additionalClasses = "bg-green-500 hover:bg-green-500 text-white dark:bg-green-600 dark:hover:bg-green-600 cursor-default";
+          variant = "outline";
+          prefixEmoji = '✅';
+          additionalClasses = "border-green-500 bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300 dark:border-green-700 cursor-default hover:bg-green-100 dark:hover:bg-green-800/30";
         } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
-          prefixEmoji = <XCircle className="h-3 w-3" />;
+          prefixEmoji = '❌';
           additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
           buttonIsDisabled = false;
         } else if (isSelected) {
@@ -112,4 +109,3 @@ export function InteractiveWordChoice({
     </span>
   );
 }
-
