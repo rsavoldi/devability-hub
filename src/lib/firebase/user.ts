@@ -16,15 +16,28 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-      // TODO: Add data validation here (e.g., using Zod) to ensure the fetched data matches the UserProfile type.
-      return userDocSnap.data() as UserProfile;
+      const fetchedData = userDocSnap.data();
+      // Ensure that essential fields are present, merging with defaults if they are missing.
+      // This makes the data structure resilient to older versions or incomplete data in Firestore.
+      const profile: UserProfile = {
+        id: userId,
+        name: fetchedData.name || 'Usuário',
+        email: fetchedData.email || null,
+        avatarUrl: fetchedData.avatarUrl,
+        points: fetchedData.points || 0,
+        lessonProgress: fetchedData.lessonProgress || {},
+        completedExercises: fetchedData.completedExercises || [],
+        unlockedAchievements: fetchedData.unlockedAchievements || [],
+        completedModules: fetchedData.completedModules || [],
+        roles: fetchedData.roles || ['user'],
+      };
+      return profile;
     } else {
       console.log(`No profile document found for user: ${userId}`);
       return null;
     }
   } catch (error) {
     console.error("Error fetching user profile from Firestore:", error);
-    // Depending on requirements, you might want to handle this more gracefully.
     return null;
   }
 }
@@ -36,7 +49,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
  * @param userId The UID of the user.
  * @param profileData The full or partial user profile data to save.
  */
-export async function updateUserProfile(userId: string, profileData: UserProfile): Promise<void> {
+export async function updateUserProfile(userId: string, profileData: Partial<UserProfile>): Promise<void> {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, userId);
     // Use `set` with `merge: true` to create or update the document non-destructively.
