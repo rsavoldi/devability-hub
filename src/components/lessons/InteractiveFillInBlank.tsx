@@ -10,81 +10,92 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { Lesson } from '@/lib/types';
 
 interface InteractiveFillInBlankProps {
+  lesson: Lesson;
   options: string[];
   correctAnswer: string;
   interactionId: string;
   onCorrect: (interactionId: string) => void;
-  isCompleted?: boolean;
+  onUncomplete: (interactionId: string) => void;
+  isInteractionCompleted?: boolean;
+  isLessonCompleted?: boolean;
 }
 
 export function InteractiveFillInBlank({
+  lesson,
   options,
   correctAnswer,
   interactionId,
   onCorrect,
-  isCompleted,
+  onUncomplete,
+  isInteractionCompleted,
+  isLessonCompleted
 }: InteractiveFillInBlankProps) {
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [filledAnswer, setFilledAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(isCompleted);
+  const isSubmitted = isInteractionCompleted || false;
 
-
-  const blankPlaceholder = "______";
 
   useEffect(() => {
-     if (isCompleted) {
+     if (isInteractionCompleted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
-      setIsSubmitted(true);
     } else {
-      // Reset state if the lesson is reset externally
       setFilledAnswer(null);
       setIsCorrect(null);
-      setIsSubmitted(false);
     }
-  }, [isCompleted, correctAnswer]);
+  }, [isInteractionCompleted, correctAnswer]);
 
 
   const handleOptionClick = (option: string) => {
-    if (isSubmitted) return;
-
+    if (isLessonCompleted) return;
+    
     setFilledAnswer(option);
     const currentIsCorrect = option === correctAnswer;
     setIsCorrect(currentIsCorrect);
     setIsPopoverOpen(false);
 
     if (currentIsCorrect) {
-      setIsSubmitted(true);
       onCorrect(interactionId);
     }
   };
 
   const handleTriggerClick = () => {
-    if (isSubmitted) return;
+    if (isLessonCompleted) return;
 
-    if (filledAnswer && isCorrect === false) {
+    if (isSubmitted) {
+      // Deselect logic
       setFilledAnswer(null);
       setIsCorrect(null);
+      onUncomplete(interactionId);
+      setIsPopoverOpen(true);
+    } else if (filledAnswer && isCorrect === false) {
+      // Reset incorrect answer
+      setFilledAnswer(null);
+      setIsCorrect(null);
+      setIsPopoverOpen(true);
+    } else {
+      // Default toggle popover
+      setIsPopoverOpen(o => !o);
     }
-    setIsPopoverOpen(o => !o);
   };
 
   let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-4 w-4 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   let textColorClass = "text-primary dark:text-primary-foreground/80";
   let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
   let cursorClass = "cursor-pointer";
-  let mainText = blankPlaceholder;
+  let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
 
   if (isSubmitted) {
     prefixEmoji = '✅';
     mainText = correctAnswer;
     textColorClass = "text-green-700 dark:text-green-300";
-    borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
-    cursorClass = "cursor-default";
+    borderColorClass = "border-green-500 bg-green-100 dark:bg-green-900/30 dark:border-green-700";
+    cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = '❌';
@@ -94,6 +105,10 @@ export function InteractiveFillInBlank({
   } else if (filledAnswer && isCorrect === null) {
      mainText = filledAnswer;
      prefixEmoji = "";
+  }
+  
+  if (isLessonCompleted && isSubmitted) {
+    chevronIcon = null;
   }
 
   const triggerContent = (
@@ -107,8 +122,8 @@ export function InteractiveFillInBlank({
   );
 
   return (
-    <Popover open={isPopoverOpen && !isSubmitted} onOpenChange={(openState) => { if (!isSubmitted) setIsPopoverOpen(openState);}}>
-      <PopoverTrigger asChild disabled={isSubmitted}>
+    <Popover open={isPopoverOpen && !isSubmitted && !isLessonCompleted} onOpenChange={(openState) => { if (!isSubmitted && !isLessonCompleted) setIsPopoverOpen(openState);}}>
+      <PopoverTrigger asChild disabled={isLessonCompleted}>
         <button
             type="button"
             onClick={handleTriggerClick}
@@ -118,7 +133,7 @@ export function InteractiveFillInBlank({
             textColorClass,
             cursorClass,
             isSubmitted ? "border" : "border border-dashed",
-            !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
+            !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
             style={{ height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
@@ -131,7 +146,7 @@ export function InteractiveFillInBlank({
           className="w-auto p-1.5 border-border shadow-lg flex flex-col space-y-1 min-w-max"
           side="bottom"
           align="start"
-          hidden={isSubmitted}
+          hidden={isSubmitted || isLessonCompleted}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {!isSubmitted && options.map((opt, index) => (
