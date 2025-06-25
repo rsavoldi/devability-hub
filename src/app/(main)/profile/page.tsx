@@ -2,14 +2,13 @@
 // src/app/(main)/profile/page.tsx
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { mockAchievements, mockLessons, mockExercises } from "@/lib/mockData";
-import { Award, CheckCircle, Edit3, Target, UserCircle, Loader2, LogIn } from "lucide-react"; // TrophyIcon e BookOpen removidos
+import { Award, Edit3, UserCircle, Loader2 } from "lucide-react"; 
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
@@ -21,6 +20,54 @@ export default function ProfilePage() {
   useEffect(() => {
     refreshUserProfile();
   }, [refreshUserProfile]);
+
+  const stats = useMemo(() => {
+    if (!userProfile) return {
+      completedLessonsCount: 0,
+      totalLessons: mockLessons.length,
+      lessonProgress: 0,
+      completedExercisesCount: mockExercises.length,
+      totalExercises: mockExercises.length,
+      exerciseProgress: 0,
+      unlockedAchievementsCount: 0,
+      totalAchievements: mockAchievements.length,
+      achievementProgress: 0,
+      userUnlockedAchievementDetails: []
+    };
+
+    const completedLessonsCount = Object.values(userProfile.lessonProgress || {}).filter(p => p.completed).length;
+    const totalLessons = mockLessons.length;
+    const lessonProgress = totalLessons > 0 ? (completedLessonsCount / totalLessons) * 100 : 0;
+
+    const completedExercisesCount = userProfile.completedExercises?.length || 0;
+    const totalExercises = mockExercises.length;
+    const exerciseProgress = totalExercises > 0 ? (completedExercisesCount / totalExercises) * 100 : 0;
+
+    const unlockedAchievementsCount = userProfile.unlockedAchievements?.length || 0;
+    const totalAchievements = mockAchievements.length;
+    const achievementProgress = totalAchievements > 0 ? (unlockedAchievementsCount / totalAchievements) * 100 : 0;
+
+    const userUnlockedAchievementDetails: Achievement[] = mockAchievements
+      .filter(ach => userProfile.unlockedAchievements.includes(ach.id))
+      .map(ach => ({
+        ...ach,
+        isUnlocked: true,
+        dateUnlocked: ach.dateUnlocked || new Date().toLocaleDateString('pt-BR') 
+      }));
+
+    return {
+      completedLessonsCount,
+      totalLessons,
+      lessonProgress,
+      completedExercisesCount,
+      totalExercises,
+      exerciseProgress,
+      unlockedAchievementsCount,
+      totalAchievements,
+      achievementProgress,
+      userUnlockedAchievementDetails
+    };
+  }, [userProfile]);
 
   if (authLoading) {
     return (
@@ -34,43 +81,24 @@ export default function ProfilePage() {
     return (
       <div className="container mx-auto py-12 text-center">
         <UserCircle className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-semibold mb-2">Perfil de Convidado</h2>
+        <h2 className="text-2xl font-semibold mb-2">Perfil não carregado</h2>
         <p className="text-muted-foreground mb-6">
-          Seu progresso é salvo localmente. Crie uma conta para salvar na nuvem (funcionalidade em implantação).
+          Não foi possível carregar os dados do seu perfil. Faça login ou tente recarregar a página.
         </p>
-        <Button onClick={refreshUserProfile}>Recarregar Progresso Local</Button>
+        <Button onClick={refreshUserProfile}>Recarregar</Button>
       </div>
     );
   }
 
-  const { name, avatarUrl, points, completedLessons, completedExercises, unlockedAchievements } = userProfile;
-
-  const totalLessons = mockLessons.length;
-  const totalExercises = mockExercises.length;
-  const totalAchievements = mockAchievements.length;
-
-  const lessonProgress = totalLessons > 0 ? (completedLessons.length / totalLessons) * 100 : 0;
-  const exerciseProgress = totalExercises > 0 ? (completedExercises.length / totalExercises) * 100 : 0;
-  
-  const userUnlockedAchievementDetails: Achievement[] = mockAchievements
-    .filter(ach => unlockedAchievements.includes(ach.id))
-    .map(ach => ({
-      ...ach,
-      isUnlocked: true,
-      dateUnlocked: ach.dateUnlocked || new Date().toLocaleDateString('pt-BR') 
-    }));
-  
-  const achievementProgress = totalAchievements > 0 ? (userUnlockedAchievementDetails.length / totalAchievements) * 100 : 0;
-
-  const displayName = name || "Convidado(a)";
+  const displayName = userProfile.name || "Convidado(a)";
   const displayAvatarFallback = displayName.substring(0,1).toUpperCase();
-  const displayAvatarUrl = avatarUrl || `https://placehold.co/100x100.png?text=${displayAvatarFallback}`;
+  const displayAvatarUrl = userProfile.avatarUrl || `https://placehold.co/100x100.png?text=${displayAvatarFallback}`;
 
   return (
     <div className="container mx-auto py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
-            <span role="img" aria-label="Pessoa" className="text-4xl mr-3">👤</span> {/* Substituído UserCircle por emoji */}
+            <span role="img" aria-label="Pessoa" className="text-4xl mr-3">👤</span>
             Seu Perfil
         </h1>
       </header>
@@ -87,8 +115,8 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="text-center">
             <div className="flex items-center justify-center text-2xl font-semibold text-primary mb-4">
-              <Award className="h-7 w-7 mr-2" /> {/* Mantido Award para pontos por clareza */}
-              {points} Pontos
+              <Award className="h-7 w-7 mr-2" />
+              {userProfile.points} Pontos
             </div>
             <Button variant="outline" className="w-full" disabled>
                 <Edit3 className="mr-2 h-4 w-4" /> Editar Perfil (Em implantação)
@@ -105,32 +133,32 @@ export default function ProfilePage() {
             <div>
               <div className="flex justify-between items-center mb-1">
                 <Label htmlFor="lesson-progress" className="flex items-center text-sm font-medium">
-                  <span role="img" aria-label="Livro Aberto" className="mr-2">📖</span> {/* Substituído BookOpen */}
+                  <span role="img" aria-label="Livro Aberto" className="mr-2">📖</span>
                   Lições Concluídas
                 </Label>
-                <span className="text-sm text-muted-foreground">{completedLessons.length} / {totalLessons}</span>
+                <span className="text-sm text-muted-foreground">{stats.completedLessonsCount} / {stats.totalLessons}</span>
               </div>
-              <Progress value={lessonProgress} id="lesson-progress" aria-label={`${lessonProgress.toFixed(0)}% de lições concluídas`} />
+              <Progress value={stats.lessonProgress} id="lesson-progress" aria-label={`${stats.lessonProgress.toFixed(0)}% de lições concluídas`} />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
                 <Label htmlFor="exercise-progress" className="flex items-center text-sm font-medium">
-                  <span role="img" aria-label="Alvo" className="mr-2">🎯</span> {/* Substituído Target */}
+                  <span role="img" aria-label="Alvo" className="mr-2">🎯</span>
                   Exercícios Dominados
                 </Label>
-                <span className="text-sm text-muted-foreground">{completedExercises.length} / {totalExercises}</span>
+                <span className="text-sm text-muted-foreground">{stats.completedExercisesCount} / {stats.totalExercises}</span>
               </div>
-              <Progress value={exerciseProgress} id="exercise-progress" aria-label={`${exerciseProgress.toFixed(0)}% de exercícios concluídos`} />
+              <Progress value={stats.exerciseProgress} id="exercise-progress" aria-label={`${stats.exerciseProgress.toFixed(0)}% de exercícios concluídos`} />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
                 <Label htmlFor="achievement-progress" className="flex items-center text-sm font-medium">
-                  <span role="img" aria-label="Troféu" className="mr-2">🏆</span> {/* Substituído TrophyIcon */}
+                  <span role="img" aria-label="Troféu" className="mr-2">🏆</span>
                   Conquistas Desbloqueadas
                 </Label>
-                <span className="text-sm text-muted-foreground">{unlockedAchievements.length} / {totalAchievements}</span>
+                <span className="text-sm text-muted-foreground">{stats.unlockedAchievementsCount} / {stats.totalAchievements}</span>
               </div>
-              <Progress value={achievementProgress} id="achievement-progress" aria-label={`${achievementProgress.toFixed(0)}% de conquistas desbloqueadas`} />
+              <Progress value={stats.achievementProgress} id="achievement-progress" aria-label={`${stats.achievementProgress.toFixed(0)}% de conquistas desbloqueadas`} />
             </div>
           </CardContent>
         </Card>
@@ -142,9 +170,9 @@ export default function ProfilePage() {
             <CardDescription>Suas medalhas e honrarias!</CardDescription>
         </CardHeader>
         <CardContent>
-            {userUnlockedAchievementDetails.length > 0 ? (
+            {stats.userUnlockedAchievementDetails.length > 0 ? (
                  <ul className="space-y-3">
-                    {userUnlockedAchievementDetails.map(ach =>(
+                    {stats.userUnlockedAchievementDetails.map(ach =>(
                         <li key={ach.id} className="flex items-center p-3 border rounded-md bg-green-50 dark:bg-green-900/30 hover:shadow-sm transition-shadow">
                            {ach.emoji ? (
                               <span className="text-2xl mr-4 shrink-0" role="img" aria-label={ach.title}>{ach.emoji}</span>
