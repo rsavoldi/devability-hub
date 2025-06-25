@@ -15,23 +15,12 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { mockLessons as allMockLessons } from '@/lib/mockData';
+import { countInteractions } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface LessonViewProps {
   lesson: Lesson;
 }
-
-const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
-const fillBlankRegexSource = "INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]";
-const combinedRegex = new RegExp(
-  `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
-  "g"
-);
-
-const parseMarkdownForHTML = (text: string): string => {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>');
-};
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
   const markdownRegex = /(\*\*.*?\*\*|\*.*?\*)/g;
@@ -49,7 +38,6 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
     } else if (matchedText.startsWith('*')) {
-       // Check for non-word character before the starting * and after the ending * to avoid matching list items.
        const preChar = text[match.index - 1];
        const postChar = text[match.index + matchedText.length];
        if ((!preChar || /\s|[.,:;?!]/.test(preChar)) && (!postChar || /\s|[.,:;?!]/.test(postChar))) {
@@ -113,8 +101,14 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   return outputParagraphs;
 };
 
+const parseMarkdownForHTML = (text: string): string => {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+};
+
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, resetLessonProgress } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress } = useAuth();
   const router = useRouter();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
@@ -136,11 +130,41 @@ export function LessonView({ lesson }: LessonViewProps) {
         await saveInteractionProgress(lesson.id, interactionId);
     }
   }, [completedInteractions, saveInteractionProgress, lesson.id]);
+
+  const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
+    if(completedInteractions.has(interactionId)) {
+        await uncompleteInteraction(lesson.id, interactionId);
+    }
+  }, [completedInteractions, uncompleteInteraction, lesson.id]);
   
   const totalInteractiveElements = useMemo(() => {
-    const matches = lesson.content.match(combinedRegex);
-    return matches ? matches.length : 0;
+    return countInteractions(lesson.content);
   }, [lesson.content]);
+
+  const { progressPercentage, interactionsProgressText } = useMemo(() => {
+    const completedCount = completedInteractions.size;
+    const totalCount = totalInteractiveElements;
+    const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+    const text = totalCount > 0
+      ? `Interações concluídas: ${completedCount} de ${totalCount}`
+      : "Nenhuma interação nesta lição.";
+    return { progressPercentage: percentage, interactionsProgressText: text };
+  }, [completedInteractions.size, totalInteractiveElements]);
+
+  const allInteractionsCompleted = useMemo(() => {
+    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
+  }, [totalInteractiveElements, completedInteractions]);
+
+  useEffect(() => {
+    setIsMarkingComplete(false);
+    if (lesson && allMockLessons && allMockLessons.length > 0) {
+      const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
+      if (currentIndex > -1) {
+        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
+        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
+      }
+    }
+  }, [lesson]);
 
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
@@ -148,6 +172,13 @@ export function LessonView({ lesson }: LessonViewProps) {
       let lastIndex = 0;
       let interactionCounter = 0;
   
+      const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
+      const fillBlankRegexSource = "INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]";
+      const combinedRegex = new RegExp(
+        `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
+        "g"
+      );
+
       const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
       const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
   
@@ -179,11 +210,14 @@ export function LessonView({ lesson }: LessonViewProps) {
               elements.push(
                 <InteractiveWordChoice
                   key={interactionId}
+                  lesson={lesson}
                   interactionId={interactionId}
                   options={parsedOptions}
                   correctAnswer={correctAnswer}
                   onCorrect={handleInteractionCorrect}
-                  isCompleted={completedInteractions.has(interactionId)}
+                  onUncomplete={handleInteractionUncomplete}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
             }
@@ -197,11 +231,14 @@ export function LessonView({ lesson }: LessonViewProps) {
               elements.push(
                 <InteractiveFillInBlank
                   key={interactionId}
+                  lesson={lesson}
                   interactionId={interactionId}
                   options={allOptions}
                   correctAnswer={correctAnswerFillIn}
                   onCorrect={handleInteractionCorrect}
-                  isCompleted={completedInteractions.has(interactionId)}
+                  onUncomplete={handleInteractionUncomplete}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
             }
@@ -216,22 +253,8 @@ export function LessonView({ lesson }: LessonViewProps) {
       return elements;
     }
     return [];
-  }, [lesson.id, lesson.content, handleInteractionCorrect, completedInteractions]);
+  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
   
-  const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
-  }, [totalInteractiveElements, completedInteractions]);
-
-  useEffect(() => {
-    setIsMarkingComplete(false);
-    if (lesson && allMockLessons && allMockLessons.length > 0) {
-      const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
-      if (currentIndex > -1) {
-        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
-        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
-      }
-    }
-  }, [lesson]);
 
   const handleMarkAsCompleted = async () => {
     if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompleted) return;
@@ -253,10 +276,6 @@ export function LessonView({ lesson }: LessonViewProps) {
       </div>
     );
   }
-
-  const interactionsProgressText = totalInteractiveElements > 0
-    ? `Interações concluídas: ${completedInteractions.size} de ${totalInteractiveElements}`
-    : "Nenhuma interação nesta lição.";
 
   const truncateTitle = (title: string, maxLength: number = 20) => {
     if (title.length > maxLength) {
@@ -291,12 +310,16 @@ export function LessonView({ lesson }: LessonViewProps) {
             {lesson.type && <span className="capitalize">Tipo: {lesson.type}</span>}
             {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
           </div>
-           {totalInteractiveElements > 0 && (
-            <div className="mt-3 text-sm text-primary flex items-center">
-                <Info className="h-4 w-4 mr-1.5 shrink-0" />
-                <span>{interactionsProgressText}</span>
+          <div className="mt-4 space-y-2">
+            <div className="flex justify-between items-center text-sm text-primary">
+              <div className="flex items-center">
+                  <Info className="h-4 w-4 mr-1.5 shrink-0" />
+                  <span>{interactionsProgressText}</span>
+              </div>
+              <span>{progressPercentage.toFixed(0)}%</span>
             </div>
-           )}
+            <Progress value={progressPercentage} aria-label={`${progressPercentage.toFixed(0)}% de progresso na lição`} />
+          </div>
         </CardHeader>
         <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
           {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}

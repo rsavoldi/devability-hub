@@ -9,23 +9,26 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types'; 
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useMemo } from 'react'; 
+import { useAuth } from '@/contexts/AuthContext';
+import { countInteractions } from '@/lib/utils';
 
 interface LessonCategoryWithEmoji {
   name: string;
-  emoji: string; // Agora é emoji
+  emoji: string;
   lessons: Lesson[];
   moduleId: string;
 }
 
 export default function LessonsPage() {
+  const { userProfile } = useAuth();
   const allLessons = mockLessons; 
   
   const categoriesWithLessons: LessonCategoryWithEmoji[] = finalLessonCategories
     .filter(cat => cat.lessons.length > 0)
     .map(cat => ({
         ...cat,
-        emoji: cat.emoji || "📚" // Fallback emoji
+        emoji: cat.emoji || "📚"
     }));
   
   const getDefaultTabValue = () => {
@@ -44,12 +47,26 @@ export default function LessonsPage() {
     }
   }, [categoriesWithLessons, activeTab]);
 
+  const getLessonProgress = useCallback((lessonId: string, lessonContent: string): number => {
+    if (!userProfile) return 0;
+    const progress = userProfile.lessonProgress[lessonId];
+    if (progress?.completed) return 100;
+    
+    const totalInteractions = countInteractions(lessonContent);
+    if (totalInteractions === 0) {
+      return progress?.completed ? 100 : 0;
+    }
+    
+    const completedCount = progress?.completedInteractions.length || 0;
+    return (completedCount / totalInteractions) * 100;
+  }, [userProfile]);
+
 
   return (
     <div className="container mx-auto py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight flex items-center">
-          <span role="img" aria-label="livro" className="text-4xl mr-3">📖</span> {/* Substituído BookOpen por emoji */}
+          <span role="img" aria-label="livro" className="text-4xl mr-3">📖</span>
           Explore as Lições
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
@@ -98,7 +115,7 @@ export default function LessonsPage() {
                         className={cn(
                             "h-10 w-10 p-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground", 
                             "rounded-md border-transparent hover:bg-accent hover:text-accent-foreground data-[state=active]:shadow-lg data-[state=active]:ring-2 data-[state=active]:ring-ring",
-                            "flex items-center justify-center text-xl leading-none" // Para centralizar e dimensionar emojis
+                            "flex items-center justify-center text-xl leading-none"
                         )}
                         aria-label={category.name}
                       >
@@ -124,7 +141,7 @@ export default function LessonsPage() {
               {allLessons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {allLessons.map((lesson) => (
-                    <LessonItemCard key={lesson.id} lesson={lesson} />
+                    <LessonItemCard key={lesson.id} lesson={lesson} progress={getLessonProgress(lesson.id, lesson.content)} />
                   ))}
                 </div>
               ) : (
@@ -142,7 +159,12 @@ export default function LessonsPage() {
               {category.lessons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {category.lessons.map((lesson) => (
-                    <LessonItemCard key={lesson.id} lesson={lesson} categoryName={category.name} />
+                    <LessonItemCard 
+                      key={lesson.id} 
+                      lesson={lesson} 
+                      categoryName={category.name} 
+                      progress={getLessonProgress(lesson.id, lesson.content)}
+                    />
                   ))}
                 </div>
               ) : (
