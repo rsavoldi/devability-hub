@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface InteractiveWordChoiceProps {
   lesson: Lesson;
@@ -27,9 +28,8 @@ export function InteractiveWordChoice({
   isInteractionCompleted,
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
-  
-  const [selectedOption, setSelectedOption] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (isInteractionCompleted) {
@@ -45,14 +45,12 @@ export function InteractiveWordChoice({
     if (isLessonCompleted) return;
 
     if (selectedOption === option) {
-      // Deselect logic
       setSelectedOption(null);
       setIsCorrectSelection(null);
       if (isInteractionCompleted) {
         onUncomplete(interactionId);
       }
     } else {
-      // Select logic
       setSelectedOption(option);
       const isCorrect = option === correctAnswer;
       setIsCorrectSelection(isCorrect);
@@ -71,8 +69,8 @@ export function InteractiveWordChoice({
         const isSelected = selectedOption === option;
         const isCorrectChoice = option === correctAnswer;
         
-        if (isSubmitted && !isCorrectChoice) {
-          return null;
+        if (isSubmitted && !isSelected && !isCorrectChoice) {
+          return null; 
         }
 
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
@@ -81,7 +79,8 @@ export function InteractiveWordChoice({
         
         if (isSubmitted && isCorrectChoice) {
           prefixEmoji = '✅';
-          additionalClasses = "border-green-500 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 cursor-default hover:bg-green-100 dark:hover:bg-green-800/30";
+          // Using solid colors and overriding hover to match FillInBlank's look and feel
+          additionalClasses = "border-green-600 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900";
         } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
           prefixEmoji = '❌';
@@ -104,7 +103,8 @@ export function InteractiveWordChoice({
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
-              additionalClasses
+              additionalClasses,
+              (isLessonCompleted || (isSubmitted && isCorrectChoice)) && 'cursor-pointer' // Ensure it's clickable to deselect
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}
           >
