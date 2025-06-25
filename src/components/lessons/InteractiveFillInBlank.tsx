@@ -3,7 +3,7 @@
 
 import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn, shuffleArray } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Popover,
@@ -29,15 +29,10 @@ export function InteractiveFillInBlank({
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(isCompleted);
 
 
   const blankPlaceholder = "______";
-
-  useEffect(() => {
-    setShuffledDisplayOptions(shuffleArray(options));
-  }, [options]);
 
   useEffect(() => {
      if (isCompleted) {
@@ -45,6 +40,7 @@ export function InteractiveFillInBlank({
       setIsCorrect(true);
       setIsSubmitted(true);
     } else {
+      // Reset state if the lesson is reset externally
       setFilledAnswer(null);
       setIsCorrect(null);
       setIsSubmitted(false);
@@ -65,18 +61,6 @@ export function InteractiveFillInBlank({
       onCorrect(interactionId);
     }
   };
-
-  const [buttonWidth, setButtonWidth] = useState('auto');
-
-  useEffect(() => {
-    const textToMeasure = filledAnswer || blankPlaceholder;
-    const emojiPlaceholderWidth = 20; 
-    const baseLength = Math.max(textToMeasure.length * 8, blankPlaceholder.length * 8);
-    const paddingAndChevron = 32;
-    const minWidth = 100;
-    setButtonWidth(`${Math.max(baseLength + emojiPlaceholderWidth, minWidth)}px`);
-  }, [filledAnswer, blankPlaceholder]);
-
 
   const handleTriggerClick = () => {
     if (isSubmitted) return;
@@ -129,14 +113,14 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
+            "w-auto min-w-24 inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
             borderColorClass,
             textColorClass,
             cursorClass,
             isSubmitted ? "border" : "border border-dashed",
             !isSubmitted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
-            style={{ minWidth: buttonWidth, height: '1.75rem' }}
+            style={{ height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
@@ -150,7 +134,7 @@ export function InteractiveFillInBlank({
           hidden={isSubmitted}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
+        {!isSubmitted && options.map((opt, index) => (
           <Button
             key={index}
             type="button"

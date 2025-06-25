@@ -6,7 +6,7 @@ import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Info, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
@@ -27,16 +27,20 @@ const combinedRegex = new RegExp(
   "g"
 );
 
-const markdownRegex = /(\*\*.*?\*\*|\*(\S(?:.*?\S)?)\*)/g;
+const parseMarkdownForHTML = (text: string): string => {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+};
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
+  const markdownRegex = /(\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   
-  const localRegex = new RegExp(markdownRegex);
   let match;
   
-  while ((match = localRegex.exec(text)) !== null) {
+  while ((match = markdownRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
@@ -45,10 +49,17 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
     } else if (matchedText.startsWith('*')) {
-      parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
+       // Check for non-word character before the starting * and after the ending * to avoid matching list items.
+       const preChar = text[match.index - 1];
+       const postChar = text[match.index + matchedText.length];
+       if ((!preChar || /\s|[.,:;?!]/.test(preChar)) && (!postChar || /\s|[.,:;?!]/.test(postChar))) {
+          parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
+       } else {
+         parts.push(matchedText);
+       }
     }
     
-    lastIndex = localRegex.lastIndex;
+    lastIndex = markdownRegex.lastIndex;
   }
 
   if (lastIndex < text.length) {
@@ -102,21 +113,15 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   return outputParagraphs;
 };
 
-const parseMarkdownForHTML = (text: string): string => {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(\S(?:.*?\S)?)\*/g, '<em>$1</em>');
-};
-
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, resetLessonProgress } = useAuth();
   const router = useRouter();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
-  const [totalInteractiveElements, setTotalInteractiveElements] = useState(0);
   
   const completedInteractions = useMemo(() => {
     return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
@@ -132,96 +137,86 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [completedInteractions, saveInteractionProgress, lesson.id]);
   
-  const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
-    const elements: (string | JSX.Element)[] = [];
-    let lastIndex = 0;
-    let interactionCounter = 0;
+  const totalInteractiveElements = useMemo(() => {
+    const matches = lesson.content.match(combinedRegex);
+    return matches ? matches.length : 0;
+  }, [lesson.content]);
 
-    const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
-    const contentWithoutGeneralComments = content.replace(generalCommentsRegex, '');
-
-    let match;
-    combinedRegex.lastIndex = 0;
-
-    while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
-      const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
-      interactionCounter++;
-
-      if (match.index > lastIndex) {
-        elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
-      }
-
-      if (match[2]) { // INTERACTIVE_WORD_CHOICE
-        const optionsString = match[2];
-        if (optionsString) {
-          const rawOptions = optionsString.split(';');
-          let correctAnswer = "";
-          const parsedOptions = rawOptions.map(opt => {
-            const trimmedOpt = opt.trim();
-            if (trimmedOpt.startsWith('*')) {
-              correctAnswer = trimmedOpt.substring(1).trim();
-              return trimmedOpt.substring(1).trim();
-            }
-            return trimmedOpt;
-          }).filter(opt => opt.length > 0);
-
-          if (parsedOptions.length > 0 && correctAnswer) {
-            elements.push(
-              <InteractiveWordChoice
-                key={interactionId}
-                interactionId={interactionId}
-                options={parsedOptions}
-                correctAnswer={correctAnswer}
-                onCorrect={handleInteractionCorrect}
-                isCompleted={completedInteractions.has(interactionId)}
-              />
-            );
-          }
-        }
-      } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
-        const optionsString = match[4];
-        if (optionsString) {
-          const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(opt => opt.length > 0);
-          if (allOptions.length > 0) {
-            const correctAnswerFillIn = allOptions[0];
-            elements.push(
-              <InteractiveFillInBlank
-                key={interactionId}
-                interactionId={interactionId}
-                options={allOptions}
-                correctAnswer={correctAnswerFillIn}
-                onCorrect={handleInteractionCorrect}
-                isCompleted={completedInteractions.has(interactionId)}
-              />
-            );
-          }
-        }
-      }
-      lastIndex = combinedRegex.lastIndex;
-    }
-
-    if (lastIndex < contentWithoutGeneralComments.length) {
-      elements.push(contentWithoutGeneralComments.substring(lastIndex));
-    }
-    return elements;
-  }, [lesson.id, handleInteractionCorrect, completedInteractions]);
-  
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
-      return parseLessonContentAndCountInteractions(lesson.content);
+      const elements: (string | JSX.Element)[] = [];
+      let lastIndex = 0;
+      let interactionCounter = 0;
+  
+      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
+      const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
+  
+      let match;
+      combinedRegex.lastIndex = 0;
+  
+      while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
+        const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
+        interactionCounter++;
+  
+        if (match.index > lastIndex) {
+          elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
+        }
+  
+        if (match[2]) { // INTERACTIVE_WORD_CHOICE
+          const optionsString = match[2];
+          if (optionsString) {
+            const rawOptions = optionsString.split(';').map(opt => opt.trim()).filter(Boolean);
+            let correctAnswer = "";
+            const parsedOptions = rawOptions.map(opt => {
+              if (opt.startsWith('*')) {
+                correctAnswer = opt.substring(1).trim();
+                return correctAnswer;
+              }
+              return opt;
+            });
+  
+            if (parsedOptions.length > 0 && correctAnswer) {
+              elements.push(
+                <InteractiveWordChoice
+                  key={interactionId}
+                  interactionId={interactionId}
+                  options={parsedOptions}
+                  correctAnswer={correctAnswer}
+                  onCorrect={handleInteractionCorrect}
+                  isCompleted={completedInteractions.has(interactionId)}
+                />
+              );
+            }
+          }
+        } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
+          const optionsString = match[4];
+          if (optionsString) {
+            const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(Boolean);
+            if (allOptions.length > 0) {
+              const correctAnswerFillIn = allOptions[0];
+              elements.push(
+                <InteractiveFillInBlank
+                  key={interactionId}
+                  interactionId={interactionId}
+                  options={allOptions}
+                  correctAnswer={correctAnswerFillIn}
+                  onCorrect={handleInteractionCorrect}
+                  isCompleted={completedInteractions.has(interactionId)}
+                />
+              );
+            }
+          }
+        }
+        lastIndex = combinedRegex.lastIndex;
+      }
+  
+      if (lastIndex < contentWithoutGeneralComments.length) {
+        elements.push(contentWithoutGeneralComments.substring(lastIndex));
+      }
+      return elements;
     }
     return [];
-  }, [lesson?.content, parseLessonContentAndCountInteractions]);
-
-  useEffect(() => {
-    let count = 0;
-    processedContentElements.forEach(el => {
-        if (React.isValidElement(el) && (el.type === InteractiveWordChoice || el.type === InteractiveFillInBlank)) {
-            count++;
-        }
-    });
-    setTotalInteractiveElements(count);
-  }, [processedContentElements]);
+  }, [lesson.id, lesson.content, handleInteractionCorrect, completedInteractions]);
   
   const allInteractionsCompleted = useMemo(() => {
     return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
@@ -243,6 +238,12 @@ export function LessonView({ lesson }: LessonViewProps) {
     setIsMarkingComplete(true);
     await completeLesson(lesson.id);
     setIsMarkingComplete(false);
+  };
+  
+  const handleResetLesson = async () => {
+      setIsResetting(true);
+      await resetLessonProgress(lesson.id);
+      setIsResetting(false);
   };
 
   if (authLoading || !lesson) {
@@ -287,7 +288,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               <Clock className="h-4 w-4 mr-1" />
               <span>{lesson.estimatedTime}</span>
             </div>
-            <span className="capitalize">Tipo: {lesson.type}</span>
+            {lesson.type && <span className="capitalize">Tipo: {lesson.type}</span>}
             {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
           </div>
            {totalInteractiveElements > 0 && (
@@ -336,7 +337,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
 
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center my-2 sm:my-0 order-first sm:order-none">
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
             <Button
               variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
               size="lg"
@@ -364,6 +365,18 @@ export function LessonView({ lesson }: LessonViewProps) {
                             : "Marcar Concluída"
                 }
             </Button>
+            {isLessonAlreadyCompletedByProfile && (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full max-w-xs sm:w-auto"
+                    onClick={handleResetLesson}
+                    disabled={isResetting}
+                >
+                    {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    Reiniciar Lição
+                </Button>
+            )}
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
