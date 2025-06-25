@@ -4,7 +4,7 @@
 import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn, shuffleArray } from '@/lib/utils';
-import { ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -17,7 +17,6 @@ interface InteractiveFillInBlankProps {
   interactionId: string;
   onCorrect: (interactionId: string) => void;
   isCompleted?: boolean;
-  isLessonAlreadyCompleted?: boolean;
 }
 
 export function InteractiveFillInBlank({
@@ -26,13 +25,12 @@ export function InteractiveFillInBlank({
   interactionId,
   onCorrect,
   isCompleted,
-  isLessonAlreadyCompleted,
 }: InteractiveFillInBlankProps) {
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
-  const [isSubmitted, setIsSubmitted] = useState(isLessonAlreadyCompleted || isCompleted);
+  const [isSubmitted, setIsSubmitted] = useState(isCompleted);
 
 
   const blankPlaceholder = "______";
@@ -42,7 +40,7 @@ export function InteractiveFillInBlank({
   }, [options]);
 
   useEffect(() => {
-     if (isLessonAlreadyCompleted || isCompleted) {
+     if (isCompleted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
       setIsSubmitted(true);
@@ -51,7 +49,7 @@ export function InteractiveFillInBlank({
       setIsCorrect(null);
       setIsSubmitted(false);
     }
-  }, [isLessonAlreadyCompleted, isCompleted, correctAnswer]);
+  }, [isCompleted, correctAnswer]);
 
 
   const handleOptionClick = (option: string) => {
@@ -98,14 +96,14 @@ export function InteractiveFillInBlank({
   let prefixEmoji: React.ReactNode = "✏️";
 
   if (isSubmitted) {
-    prefixEmoji = <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />;
+    prefixEmoji = '✅';
     mainText = correctAnswer;
     textColorClass = "text-green-700 dark:text-green-300";
     borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
     cursorClass = "cursor-default";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
-    prefixEmoji = <XCircle className="h-3 w-3 text-red-600 dark:text-red-400" />;
+    prefixEmoji = '❌';
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 bg-red-100 dark:bg-red-900/30 dark:border-red-700";
