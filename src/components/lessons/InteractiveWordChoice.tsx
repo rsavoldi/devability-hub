@@ -75,8 +75,8 @@ export function InteractiveWordChoice({
           additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
           buttonIsDisabled = false;
         } else if (isSelected) {
-            variant = "default";
-            additionalClasses = "bg-primary/80";
+            variant = "ghost"; // Use ghost to remove default button styles
+            additionalClasses = "bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background";
         } else {
              additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
@@ -103,3 +103,4 @@ export function InteractiveWordChoice({
     </span>
   );
 }
+
