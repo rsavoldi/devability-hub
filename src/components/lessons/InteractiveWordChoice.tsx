@@ -22,7 +22,7 @@ export function InteractiveWordChoice({
 }: InteractiveWordChoiceProps) {
   
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
+  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(isCompleted ? true : null);
   const [isSubmitted, setIsSubmitted] = useState(isCompleted);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export function InteractiveWordChoice({
       setIsCorrectSelection(true);
       setIsSubmitted(true);
     } else {
+      // This part handles the reset logic if the lesson progress is cleared externally
       setSelectedOption(null);
       setIsCorrectSelection(null);
       setIsSubmitted(false);
@@ -56,8 +57,9 @@ export function InteractiveWordChoice({
         const isSelected = selectedOption === option;
         const isCorrectChoice = option === correctAnswer;
         
+        // Hide incorrect options once the correct answer is submitted
         if (isSubmitted && !isCorrectChoice) {
-          return null; // Don't render incorrect options if submitted
+          return null;
         }
 
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
@@ -68,12 +70,13 @@ export function InteractiveWordChoice({
         if (isSubmitted && isCorrectChoice) {
           variant = "outline";
           prefixEmoji = '✅';
+          // Style copied from InteractiveFillInBlank for consistency
           additionalClasses = "border-green-500 bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300 dark:border-green-700 cursor-default hover:bg-green-100 dark:hover:bg-green-800/30";
         } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
           prefixEmoji = '❌';
           additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
-          buttonIsDisabled = false;
+          buttonIsDisabled = false; // Allow user to try again
         } else if (isSelected) {
             variant = "ghost"; // Use ghost to remove default button styles
             additionalClasses = "bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background";
@@ -103,4 +106,3 @@ export function InteractiveWordChoice({
     </span>
   );
 }
-
