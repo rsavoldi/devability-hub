@@ -36,7 +36,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   refreshUserProfile: () => void;
-  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  updateUserProfile: (newProfile: UserProfile) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
   clearCurrentUserProgress: () => void;
@@ -65,17 +65,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
 
-const getProfileStorageKey = (userId: string | null): string => {
-  return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
-};
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [userProfileState, setUserProfileState] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  const loadProfile = useCallback((userId: string | null, firebaseUser: FirebaseUser | null): UserProfile => {
+const loadProfile = (userId: string | null, firebaseUser: FirebaseUser | null): UserProfile => {
     let profile: UserProfile;
     if (typeof window !== 'undefined') {
       const storageKey = getProfileStorageKey(userId);
@@ -83,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedProfileRaw) {
         try {
           profile = JSON.parse(storedProfileRaw) as UserProfile;
+          // Garante consistência dos dados carregados
           profile.id = userId || GUEST_USER_ID;
           profile.name = firebaseUser?.displayName || profile.name || (userId === GUEST_USER_ID ? GUEST_USER_NAME : "Usuário Anônimo");
           profile.email = firebaseUser?.email || profile.email || null;
@@ -93,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profile.unlockedAchievements = Array.isArray(profile.unlockedAchievements) ? [...new Set([...profile.unlockedAchievements, 'ach1'])] : ['ach1'];
           profile.completedModules = Array.isArray(profile.completedModules) ? profile.completedModules : [];
           profile.roles = Array.isArray(profile.roles) ? profile.roles : (userId === GUEST_USER_ID || !userId ? ['guest'] : ['user']);
+
         } catch (e) {
           console.error("Erro ao parsear perfil do localStorage, criando perfil padrão:", e);
           profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
@@ -104,28 +96,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
     }
     return profile;
+};
+
+
+const getProfileStorageKey = (userId: string | null): string => {
+  return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
+};
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [userProfileState, setUserProfileState] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const updateUserProfile = useCallback(async (newProfile: UserProfile) => {
+    setUserProfileState(newProfile);
+    if (typeof window !== 'undefined') {
+      const storageKey = getProfileStorageKey(newProfile.id);
+      localStorage.setItem(storageKey, JSON.stringify(newProfile));
+    }
   }, []);
-
-  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    setUserProfileState(prevProfile => {
-      const activeUserId = currentUser?.uid || GUEST_USER_ID;
-      const baseProfileForMerge = prevProfile || createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
-      
-      let finalUpdatedProfile = { ...baseProfileForMerge, ...updates, id: activeUserId };
-
-      finalUpdatedProfile.unlockedAchievements = [...new Set([...(baseProfileForMerge.unlockedAchievements || ['ach1']), ...(updates.unlockedAchievements || [])])];
-      finalUpdatedProfile.completedLessons = [...new Set([...(baseProfileForMerge.completedLessons || []), ...(updates.completedLessons || [])])];
-      finalUpdatedProfile.completedExercises = [...new Set([...(baseProfileForMerge.completedExercises || []), ...(updates.completedExercises || [])])];
-      finalUpdatedProfile.completedModules = [...new Set([...(baseProfileForMerge.completedModules || []), ...(updates.completedModules || [])])];
-      
-      if (typeof window !== 'undefined') {
-        const storageKey = getProfileStorageKey(activeUserId);
-        localStorage.setItem(storageKey, JSON.stringify(finalUpdatedProfile));
-      }
-      return finalUpdatedProfile;
-    });
-  }, [currentUser]);
-
 
   useEffect(() => {
     setLoading(true);
@@ -136,87 +126,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [loadProfile]);
+  }, []);
 
   useEffect(() => {
-    if (currentUser && userProfileState) {
-        if (!userProfileState.unlockedAchievements.includes('ach_login')) {
-            const achievement = mockAchievements.find(a => a.id === 'ach_login');
-            if (achievement) {
-                const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
-                const profileUpdates: Partial<UserProfile> = {
-                    unlockedAchievements: [...userProfileState.unlockedAchievements, 'ach_login'],
-                    points: (userProfileState.points || 0) + pointsFromLoginAchievement
-                };
-                
-                (async () => {
-                    await updateUserProfile(profileUpdates);
-                    setTimeout(() => {
-                        playSound('achievementUnlock');
-                        toast({
-                            title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
-                            description: `${achievement.title} - ${achievement.description}`,
-                            className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-                        });
-                    }, 0);
-                })();
-            }
-        }
+    if (currentUser && userProfileState && !userProfileState.unlockedAchievements.includes('ach_login')) {
+      const achievement = mockAchievements.find(a => a.id === 'ach_login');
+      if (achievement) {
+        const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
+        const profileUpdates = {
+            ...userProfileState,
+            unlockedAchievements: [...userProfileState.unlockedAchievements, 'ach_login'],
+            points: (userProfileState.points || 0) + pointsFromLoginAchievement
+        };
+        
+        (async () => {
+          await updateUserProfile(profileUpdates);
+          setTimeout(() => {
+            playSound('achievementUnlock');
+            toast({
+              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
+              description: `${achievement.title} - ${achievement.description}`,
+              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+            });
+          }, 0);
+        })();
+      }
     }
   }, [currentUser, userProfileState, updateUserProfile, toast]);
+
 
   const refreshUserProfile = useCallback(() => {
     const activeUserId = currentUser?.uid || null;
     const refreshedProfile = loadProfile(activeUserId, currentUser);
     setUserProfileState(refreshedProfile);
-  }, [currentUser, loadProfile]);
-
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.error("Erro ao fazer login com Google:", error);
-      const errorCode = error.code;
-      let friendlyMessage = "Não foi possível fazer login com Google.";
-      if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
-        friendlyMessage = "Login com Google cancelado ou janela fechada.";
-      }
-      setTimeout(() => {
-        toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      }, 0);
-      setLoading(false);
-    }
-  };
-
-  const signOutFirebase = async () => {
-    setLoading(true);
-    try {
-      await signOut(auth);
-    } catch (error: any) {
-      console.error("Erro ao fazer logout:", error);
-      setTimeout(() => {
-        toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
-      }, 0);
-      setLoading(false);
-    }
-  };
-
-  const clearCurrentUserProgress = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const activeUserId = currentUser?.uid || GUEST_USER_ID;
-      const storageKey = getProfileStorageKey(activeUserId);
-      const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
-      
-      setUserProfileState(defaultProfile);
-      localStorage.setItem(storageKey, JSON.stringify(defaultProfile));
-      
-      setTimeout(() => {
-        toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
-      },0);
-    }
   }, [currentUser]);
+
 
   const handleProgressUpdate = useCallback(async (resultPromise: Promise<UpdateResult>) => {
     try {
@@ -264,7 +208,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (userProfileState.completedLessons.includes(lessonId) && !currentUser) return;
     
-    await handleProgressUpdate(currentUser ? markLessonCompletedAction(userProfileState, lessonId) : completeLessonLogic(userProfileState, lessonId));
+    const logicFunction = currentUser ? markLessonAsCompletedAction : completeLessonLogic;
+    const resultPromise = logicFunction(userProfileState, lessonId);
+    
+    await handleProgressUpdate(resultPromise);
   }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
@@ -274,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (userProfileState.completedExercises.includes(exerciseId) && !currentUser) return;
 
-    await handleProgressUpdate(currentUser ? markExerciseCompletedAction(userProfileState, exerciseId) : completeExerciseLogic(userProfileState, exerciseId));
+    const logicFunction = currentUser ? markExerciseAsCompletedAction : completeExerciseLogic;
+    const resultPromise = logicFunction(userProfileState, exerciseId);
+    await handleProgressUpdate(resultPromise);
   }, [userProfileState, currentUser, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
@@ -284,8 +233,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
      if (userProfileState.completedModules.includes(moduleId) && !currentUser) return;
 
-    await handleProgressUpdate(currentUser ? markModuleAsCompleted(userProfileState, moduleId) : completeModuleLogic(userProfileState, moduleId));
+    const logicFunction = currentUser ? markModuleAsCompleted : completeModuleLogic;
+    const resultPromise = logicFunction(userProfileState, moduleId);
+    await handleProgressUpdate(resultPromise);
   }, [userProfileState, currentUser, handleProgressUpdate]);
+
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Erro ao fazer login com Google:", error);
+      const errorCode = error.code;
+      let friendlyMessage = "Não foi possível fazer login com Google.";
+      if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
+        friendlyMessage = "Login com Google cancelado ou janela fechada.";
+      }
+      setTimeout(() => {
+        toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
+      }, 0);
+      setLoading(false);
+    }
+  };
+
+  const signOutFirebase = async () => {
+    setLoading(true);
+    try {
+      await signOut(auth);
+    } catch (error: any) {
+      console.error("Erro ao fazer logout:", error);
+      setTimeout(() => {
+        toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
+      }, 0);
+      setLoading(false);
+    }
+  };
+
+  const clearCurrentUserProgress = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const activeUserId = currentUser?.id || GUEST_USER_ID;
+      const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
+      setUserProfileState(defaultProfile);
+      const storageKey = getProfileStorageKey(activeUserId);
+      localStorage.setItem(storageKey, JSON.stringify(defaultProfile));
+      
+      setTimeout(() => {
+        toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
+      },0);
+    }
+  }, [currentUser]);
 
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
@@ -294,7 +292,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
       setCurrentUser(auth.currentUser);
-      // Let onAuthStateChanged handle profile loading/creation.
       
       setTimeout(() => toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` }), 0);
       return auth.currentUser;
