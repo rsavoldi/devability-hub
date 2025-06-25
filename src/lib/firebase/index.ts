@@ -1,7 +1,7 @@
 // src/lib/firebase/index.ts
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Descomentado
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,16 +14,19 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp;
+let db: ReturnType<typeof getFirestore>;
+let auth: ReturnType<typeof getAuth>;
+
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
+  db = initializeFirestore(app, {
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  });
+  auth = getAuth(app);
 } else {
   app = getApps()[0];
+  db = getFirestore(app);
+  auth = getAuth(app);
 }
 
-const db = initializeFirestore(app, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED
-});
-
-const auth = getAuth(app); // Descomentado e inicializado
-
-export { db, auth }; // Exportando auth
+export { db, auth };

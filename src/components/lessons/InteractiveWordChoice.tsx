@@ -4,13 +4,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { shuffleArray } from '@/lib/utils';
 
 interface InteractiveWordChoiceProps {
   options: string[];
   correctAnswer: string;
   interactionId: string;
   onCorrect: (interactionId: string) => void;
-  isLessonAlreadyCompleted?: boolean; // Nova prop
+  isCompleted?: boolean;
 }
 
 export function InteractiveWordChoice({
@@ -18,77 +19,70 @@ export function InteractiveWordChoice({
   correctAnswer,
   interactionId,
   onCorrect,
-  isLessonAlreadyCompleted, // Nova prop
+  isCompleted,
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(
-    isLessonAlreadyCompleted ? correctAnswer : null
+    isCompleted ? correctAnswer : null
   );
   const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(
-    isLessonAlreadyCompleted ? true : null
+    isCompleted ? true : null
   );
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(
-    isLessonAlreadyCompleted || false
-  );
+  
+  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
 
   useEffect(() => {
-    if (isLessonAlreadyCompleted) {
+    setShuffledOptions(shuffleArray(options));
+  }, [options]);
+
+  useEffect(() => {
+    if (isCompleted) {
       setSelectedOption(correctAnswer);
       setIsCorrectSelection(true);
-      setIsSubmitted(true);
     }
-  }, [isLessonAlreadyCompleted, correctAnswer]);
+  }, [isCompleted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
-    if (isSubmitted) return; // Se já submetido (ou lição já completa), não faz nada
+    if (isCompleted) return;
 
-    if (selectedOption === option && isCorrectSelection === false) {
-      setSelectedOption(null);
-      setIsCorrectSelection(null);
-    } else {
-      setSelectedOption(option);
-      const isCorrect = option === correctAnswer;
-      setIsCorrectSelection(isCorrect);
+    setSelectedOption(option);
+    const isCorrect = option === correctAnswer;
+    setIsCorrectSelection(isCorrect);
 
-      if (isCorrect) {
-        setIsSubmitted(true);
-        onCorrect(interactionId);
-      }
+    if (isCorrect) {
+      onCorrect(interactionId);
     }
   };
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
-      {options.map((option, index) => {
+      {shuffledOptions.map((option, index) => {
         const isSelected = selectedOption === option;
-        const isCorrectAndSubmitted = isSubmitted && option === correctAnswer;
-        const isIncorrectAndSelected = isSelected && isCorrectSelection === false && !isSubmitted; // Apenas antes da submissão correta
-
+        const isCorrectAndSubmitted = isCompleted && option === correctAnswer;
+        const isIncorrectAndSelected = isSelected && isCorrectSelection === false;
+        
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let prefixEmoji = "";
         let additionalClasses = "";
-        let buttonIsDisabled = isSubmitted && option !== correctAnswer; // Desabilita outras opções após submissão correta
+        let buttonIsDisabled = isCompleted;
 
         if (isCorrectAndSubmitted) {
           variant = "default";
           prefixEmoji = "✅";
           additionalClasses = "bg-green-500 hover:bg-green-500 text-white dark:bg-green-600 dark:hover:bg-green-600 cursor-default";
-          buttonIsDisabled = true; // Bloqueia a opção correta também
-        } else if (isSubmitted && option !== correctAnswer) {
-           additionalClasses = "opacity-60 cursor-not-allowed text-muted-foreground";
-        } else { // Antes da submissão final (ou seja, quando isSubmitted é false, ou lição não completa inicialmente)
-          if (isSelected) {
-            if (isCorrectSelection === true) { // Selecionou a correta, vai submeter
-              variant = "default";
-              prefixEmoji = "✅";
-              additionalClasses = "bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700 focus-visible:ring-green-400";
-            } else if (isIncorrectAndSelected) { // Selecionou a errada
-              variant = "destructive";
-              prefixEmoji = "❌";
-              additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
-            }
-          } else {
+        } else if (isIncorrectAndSelected) {
+          variant = "destructive";
+          prefixEmoji = "❌";
+          additionalClasses = "bg-red-500 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 focus-visible:ring-red-400";
+          buttonIsDisabled = false;
+        } else if (isSelected) { // Selected but not yet evaluated as correct (before onCorrect completes)
+            variant = "default";
+            additionalClasses = "bg-primary/80";
+        } else {
              additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
-          }
+        }
+
+        if (isCompleted && !isCorrectAndSubmitted) {
+            additionalClasses += " opacity-60 cursor-not-allowed";
         }
 
         return (
@@ -97,15 +91,15 @@ export function InteractiveWordChoice({
             variant={variant}
             size="sm"
             onClick={() => handleOptionClick(option)}
-            disabled={buttonIsDisabled}
+            disabled={buttonIsDisabled && !isIncorrectAndSelected}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses
             )}
-            style={{gap: (prefixEmoji && isCorrectAndSubmitted) ? '0.1rem' : (prefixEmoji ? '0.2rem' : '0')}}
+            style={{gap: '0.2rem'}}
           >
-            {prefixEmoji && <span className={cn("shrink-0", (isCorrectAndSubmitted) ? "mr-0.5" : "-ml-0.5")}>{prefixEmoji}</span>}
+            {prefixEmoji && <span className={cn("shrink-0", "-ml-0.5")}>{prefixEmoji}</span>}
             <span>{option}</span>
           </Button>
         );

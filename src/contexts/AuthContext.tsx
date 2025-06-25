@@ -18,25 +18,15 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
-import {
-  checkAndUnlockAchievementsLogic,
-  completeLessonLogic,
-  completeExerciseLogic,
-  completeModuleLogic,
-  markLessonAsCompleted as markLessonCompletedAction,
-  markExerciseAsCompleted as markExerciseCompletedAction,
-  markModuleAsCompleted as markModuleCompletedAction,
-} from '@/app/actions/userProgressActions';
-import type { UpdateResult } from '@/app/actions/userProgressActions';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
+import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockAchievements } from '@/lib/mockData';
-
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
   refreshUserProfile: () => void;
-  updateUserProfile: (newProfile: UserProfile) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
   clearCurrentUserProgress: () => void;
@@ -45,62 +35,45 @@ interface AuthContextType {
   completeLesson: (lessonId: string) => Promise<void>;
   completeExercise: (exerciseId: string) => Promise<void>;
   completeModule: (moduleId: string) => Promise<void>;
+  saveInteractionProgress: (lessonId: string, interactionId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const GUEST_USER_ID = "guest_user";
-const GUEST_USER_NAME = "Convidado(a)";
 
 const createDefaultProfile = (userId: string, userName?: string | null, userEmail?: string | null, userAvatar?: string | null): UserProfile => ({
   id: userId,
-  name: userName || (userId === GUEST_USER_ID ? GUEST_USER_NAME : "Usuário Anônimo"),
+  name: userName || (userId === GUEST_USER_ID ? "Convidado(a)" : "Usuário Anônimo"),
   email: userEmail || null,
-  avatarUrl: userAvatar || `https://placehold.co/100x100.png?text=${(userName || (userId === GUEST_USER_ID ? "C" : "U")).charAt(0).toUpperCase()}`,
+  avatarUrl: userAvatar || `https://placehold.co/100x100.png?text=${(userName || "G").charAt(0).toUpperCase()}`,
   points: 0,
-  completedLessons: [],
+  lessonProgress: {},
   completedExercises: [],
   unlockedAchievements: ['ach1'],
   completedModules: [],
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
 
-const loadProfile = (userId: string | null, firebaseUser: FirebaseUser | null): UserProfile => {
-    let profile: UserProfile;
-    if (typeof window !== 'undefined') {
-      const storageKey = getProfileStorageKey(userId);
-      const storedProfileRaw = localStorage.getItem(storageKey);
-      if (storedProfileRaw) {
-        try {
-          profile = JSON.parse(storedProfileRaw) as UserProfile;
-          // Garante consistência dos dados carregados
-          profile.id = userId || GUEST_USER_ID;
-          profile.name = firebaseUser?.displayName || profile.name || (userId === GUEST_USER_ID ? GUEST_USER_NAME : "Usuário Anônimo");
-          profile.email = firebaseUser?.email || profile.email || null;
-          profile.avatarUrl = firebaseUser?.photoURL || profile.avatarUrl || `https://placehold.co/100x100.png?text=${(profile.name || (userId === GUEST_USER_ID ? "C" : "U")).charAt(0).toUpperCase()}`;
-          profile.points = typeof profile.points === 'number' ? profile.points : 0;
-          profile.completedLessons = Array.isArray(profile.completedLessons) ? profile.completedLessons : [];
-          profile.completedExercises = Array.isArray(profile.completedExercises) ? profile.completedExercises : [];
-          profile.unlockedAchievements = Array.isArray(profile.unlockedAchievements) ? [...new Set([...profile.unlockedAchievements, 'ach1'])] : ['ach1'];
-          profile.completedModules = Array.isArray(profile.completedModules) ? profile.completedModules : [];
-          profile.roles = Array.isArray(profile.roles) ? profile.roles : (userId === GUEST_USER_ID || !userId ? ['guest'] : ['user']);
-
-        } catch (e) {
-          console.error("Erro ao parsear perfil do localStorage, criando perfil padrão:", e);
-          profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
-        }
-      } else {
-        profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
-      }
-    } else {
-      profile = createDefaultProfile(userId || GUEST_USER_ID, firebaseUser?.displayName, firebaseUser?.email, firebaseUser?.photoURL);
+const loadGuestProfile = (): UserProfile => {
+  if (typeof window === 'undefined') {
+    return createDefaultProfile(GUEST_USER_ID);
+  }
+  const storedProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+  if (storedProfileRaw) {
+    try {
+      const profile = JSON.parse(storedProfileRaw) as UserProfile;
+      // Data integrity checks
+      profile.id = GUEST_USER_ID;
+      profile.name = profile.name || "Convidado(a)";
+      profile.roles = profile.roles || ['guest'];
+      profile.lessonProgress = profile.lessonProgress || {};
+      return profile;
+    } catch (e) {
+      console.error("Error parsing guest profile from localStorage", e);
     }
-    return profile;
-};
-
-
-const getProfileStorageKey = (userId: string | null): string => {
-  return userId ? `${LOCAL_STORAGE_KEYS.USER_PROGRESS_PREFIX}${userId}` : LOCAL_STORAGE_KEYS.GUEST_PROGRESS;
+  }
+  return createDefaultProfile(GUEST_USER_ID);
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -109,70 +82,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const updateUserProfile = useCallback(async (newProfile: UserProfile) => {
-    setUserProfileState(newProfile);
-    if (typeof window !== 'undefined') {
-      const storageKey = getProfileStorageKey(newProfile.id);
-      localStorage.setItem(storageKey, JSON.stringify(newProfile));
-    }
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setCurrentUser(firebaseUser);
-      const loadedUserProfile = loadProfile(firebaseUser?.uid || null, firebaseUser);
-      setUserProfileState(loadedUserProfile);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (currentUser && userProfileState && !userProfileState.unlockedAchievements.includes('ach_login')) {
-      const achievement = mockAchievements.find(a => a.id === 'ach_login');
-      if (achievement) {
-        const pointsFromLoginAchievement = achievement.pointsAwarded || 0;
-        const profileUpdates = {
-            ...userProfileState,
-            unlockedAchievements: [...userProfileState.unlockedAchievements, 'ach_login'],
-            points: (userProfileState.points || 0) + pointsFromLoginAchievement
-        };
-        
-        (async () => {
-          await updateUserProfile(profileUpdates);
-          setTimeout(() => {
-            playSound('achievementUnlock');
-            toast({
-              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
-              description: `${achievement.title} - ${achievement.description}`,
-              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
-            });
-          }, 0);
-        })();
+  const updateUserProfileState = useCallback(async (newProfileData: UserProfile) => {
+    setUserProfileState(newProfileData);
+    if (newProfileData.id === GUEST_USER_ID) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
       }
+    } else {
+      await saveUserProfileToFirestore(newProfileData.id, newProfileData);
     }
-  }, [currentUser, userProfileState, updateUserProfile, toast]);
+  }, []);
 
-
-  const refreshUserProfile = useCallback(() => {
-    const activeUserId = currentUser?.uid || null;
-    const refreshedProfile = loadProfile(activeUserId, currentUser);
-    setUserProfileState(refreshedProfile);
-  }, [currentUser]);
-
-
-  const handleProgressUpdate = useCallback(async (resultPromise: Promise<UpdateResult>) => {
+  const handleProgressUpdate = useCallback(async (resultPromise: Promise<any>) => {
     try {
       const result = await resultPromise;
       if (result.success && result.updatedProfile) {
-        await updateUserProfile(result.updatedProfile);
-
+        await updateUserProfileState(result.updatedProfile);
+        
         if (result.pointsAdded && result.pointsAdded > 0) {
           setTimeout(() => playSound('pointGain'), 0);
         }
         
-        result.unlockedAchievementsDetails?.forEach((ach: Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded' | 'dateUnlocked' | 'isUnlocked'>) => {
+        result.unlockedAchievementsDetails?.forEach((ach: Achievement) => {
           setTimeout(() => {
             playSound('achievementUnlock');
             toast({
@@ -184,13 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (result.message && (result.message.includes("concluída") || result.message.includes("concluído"))) {
-           setTimeout(() => {
+          setTimeout(() => {
              toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
            }, 0);
         }
       } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) {
         setTimeout(() => {
-          toast({ title: "Erro ao Salvar Progresso", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
+          toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
         }, 0);
       }
     } catch (error) {
@@ -199,44 +130,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast({ title: "Erro Crítico", description: "Ocorreu um erro inesperado ao atualizar seu progresso.", variant: "destructive" });
         }, 0);
     }
-  }, [updateUserProfile, toast]);
+  }, [updateUserProfileState, toast]);
+
+  const saveInteractionProgress = useCallback(async (lessonId: string, interactionId: string) => {
+    if (!userProfileState) return;
+
+    const newProfile = { ...userProfileState };
+    const currentLessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
+    
+    if (!currentLessonProgress.completedInteractions.includes(interactionId)) {
+        currentLessonProgress.completedInteractions = [...currentLessonProgress.completedInteractions, interactionId];
+        newProfile.lessonProgress = {
+            ...newProfile.lessonProgress,
+            [lessonId]: currentLessonProgress
+        };
+        await updateUserProfileState(newProfile);
+    }
+  }, [userProfileState, updateUserProfileState]);
+
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setCurrentUser(firebaseUser);
+      if (firebaseUser) {
+        let profile = await getUserProfile(firebaseUser.uid);
+        if (!profile) {
+          // New user, create profile in Firestore
+          profile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+          await saveUserProfileToFirestore(firebaseUser.uid, profile);
+        }
+        setUserProfileState(profile);
+      } else {
+        // Guest user
+        setUserProfileState(loadGuestProfile());
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const refreshUserProfile = useCallback(async () => {
+    if (currentUser) {
+      const refreshedProfile = await getUserProfile(currentUser.uid);
+      if(refreshedProfile) setUserProfileState(refreshedProfile);
+    } else {
+      setUserProfileState(loadGuestProfile());
+    }
+  }, [currentUser]);
 
   const completeLesson = useCallback(async (lessonId: string) => {
-    if (!userProfileState) {
-      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
-      return;
-    }
-    if (userProfileState.completedLessons.includes(lessonId) && !currentUser) return;
-    
-    const logicFunction = currentUser ? markLessonAsCompletedAction : completeLessonLogic;
-    const resultPromise = logicFunction(userProfileState, lessonId);
-    
+    if (!userProfileState) return;
+    if (userProfileState.lessonProgress[lessonId]?.completed) return;
+    const resultPromise = completeLessonLogic(userProfileState, lessonId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, currentUser, handleProgressUpdate]);
+  }, [userProfileState, handleProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
-    if (!userProfileState) {
-      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
-      return;
-    }
-    if (userProfileState.completedExercises.includes(exerciseId) && !currentUser) return;
-
-    const logicFunction = currentUser ? markExerciseAsCompletedAction : completeExerciseLogic;
-    const resultPromise = logicFunction(userProfileState, exerciseId);
+    if (!userProfileState) return;
+    if (userProfileState.completedExercises.includes(exerciseId)) return;
+    const resultPromise = completeExerciseLogic(userProfileState, exerciseId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, currentUser, handleProgressUpdate]);
+  }, [userProfileState, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
-    if (!userProfileState) {
-      setTimeout(() => toast({ title: "Erro", description: "Perfil do usuário não carregado.", variant: "destructive" }), 0);
-      return;
-    }
-     if (userProfileState.completedModules.includes(moduleId) && !currentUser) return;
-
-    const logicFunction = currentUser ? markModuleAsCompleted : completeModuleLogic;
-    const resultPromise = logicFunction(userProfileState, moduleId);
+    if (!userProfileState) return;
+    if (userProfileState.completedModules.includes(moduleId)) return;
+    const resultPromise = completeModuleLogic(userProfileState, moduleId);
     await handleProgressUpdate(resultPromise);
-  }, [userProfileState, currentUser, handleProgressUpdate]);
+  }, [userProfileState, handleProgressUpdate]);
 
 
   const signInWithGoogle = async () => {
@@ -251,9 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request') {
         friendlyMessage = "Login com Google cancelado ou janela fechada.";
       }
-      setTimeout(() => {
-        toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      }, 0);
+      toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
       setLoading(false);
     }
   };
@@ -262,39 +222,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signOut(auth);
+      // onAuthStateChanged will handle setting the guest profile
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
-      setTimeout(() => {
-        toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
-      }, 0);
+      toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
       setLoading(false);
     }
   };
 
-  const clearCurrentUserProgress = useCallback(() => {
+  const clearCurrentUserProgress = useCallback(async () => {
     if (typeof window !== 'undefined') {
-      const activeUserId = currentUser?.id || GUEST_USER_ID;
+      const activeUserId = currentUser?.uid || GUEST_USER_ID;
       const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
-      setUserProfileState(defaultProfile);
-      const storageKey = getProfileStorageKey(activeUserId);
-      localStorage.setItem(storageKey, JSON.stringify(defaultProfile));
-      
-      setTimeout(() => {
-        toast({ title: "Progresso Limpo", description: "Seu progresso local foi reiniciado." });
-      },0);
+      await updateUserProfileState(defaultProfile);
+      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado." });
     }
-  }, [currentUser]);
-
+  }, [currentUser, updateUserProfileState, toast]);
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
-      setCurrentUser(auth.currentUser);
-      
-      setTimeout(() => toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` }), 0);
-      return auth.currentUser;
+      // onAuthStateChanged will handle the rest
+      toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
+      return userCredential.user;
     } catch (error: any) {
       console.error("Erro ao registrar com email:", error);
       let friendlyMessage = "Não foi possível registrar.";
@@ -303,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (error.code === 'auth/weak-password') {
         friendlyMessage = "A senha é muito fraca. Por favor, use uma senha mais forte.";
       }
-      setTimeout(() => toast({ title: "Erro no Registro", description: friendlyMessage, variant: "destructive" }), 0);
+      toast({ title: "Erro no Registro", description: friendlyMessage, variant: "destructive" });
       setLoading(false);
       return null;
     }
@@ -313,19 +265,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setTimeout(() => toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` }), 0);
+      toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
       return userCredential.user;
     } catch (error: any) {
        let friendlyMessage = "Email ou senha inválidos.";
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         friendlyMessage = "Email ou senha incorretos. Por favor, verifique seus dados.";
       }
-      setTimeout(() => toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" }), 0);
+      toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
       setLoading(false);
       return null;
     }
   };
-
 
   if (loading) {
     return (
@@ -342,7 +293,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfile: userProfileState,
       loading,
       refreshUserProfile,
-      updateUserProfile,
       signInWithGoogle,
       signOutFirebase,
       clearCurrentUserProgress,
@@ -351,6 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeLesson,
       completeExercise,
       completeModule,
+      saveInteractionProgress,
     }}>
       {children}
     </AuthContext.Provider>

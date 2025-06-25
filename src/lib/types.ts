@@ -23,6 +23,11 @@ export interface Module {
   progress?: number; // 0-100
 }
 
+export interface LessonProgress {
+  completed: boolean;
+  completedInteractions: string[];
+}
+
 export interface Lesson {
   id: string;
   title: string;
@@ -95,7 +100,7 @@ export interface UserProfile {
   email?: string | null;
   avatarUrl?: string;
   points: number;
-  completedLessons: string[];
+  lessonProgress: Record<string, LessonProgress>; // lessonId -> progress
   completedExercises: string[];
   unlockedAchievements: string[];
   completedModules: string[];

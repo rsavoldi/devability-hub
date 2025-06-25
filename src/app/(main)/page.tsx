@@ -1,8 +1,9 @@
+
 // src/app/(main)/page.tsx
-"use client"; // Alterado para client component para usar hooks como useAuth e useEffect
+"use client"; 
 
 import { RoadmapDisplay } from "@/components/roadmap/RoadmapDisplay";
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { mockRoadmapData as fallbackRoadmapData } from '@/lib/mockData'; 
 import type { RoadmapStep } from '@/lib/types';
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,11 +15,9 @@ export default function HomePage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
-    // Simula o carregamento dos dados do roadmap, que agora são estáticos
-    // mas queremos respeitar o estado de loading do AuthContext
     if (!authLoading) {
       const completedModules = userProfile?.completedModules || [];
-      const completedLessons = userProfile?.completedLessons || [];
+      const lessonProgress = userProfile?.lessonProgress || {};
 
       const processedData = fallbackRoadmapData.map(trilha => {
         let allModulesInTrilhaCompleted = true;
@@ -27,22 +26,13 @@ export default function HomePage() {
           
           let completedLessonsInModule = 0;
           if (module.lessons && module.lessons.length > 0) {
-            completedLessonsInModule = module.lessons.filter(l => completedLessons.includes(l.id)).length;
-            if (completedLessonsInModule === module.lessons.length && !moduleCompletedBasedOnProfile) {
-               // Se todas as lições estão completas, mas o módulo não está no perfil, marca como completo
-               // Isso é para o caso de o localStorage não ter sido atualizado para o módulo ainda
-               // Ou se a lógica de completar módulo for baseada 100% nas lições
-               // moduleCompletedBasedOnProfile = true; // Descomente se quiser que o módulo seja automarcado
-            }
-          } else if (!module.lessons || module.lessons.length === 0) {
-            // Módulo sem lições é completo se estiver no perfil, ou por padrão se não houver lições para progredir
-            // moduleCompletedBasedOnProfile = moduleCompletedBasedOnProfile || true; // Descomente se módulos vazios devem ser completos
+            completedLessonsInModule = module.lessons.filter(l => lessonProgress[l.id]?.completed).length;
           }
-
-
+          
           if (!moduleCompletedBasedOnProfile) {
             allModulesInTrilhaCompleted = false;
           }
+          
           return {
             ...module,
             isCompleted: moduleCompletedBasedOnProfile,
@@ -56,11 +46,9 @@ export default function HomePage() {
           ...trilha,
           modules: updatedModules,
           isCompleted: allModulesInTrilhaCompleted,
-          // A lógica de isCurrent será ajustada no RoadmapDisplay ou aqui, se necessário
         };
       });
       
-      // Lógica para definir isCurrent (primeira trilha não completa)
       let currentFound = false;
       const finalRoadmapData = processedData.map(trilha => {
         if (!trilha.isCompleted && !currentFound) {
@@ -71,9 +59,8 @@ export default function HomePage() {
       });
 
       if (!currentFound && finalRoadmapData.length > 0) {
-        finalRoadmapData[finalRoadmapData.length-1].isCurrent = true; // Ou a primeira, se preferir
+        finalRoadmapData[finalRoadmapData.length-1].isCurrent = true;
       }
-
 
       setRoadmapData(finalRoadmapData);
       setIsLoadingData(false);

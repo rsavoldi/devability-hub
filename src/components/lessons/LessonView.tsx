@@ -3,22 +3,18 @@
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import Image from 'next/image';
-import type { Lesson, UserProfile } from '@/lib/types';
+import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, FileText, Info, Trophy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Info } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
 import { Separator } from '../ui/separator';
-import { cn, shuffleArray } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { playSound } from '@/lib/sounds';
 import { useRouter } from 'next/navigation';
-import { LOCAL_STORAGE_KEYS } from '@/constants';
-import { mockLessons as allMockLessons, mockAchievements } from '@/lib/mockData';
+import { mockLessons as allMockLessons } from '@/lib/mockData';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -31,14 +27,12 @@ const combinedRegex = new RegExp(
   "g"
 );
 
-// Regex para **bold** e *italic*. A de itálico é cuidadosa para não pegar marcadores de lista.
 const markdownRegex = /(\*\*.*?\*\*|\*(\S(?:.*?\S)?)\*)/g;
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   
-  // Usar uma cópia do regex para cada chamada para resetar seu estado
   const localRegex = new RegExp(markdownRegex);
   let match;
   
@@ -108,48 +102,36 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   return outputParagraphs;
 };
 
-// Helper function to parse markdown-like syntax into HTML for the references section
 const parseMarkdownForHTML = (text: string): string => {
   return text
-    // Bold: **text** -> <strong>text</strong>
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic: *text* -> <em>text</em>
-    // This regex is crafted to not match list item markers like '* '
     .replace(/\*(\S(?:.*?\S)?)\*/g, '<em>$1</em>');
 };
 
-
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson } = useAuth();
-  const { toast } = useToast();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress } = useAuth();
   const router = useRouter();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
-
   const [totalInteractiveElements, setTotalInteractiveElements] = useState(0);
-  const [completedInteractionIds, setCompletedInteractionIds] = useState<Set<string>>(new Set());
-
+  
+  const completedInteractions = useMemo(() => {
+    return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
+  }, [userProfile, lesson.id]);
+  
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    if (authLoading || !userProfile || !lesson) return false;
-    return userProfile.completedLessons.includes(lesson.id);
-  }, [userProfile, lesson, authLoading]);
+    return userProfile?.lessonProgress[lesson.id]?.completed || false;
+  }, [userProfile, lesson.id]);
 
-
-  const handleInteractionCorrect = useCallback((interactionId: string) => {
-    setCompletedInteractionIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(interactionId);
-      if (typeof window !== 'undefined' && lesson) {
-          const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile?.id || 'guest_user'}`;
-          localStorage.setItem(currentLessonInteractionsKey, JSON.stringify(Array.from(newSet)));
-      }
-      return newSet;
-    });
-  }, [lesson, userProfile?.id]);
-
+  const handleInteractionCorrect = useCallback(async (interactionId: string) => {
+    if (!completedInteractions.has(interactionId)) {
+        await saveInteractionProgress(lesson.id, interactionId);
+    }
+  }, [completedInteractions, saveInteractionProgress, lesson.id]);
+  
   const parseLessonContentAndCountInteractions = useCallback((content: string): (string | JSX.Element)[] => {
     const elements: (string | JSX.Element)[] = [];
     let lastIndex = 0;
@@ -188,17 +170,13 @@ export function LessonView({ lesson }: LessonViewProps) {
               <InteractiveWordChoice
                 key={interactionId}
                 interactionId={interactionId}
-                options={shuffleArray(parsedOptions)}
+                options={parsedOptions}
                 correctAnswer={correctAnswer}
                 onCorrect={handleInteractionCorrect}
-                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile}
+                isCompleted={completedInteractions.has(interactionId)}
               />
             );
-          } else {
-             elements.push(`<!-- WC PARSE ERROR: ${match[0]} -->`);
           }
-        } else {
-           elements.push(`<!-- WC PARSE ERROR (no options string): ${match[0]} -->`);
         }
       } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
         const optionsString = match[4];
@@ -213,14 +191,10 @@ export function LessonView({ lesson }: LessonViewProps) {
                 options={allOptions}
                 correctAnswer={correctAnswerFillIn}
                 onCorrect={handleInteractionCorrect}
-                isLessonAlreadyCompleted={isLessonAlreadyCompletedByProfile}
+                isCompleted={completedInteractions.has(interactionId)}
               />
             );
-          } else {
-             elements.push(`<!-- FB PARSE ERROR: ${match[0]} -->`);
           }
-        } else {
-          elements.push(`<!-- FB PARSE ERROR (no options string): ${match[0]} -->`);
         }
       }
       lastIndex = combinedRegex.lastIndex;
@@ -230,9 +204,8 @@ export function LessonView({ lesson }: LessonViewProps) {
       elements.push(contentWithoutGeneralComments.substring(lastIndex));
     }
     return elements;
-  }, [lesson?.id, handleInteractionCorrect, isLessonAlreadyCompletedByProfile]);
-
-
+  }, [lesson.id, handleInteractionCorrect, completedInteractions]);
+  
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
       return parseLessonContentAndCountInteractions(lesson.content);
@@ -241,71 +214,32 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson?.content, parseLessonContentAndCountInteractions]);
 
   useEffect(() => {
-      let count = 0;
-      const interactionIdsFromContent: string[] = [];
-      processedContentElements.forEach(el => {
-          if (React.isValidElement(el) && (el.type === InteractiveWordChoice || el.type === InteractiveFillInBlank)) {
-              count++;
-              if(el.props.interactionId) {
-                interactionIdsFromContent.push(el.props.interactionId);
-              }
-          }
-      });
-      setTotalInteractiveElements(count);
-
-      if (isLessonAlreadyCompletedByProfile) {
-        setCompletedInteractionIds(new Set(interactionIdsFromContent));
-      }
-
-  }, [processedContentElements, isLessonAlreadyCompletedByProfile]);
-
-
-  const allInteractionsCompletedThisSessionOrPreviously = useMemo(() => {
-    if (isLessonAlreadyCompletedByProfile) return true;
-    return totalInteractiveElements === 0 || completedInteractionIds.size === totalInteractiveElements;
-  }, [totalInteractiveElements, completedInteractionIds, isLessonAlreadyCompletedByProfile]);
-
+    let count = 0;
+    processedContentElements.forEach(el => {
+        if (React.isValidElement(el) && (el.type === InteractiveWordChoice || el.type === InteractiveFillInBlank)) {
+            count++;
+        }
+    });
+    setTotalInteractiveElements(count);
+  }, [processedContentElements]);
+  
+  const allInteractionsCompleted = useMemo(() => {
+    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
+  }, [totalInteractiveElements, completedInteractions]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && lesson && userProfile && !isLessonAlreadyCompletedByProfile) {
-        const currentLessonInteractionsKey = `${LOCAL_STORAGE_KEYS.GUEST_COMPLETED_LESSONS}_interactions_${lesson.id}_${userProfile.id}`;
-        const storedInteractions = localStorage.getItem(currentLessonInteractionsKey);
-        if (storedInteractions) {
-            try {
-                const parsedInteractions = JSON.parse(storedInteractions);
-                if (Array.isArray(parsedInteractions)) {
-                    setCompletedInteractionIds(new Set(parsedInteractions));
-                }
-            } catch (error) {
-                console.error("Error parsing stored interactions:", error);
-            }
-        } else {
-           setCompletedInteractionIds(new Set());
-        }
-    } else if (!isLessonAlreadyCompletedByProfile) {
-        setCompletedInteractionIds(new Set());
-    }
-
     setIsMarkingComplete(false);
-
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
         setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
         setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
-      } else {
-        setPrevLesson(null);
-        setNextLesson(null);
       }
-    } else {
-      setPrevLesson(null);
-      setNextLesson(null);
     }
-  }, [lesson, userProfile, isLessonAlreadyCompletedByProfile]);
-
+  }, [lesson]);
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompletedThisSessionOrPreviously || !lesson || !userProfile) return;
+    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompleted) return;
     setIsMarkingComplete(true);
     await completeLesson(lesson.id);
     setIsMarkingComplete(false);
@@ -320,7 +254,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   }
 
   const interactionsProgressText = totalInteractiveElements > 0
-    ? `Interações concluídas: ${completedInteractionIds.size} de ${totalInteractiveElements}`
+    ? `Interações concluídas: ${completedInteractions.size} de ${totalInteractiveElements}`
     : "Nenhuma interação nesta lição.";
 
   const truncateTitle = (title: string, maxLength: number = 20) => {
@@ -342,7 +276,6 @@ export function LessonView({ lesson }: LessonViewProps) {
                 fill
                 style={{objectFit:"cover"}}
                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="transition-transform duration-500 hover:scale-105"
                 data-ai-hint={lesson.aiHint || "visualização dados estatisticos"}
                 priority
               />
@@ -410,10 +343,10 @@ export function LessonView({ lesson }: LessonViewProps) {
               className={cn(
                 "w-full max-w-xs sm:w-auto",
                 isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
-                (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0)}
+              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
                 {isMarkingComplete ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -426,7 +359,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                     ? "Marcando..."
                     : isLessonAlreadyCompletedByProfile
                         ? "Concluída"
-                        : (!allInteractionsCompletedThisSessionOrPreviously && totalInteractiveElements > 0)
+                        : (!allInteractionsCompleted && totalInteractiveElements > 0)
                             ? "Complete Interações"
                             : "Marcar Concluída"
                 }
