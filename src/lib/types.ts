@@ -91,7 +91,6 @@ export interface Achievement {
   dateUnlocked?: string; 
   criteria: string;
   pointsAwarded?: number;
-  hasAwardedPoints?: boolean;
 }
 
 export interface UserProfile {

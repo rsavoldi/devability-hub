@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn, shuffleArray } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 interface InteractiveWordChoiceProps {
   options: string[];
@@ -24,12 +24,6 @@ export function InteractiveWordChoice({
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(isCompleted);
-  
-  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-
-  useEffect(() => {
-    setShuffledOptions(shuffleArray(options));
-  }, [options]);
 
   useEffect(() => {
     if (isCompleted) {
@@ -58,10 +52,14 @@ export function InteractiveWordChoice({
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
-      {shuffledOptions.map((option, index) => {
+      {options.map((option, index) => {
         const isSelected = selectedOption === option;
         const isCorrectChoice = option === correctAnswer;
         
+        if (isSubmitted && !isCorrectChoice) {
+          return null; // Don't render incorrect options if submitted
+        }
+
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let prefixEmoji: React.ReactNode = null;
         let additionalClasses = "";
@@ -83,10 +81,6 @@ export function InteractiveWordChoice({
              additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
 
-        if (isSubmitted && !isCorrectChoice) {
-            additionalClasses += " opacity-60 cursor-not-allowed";
-        }
-        
         return (
           <Button
             key={index}
