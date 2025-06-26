@@ -31,7 +31,8 @@ import {
 } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { playSound } from '@/lib/sounds';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { shuffleArray } from '@/lib/utils';
 
 interface ExerciseViewProps {
   exerciseId: string;
@@ -95,7 +96,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const { toast } = useToast();
-  const { completeExercise, userProfile, loading: authLoading } = useAuth(); // Get completeExercise from context
+  const { completeExercise, userProfile, loading: authLoading } = useAuth();
 
   const [itemsA, setItemsA] = useState<ExerciseOption[]>([]);
   const [itemsB, setItemsB] = useState<ExerciseOption[]>([]);
@@ -110,6 +111,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   const [userCategorizations, setUserCategorizations] = useState<Record<string, string>>({});
   const [activeDragId, setActiveDragId] = useState<UniqueIdentifier | null>(null);
   const [itemFeedback, setItemFeedback] = useState<Record<string, boolean>>({});
+  const [shuffledOptions, setShuffledOptions] = useState<ExerciseOption[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -136,9 +138,12 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       setUserCategorizations({});
       setUnassignedItems([]);
       setCategorizedItemsMap({});
+      setShuffledOptions([]);
 
 
-      if (foundExercise.type === 'association' && foundExercise.options) {
+      if ((foundExercise.type === 'multiple-choice' || (foundExercise.type === 'fill-in-the-blank' && foundExercise.options)) && foundExercise.options) {
+        setShuffledOptions(shuffleArray(foundExercise.options));
+      } else if (foundExercise.type === 'association' && foundExercise.options) {
         const colA: ExerciseOption[] = [];
         const colB: ExerciseOption[] = [];
         foundExercise.options.forEach(opt => {
@@ -162,20 +167,15 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
         setUserCategorizations({});
       }
     }
-    // Se o exercício já foi completado, mostrar como submetido e correto
     if (userProfile && foundExercise && userProfile.completedExercises.includes(foundExercise.id)) {
         setIsSubmitted(true);
         setIsCorrect(true); 
-        // Restaurar o estado da resposta correta seria ideal aqui, mas complexo sem salvar a resposta do usuário.
-        // Por ora, apenas marcamos como correto se já estiver no perfil.
-        // A lógica de mostrar o feedback visual correto para cada tipo precisaria ser mais elaborada
-        // se quisermos mostrar a resposta correta salva.
     } else {
         setIsSubmitted(false);
         setIsCorrect(null);
     }
     setTimeout(() => setIsLoading(false), 300);
-  }, [exerciseId, userProfile]); // Adicionado userProfile à dependência
+  }, [exerciseId, userProfile]);
 
 
   const handleAddAssociation = () => {
@@ -256,12 +256,11 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       let newUnassignedItems = [...unassignedItems];
       const newCategorizedItemsMap = { ...categorizedItemsMap };
 
-      // Tenta remover de unassignedItems
       const unassignedIndex = newUnassignedItems.findIndex(item => item.id === draggedItemId);
       if (unassignedIndex > -1) {
         itemToMove = newUnassignedItems[unassignedIndex];
         newUnassignedItems.splice(unassignedIndex, 1);
-      } else { // Se não estava em unassigned, procura nas categorias
+      } else { 
         Object.keys(newCategorizedItemsMap).forEach(catId => {
           const catIndex = newCategorizedItemsMap[catId].findIndex(item => item.id === draggedItemId);
           if (catIndex > -1) {
@@ -273,7 +272,6 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       
       if (!itemToMove) return;
 
-      // Adiciona ao novo local
       if (targetContainerId === 'unassigned-items-droppable') {
         newUnassignedItems.push(itemToMove);
         const newCategorizations = { ...userCategorizations };
@@ -290,7 +288,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       }
       setCategorizedItemsMap(newCategorizedItemsMap);
       setUnassignedItems(newUnassignedItems);
-      setUserAnswer(userCategorizations); // Mantenha userAnswer atualizado se for usar para submit
+      setUserAnswer(userCategorizations);
     }
   };
 
@@ -304,7 +302,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!exercise || (isSubmitted && isCorrect) || isExerciseAlreadyCompleted) return; // Não submete se já completou
+    if (!exercise || (isSubmitted && isCorrect) || isExerciseAlreadyCompleted) return;
 
     let answerProvided = false;
     if (exercise.type === 'association') {
@@ -325,7 +323,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
       answerProvided = userAnswer !== undefined && userAnswer !== "" && (!Array.isArray(userAnswer) || userAnswer.length > 0);
     }
 
-    if (!answerProvided && exercise.type !== 'coding'){ // Coding pode ser enviado em branco para "concluir" placeholder
+    if (!answerProvided && exercise.type !== 'coding'){
         toast({
           title: "Resposta Incompleta",
           description: `Por favor, ${exercise.type === 'drag-and-drop' ? 'categorize todos os itens' : 'forneça uma resposta'} antes de enviar.`,
@@ -336,8 +334,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
 
     setIsSubmitted(true);
     setItemFeedback({});
-    // await new Promise(resolve => setTimeout(resolve, 500)); // Removido delay desnecessário
-
+    
     let correct = false;
     let currentItemFeedback: Record<string, boolean> = {};
 
@@ -386,7 +383,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
         setItemFeedback(currentItemFeedback);
         correct = allCorrect;
     } else if (['coding'].includes(exercise.type)) {
-      correct = true; // Placeholder
+      correct = true; 
       toast({
         title: "Exercício de Código Enviado",
         description: "Este tipo de exercício está em construção e será considerado completo por agora.",
@@ -397,8 +394,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
     setIsCorrect(correct);
 
     if (correct && !isExerciseAlreadyCompleted) {
-      await completeExercise(exercise.id); // Chama a função do AuthContext
-      // Toasts de pontos e conquistas são tratados pelo AuthContext
+      await completeExercise(exercise.id);
     } else if (!correct) {
       toast({
           title: "Incorreto 😕",
@@ -430,7 +426,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
   const renderExerciseContent = () => {
     switch (exercise.type) {
       case 'multiple-choice':
-        return exercise.options && (
+        return shuffledOptions.length > 0 && (
           <RadioGroup
             value={userAnswer as string}
             onValueChange={(value) => {
@@ -441,7 +437,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
             }}
             disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
           >
-            {exercise.options.map((option: ExerciseOption) => (
+            {shuffledOptions.map((option: ExerciseOption) => (
               <div key={option.id} className="flex items-center space-x-2 mb-2 p-3 border rounded-md hover:bg-muted/50 has-[[data-state=checked]]:bg-muted">
                 <RadioGroupItem value={option.id} id={`ex-${exercise.id}-opt-${option.id}`} />
                 <Label htmlFor={`ex-${exercise.id}-opt-${option.id}`} className="flex-1 cursor-pointer">{option.text}</Label>
@@ -463,7 +459,7 @@ export function ExerciseView({ exerciseId }: ExerciseViewProps) {
               disabled={(isSubmitted && isCorrect === true) || isExerciseAlreadyCompleted}
               className="space-y-2"
             >
-              {exercise.options.map((option: ExerciseOption) => (
+              {shuffledOptions.map((option: ExerciseOption) => (
                 <div key={option.id} className="flex items-center space-x-2 p-3 border rounded-md hover:bg-muted/50 has-[[data-state=checked]]:bg-muted">
                   <RadioGroupItem value={option.text} id={`ex-${exercise.id}-fillopt-${option.id}`} />
                   <Label htmlFor={`ex-${exercise.id}-fillopt-${option.id}`} className="flex-1 cursor-pointer">{option.text}</Label>
