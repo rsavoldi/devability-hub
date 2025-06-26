@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import type { Lesson } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { shuffleArray } from '@/lib/utils';
 
 interface InteractiveFillInBlankProps {
   lesson: Lesson;
@@ -37,7 +38,12 @@ export function InteractiveFillInBlank({
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
   const isSubmitted = isInteractionCompleted || false;
+
+  useEffect(() => {
+    setShuffledOptions(shuffleArray(options));
+  }, [options]);
 
   useEffect(() => {
     if (isInteractionCompleted) {
@@ -92,9 +98,8 @@ export function InteractiveFillInBlank({
   if (isSubmitted) {
     prefixEmoji = '✅';
     mainText = correctAnswer;
-    // Solid colors for better consistency and contrast
     textColorClass = "text-green-800 dark:text-green-200";
-    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900 dark:border-green-700";
+    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900 dark:border-green-700 hover:bg-green-200/80 dark:hover:bg-green-800/80";
     cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
     chevronIcon = null;
   } else if (filledAnswer && isCorrect === false) {
@@ -110,6 +115,10 @@ export function InteractiveFillInBlank({
   if (isLessonCompleted && isSubmitted) {
     chevronIcon = null;
   }
+  
+  const popoverWidthClass = options.reduce((longest, current) => current.length > longest.length ? current : longest, "").length > 20
+    ? 'w-auto'
+    : 'min-w-[150px]';
 
   const triggerContent = (
     <span className="flex items-center justify-between w-full">
@@ -128,7 +137,7 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "w-auto min-w-24 inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
+            "w-auto inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose min-w-[96px]",
             borderColorClass,
             textColorClass,
             cursorClass,
@@ -143,13 +152,13 @@ export function InteractiveFillInBlank({
         </button>
       </PopoverTrigger>
       <PopoverContent
-          className="w-auto p-1.5 border-border shadow-lg flex flex-col space-y-1 min-w-max"
+          className={cn("p-1.5 border-border shadow-lg flex flex-col space-y-1", popoverWidthClass)}
           side="bottom"
           align="start"
           hidden={isSubmitted || isLessonCompleted}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {!isSubmitted && options.map((opt, index) => (
+        {!isSubmitted && shuffledOptions.map((opt, index) => (
           <Button
             key={index}
             type="button"
