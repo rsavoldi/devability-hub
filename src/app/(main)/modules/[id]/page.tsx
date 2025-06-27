@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use, useEffect, useState, useMemo } from 'react';
+import { use, useEffect, useState, useMemo, useCallback } from 'react';
 import { mockRoadmapData, mockExercises as allMockExercises, mockLessons as allMockLessons } from '@/lib/mockData';
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { LessonItemCard } from '@/components/lessons/LessonItemCard';
+import { countInteractions } from '@/lib/utils';
 
 interface ModulePageProps {
   params: Promise<{
@@ -23,12 +25,11 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   const actualParams = use(paramsPromise);
   const { id: moduleId } = actualParams;
 
-  const { userProfile, loading: authLoading, completeModule } = useAuth();
+  const { userProfile, loading: authLoading, completeModule, isUpdatingProgress } = useAuth();
 
   const [module, setModule] = useState<Module | null>(null);
   const [parentTrilha, setParentTrilha] = useState<RoadmapStep | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMarkingModuleComplete, setIsMarkingModuleComplete] = useState(false);
 
   const moduleLessons = useMemo(() => {
     return allMockLessons.filter(lesson => lesson.moduleId === moduleId);
@@ -62,7 +63,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   }, [moduleId, moduleLessons, moduleExercises]);
 
   const { moduleProgress, allItemsCompleted } = useMemo(() => {
-    if (!userProfile || !module || (!module.lessons && !module.exercises)) {
+    if (!userProfile || !module) {
       return { moduleProgress: 0, allItemsCompleted: false };
     }
 
@@ -76,7 +77,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     if (totalModuleItems === 0) return { moduleProgress: 0, allItemsCompleted: true };
 
     const completedItems = completedLessonsCount + completedExercisesCount;
-    const progress = (completedItems / totalModuleItems) * 100;
+    const progress = Math.round((completedItems / totalModuleItems) * 100);
     
     return { moduleProgress: progress, allItemsCompleted: completedItems === totalModuleItems };
   }, [module, userProfile]);
@@ -87,12 +88,23 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   }, [userProfile, module]);
 
   const handleMarkModuleAsCompleted = async () => {
-    if (moduleIsCompletedByProfile || isMarkingModuleComplete || !allItemsCompleted || !module) return;
-
-    setIsMarkingComplete(true);
+    if (moduleIsCompletedByProfile || isUpdatingProgress || !allItemsCompleted || !module) return;
     await completeModule(module.id);
-    setIsMarkingModuleComplete(false);
   };
+
+  const getLessonProgress = useCallback((lessonId: string, lessonContent: string): number => {
+    if (!userProfile) return 0;
+    const progress = userProfile.lessonProgress[lessonId];
+    if (progress?.completed) return 100;
+    
+    const totalInteractions = countInteractions(lessonContent);
+    if (totalInteractions === 0) {
+      return progress?.completed ? 100 : 0;
+    }
+    
+    const completedCount = progress?.completedInteractions.length || 0;
+    return Math.round((completedCount / totalInteractions) * 100);
+  }, [userProfile]);
 
   if (isLoading || authLoading) {
     return (
@@ -105,6 +117,11 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   if (!module || !parentTrilha) {
     return <div className="text-center py-10">Módulo ou trilha não encontrado.</div>;
   }
+  
+  const buttonText = isUpdatingProgress ? "Marcando..." :
+                     moduleIsCompletedByProfile ? "Módulo Concluído!" :
+                     allItemsCompleted ? "Marcar Módulo como Concluído" : "Complete tudo para finalizar";
+
 
   return (
     <div className="container mx-auto py-8">
@@ -130,7 +147,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           </CardDescription>
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo (Lições e Exercícios)</span>
+              <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo</span>
               <Badge variant={moduleIsCompletedByProfile ? "default" : "secondary"} className={cn(moduleIsCompletedByProfile ? "bg-green-500 hover:bg-green-600" : "bg-secondary hover:bg-secondary/80")}>
                 {moduleProgress.toFixed(0)}% {moduleIsCompletedByProfile ? "Concluído" : ""}
               </Badge>
@@ -146,30 +163,14 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
               Lições
             </h2>
             {(module.lessons?.length || 0) > 0 ? (
-              <div className="space-y-4">
-                {module.lessons.map(lesson => {
-                  const isCompleted = userProfile?.lessonProgress[lesson.id]?.completed || false;
-                  return (
-                    <Card key={lesson.id} className={cn("hover:shadow-md transition-shadow", isCompleted ? "bg-green-50 dark:bg-green-900/20 border-green-500/50" : "")}>
-                      <CardHeader className="flex flex-row items-center justify-between p-4">
-                        <div>
-                          <CardTitle className="text-lg">{lesson.title}</CardTitle>
-                          <CardDescription>{lesson.estimatedTime} • {lesson.points && `+${lesson.points}pts`}</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isCompleted && <CheckCircle className="h-5 w-5 text-green-500" />}
-                          <Button variant="outline" size="sm" asChild>
-                            <Link href={`/lessons/${lesson.id}`}>
-                              <span className="flex items-center">
-                                Ver <ExternalLink className="ml-1 h-3 w-3"/>
-                              </span>
-                            </Link>
-                          </Button>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  )
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {module.lessons.map(lesson => (
+                   <LessonItemCard 
+                      key={lesson.id} 
+                      lesson={lesson} 
+                      progress={getLessonProgress(lesson.id, lesson.content)}
+                    />
+                ))}
               </div>
             ) : (
               <p className="text-muted-foreground">Nenhuma lição neste módulo ainda.</p>
@@ -201,15 +202,15 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
                 size="lg"
                 className="w-full"
                 onClick={handleMarkModuleAsCompleted}
-                disabled={moduleIsCompletedByProfile || !allItemsCompleted || isMarkingModuleComplete}
+                disabled={moduleIsCompletedByProfile || !allItemsCompleted || isUpdatingProgress}
                 variant={moduleIsCompletedByProfile ? "default" : (allItemsCompleted ? "secondary" : "outline")}
              >
-                {isMarkingModuleComplete ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
-                {moduleIsCompletedByProfile ? "Módulo Concluído!" :
-                 (allItemsCompleted ? "Marcar Módulo como Concluído" : "Complete todas as lições e exercícios para finalizar")}
+                {isUpdatingProgress ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
+                {buttonText}
              </Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
+
