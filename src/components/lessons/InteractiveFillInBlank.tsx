@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, type JSX } from 'react';
+import { useState, useEffect, type JSX, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -10,6 +10,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { Lesson } from '@/lib/types';
+import { shuffleArray } from '@/lib/utils';
 
 interface InteractiveFillInBlankProps {
   lesson: Lesson;
@@ -35,19 +37,22 @@ export function InteractiveFillInBlank({
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
 
-  const blankPlaceholder = "______";
+  const shuffledDisplayOptions = useMemo(() => {
+    return shuffleArray(options);
+  }, [options]);
+
+  const isSubmitted = isInteractionCompleted || false;
 
   useEffect(() => {
-    if (isInteractionCompleted) {
+    if (isSubmitted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
     } else {
       setFilledAnswer(null);
       setIsCorrect(null);
     }
-  }, [isInteractionCompleted, correctAnswer]);
+  }, [isSubmitted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
@@ -66,18 +71,18 @@ export function InteractiveFillInBlank({
     if (isLessonCompleted) return;
 
     if (isSubmitted) {
-      // Deselect logic
+      // Logic to un-complete the interaction
       setFilledAnswer(null);
       setIsCorrect(null);
       onUncomplete(interactionId);
       setIsPopoverOpen(true);
     } else if (filledAnswer && isCorrect === false) {
-      // Reset incorrect answer
+      // Logic to reset an incorrect answer
       setFilledAnswer(null);
       setIsCorrect(null);
       setIsPopoverOpen(true);
     } else {
-      // Default toggle popover
+      // Default popover toggle
       setIsPopoverOpen(o => !o);
     }
   };
@@ -89,13 +94,13 @@ export function InteractiveFillInBlank({
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
 
-  if (isSubmitted) { // Cobre o caso de isLessonAlreadyCompleted também
+  if (isSubmitted) {
     prefixEmoji = "✅";
-    mainText = correctAnswer; // Mostra a resposta correta
-    textColorClass = "text-green-700 dark:text-green-300";
-    borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
-    cursorClass = "cursor-default";
-    chevronIcon = null; // Remover chevron quando submetido e correto
+    mainText = correctAnswer;
+    textColorClass = "text-green-800 dark:text-green-200";
+    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900/40 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/40";
+    cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
+    chevronIcon = isLessonCompleted ? null : chevronIcon;
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = '❌';
     mainText = filledAnswer;
@@ -123,12 +128,12 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
-            borderColorClass,
-            textColorClass,
-            cursorClass,
-            isSubmitted ? "border" : "border border-dashed",
-            !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
+              "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
+              borderColorClass,
+              textColorClass,
+              cursorClass,
+              isSubmitted ? "border" : "border border-dashed",
+              !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
             )}
             style={{ height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
@@ -138,7 +143,7 @@ export function InteractiveFillInBlank({
         </button>
       </PopoverTrigger>
       <PopoverContent
-          className={cn("p-1.5 border-border shadow-lg flex flex-col space-y-1", popoverWidthClass)}
+          className={cn("p-1.5 border-border shadow-lg flex flex-col space-y-1 w-auto min-w-[var(--radix-popover-trigger-width)]")}
           side="bottom"
           align="start"
           hidden={isSubmitted || isLessonCompleted}

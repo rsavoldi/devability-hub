@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
-import { useAuth } from '@/contexts/AuthContext';
+import { shuffleArray } from '@/lib/utils';
 
 interface InteractiveWordChoiceProps {
   lesson: Lesson;
@@ -31,35 +32,31 @@ export function InteractiveWordChoice({
   const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
   
   const shuffledOptions = useMemo(() => {
-    // Only shuffle once on component mount, or if options change.
-    const tempOptions = [...options];
-    for (let i = tempOptions.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [tempOptions[i], tempOptions[j]] = [tempOptions[j], tempOptions[i]];
-    }
-    return tempOptions;
+    return shuffleArray(options);
   }, [options]);
 
+  const isSubmitted = isInteractionCompleted || false;
 
   useEffect(() => {
-    if (isInteractionCompleted) {
+    if (isSubmitted) {
       setSelectedOption(correctAnswer);
       setIsCorrectSelection(true);
     } else {
       setSelectedOption(null);
       setIsCorrectSelection(null);
     }
-  }, [isInteractionCompleted, correctAnswer]);
+  }, [isSubmitted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
     const isCurrentlySelected = selectedOption === option;
+    const wasCorrect = isCorrectSelection;
 
     if (isCurrentlySelected) {
       setSelectedOption(null);
       setIsCorrectSelection(null);
-      if (option === correctAnswer) {
+      if (wasCorrect) {
         onUncomplete(interactionId);
       }
       return;
@@ -74,9 +71,7 @@ export function InteractiveWordChoice({
     }
   };
   
-  const isSubmitted = isInteractionCompleted || false;
-
-  if (isSubmitted) {
+  if (isSubmitted || isCorrectSelection) {
     return (
         <span className="inline-flex items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
              <Button
@@ -88,11 +83,10 @@ export function InteractiveWordChoice({
                 className={cn(
                     "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
                     "inline-flex items-center",
-                    // Consistent correct answer styling with solid colors and better contrast
-                    "border-green-600 bg-green-100 text-green-800 dark:border-green-700 dark:bg-green-900 dark:text-green-200",
-                    // Override hover effect when correct by keeping the same background color
-                    "hover:bg-green-100 dark:hover:bg-green-900",
-                    !isLessonCompleted && "cursor-pointer" // Allow click to un-complete
+                    "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/40 dark:border-green-700 dark:text-green-200",
+                    // Anula o efeito de hover quando já está correto
+                    "hover:bg-green-100 dark:hover:bg-green-900/40",
+                    !isLessonCompleted && "cursor-pointer"
                 )}
                 style={{gap: '0.2rem'}}
              >
@@ -132,7 +126,7 @@ export function InteractiveWordChoice({
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses,
-              isSelected && "ring-2 ring-ring"
+              isSelected && !isCorrectSelection && "ring-2 ring-ring"
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}
           >
