@@ -3,6 +3,7 @@
 "use client"; 
 
 import { RoadmapDisplay } from "@/components/roadmap/RoadmapDisplay";
+import { mockRoadmapData } from "@/lib/mockData";
 
 export default function HomePage() {
   return (
@@ -15,7 +16,7 @@ export default function HomePage() {
           Navegue pelas trilhas e expanda seus conhecimentos sobre desenvolvimento e inclusão.
         </p>
       </header>
-      <RoadmapDisplay />
+      <RoadmapDisplay initialRoadmapData={mockRoadmapData} />
     </div>
   );
 }
