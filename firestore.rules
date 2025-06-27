@@ -4,11 +4,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Roadmaps e seus conteúdos (módulos, lições, exercícios)
-    // Permitir leitura pública para que todos possam ver o conteúdo.
-    // A escrita (criação, atualização, deleção) deve ser restrita.
-    // Exemplo: apenas administradores (não implementado aqui, mas um placeholder).
-    // Para simplificar, vamos permitir escrita apenas para usuários autenticados por enquanto.
     // Em um app real, você provavelmente teria papéis (roles) para definir quem pode escrever.
     match /roadmaps/{roadmapId} {
       allow read: if true;

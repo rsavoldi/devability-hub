@@ -4,7 +4,7 @@
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
 import { mockLessons, finalLessonCategories } from '@/lib/mockData'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ListFilter, ListChecks, BookOpen as DefaultCategoryIcon } from 'lucide-react'; 
+import { ListFilter, ListChecks } from 'lucide-react'; 
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
@@ -58,7 +58,7 @@ export default function LessonsPage() {
     }
     
     const completedCount = progress?.completedInteractions.length || 0;
-    return (completedCount / totalInteractions) * 100;
+    return Math.round((completedCount / totalInteractions) * 100);
   }, [userProfile]);
 
 

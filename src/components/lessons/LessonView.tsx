@@ -283,6 +283,14 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return title;
   };
+  
+  const getButtonText = () => {
+    if (isMarkingComplete) return "Marcando...";
+    if (isLessonAlreadyCompletedByProfile) return "Concluída";
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete Interações";
+    return "Marcar Concluída";
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -372,21 +380,12 @@ export function LessonView({ lesson }: LessonViewProps) {
               onClick={handleMarkAsCompleted}
               disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
-                {isMarkingComplete ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : isLessonAlreadyCompletedByProfile ? (
+                {isMarkingComplete || isLessonAlreadyCompletedByProfile ? (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 ) : (
                     <CheckCircle className="mr-2 h-5 w-5" />
                 )}
-                {isMarkingComplete
-                    ? "Marcando..."
-                    : isLessonAlreadyCompletedByProfile
-                        ? "Concluída"
-                        : (!allInteractionsCompleted && totalInteractiveElements > 0)
-                            ? "Complete Interações"
-                            : "Marcar Concluída"
-                }
+                {getButtonText()}
             </Button>
             {isLessonAlreadyCompletedByProfile && (
                 <Button

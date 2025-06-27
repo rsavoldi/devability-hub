@@ -73,6 +73,24 @@ export async function checkAndUnlockAchievementsLogic(
   return { newAchievements: newlyUnlockedIds, newPointsFromAchievements: pointsFromAchievements, unlockedDetails };
 }
 
+async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: string): Promise<UpdateResult> {
+  const moduleToUpdate = mockModules.find(m => m.id === moduleId);
+  if (!moduleToUpdate) {
+    return { success: false, message: "Módulo para verificação não encontrado." };
+  }
+
+  const allLessonsDone = moduleToUpdate.lessons.every(l => profile.lessonProgress[l.id]?.completed);
+  const exercisesForModule = mockExercises.filter(ex => ex.moduleId === moduleToUpdate.id);
+  const allExercisesDone = exercisesForModule.every(e => profile.completedExercises.includes(e.id));
+
+  if (allLessonsDone && allExercisesDone && !profile.completedModules.includes(moduleId)) {
+    return completeModuleLogic(profile, moduleId);
+  }
+
+  return { success: true, message: "Progresso atualizado, mas módulo ainda não concluído.", updatedProfile: profile, pointsAdded: 0, unlockedAchievementsDetails: [] };
+}
+
+
 export async function completeLessonLogic(
   currentProfile: UserProfile | null,
   lessonId: string
@@ -82,8 +100,8 @@ export async function completeLessonLogic(
   }
 
   const lesson = mockLessons.find(l => l.id === lessonId);
-  if (!lesson) {
-    return { success: false, message: "Lição não encontrada." };
+  if (!lesson || !lesson.moduleId) {
+    return { success: false, message: "Lição ou módulo associado não encontrado." };
   }
 
   const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
@@ -102,6 +120,24 @@ export async function completeLessonLogic(
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'lesson', lessonId);
   profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
   profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+
+  const moduleCompletionResult = await checkModuleCompletionAndUpdate(profileToUpdate, lesson.moduleId);
+  if(moduleCompletionResult.success && moduleCompletionResult.updatedProfile) {
+     const finalProfile = moduleCompletionResult.updatedProfile;
+     finalProfile.points += (moduleCompletionResult.pointsAdded || 0);
+     finalProfile.unlockedAchievements = [...new Set([...finalProfile.unlockedAchievements, ...(moduleCompletionResult.unlockedAchievementsDetails?.map(a => a.id) || [])])];
+     
+     const allUnlockedDetails = [...(achievementCheck.unlockedDetails || []), ...(moduleCompletionResult.unlockedAchievementsDetails || [])];
+     const totalPointsAdded = pointsForLesson + (achievementCheck.newPointsFromAchievements || 0) + (moduleCompletionResult.pointsAdded || 0);
+     
+     return {
+        success: true,
+        message: `Lição "${lesson.title}" concluída! +${pointsForLesson} pontos. ` + (moduleCompletionResult.message.includes("concluído") ? moduleCompletionResult.message : ""),
+        updatedProfile: finalProfile,
+        unlockedAchievementsDetails: allUnlockedDetails,
+        pointsAdded: totalPointsAdded,
+     };
+  }
   
   return {
     success: true,
@@ -121,8 +157,8 @@ export async function completeExerciseLogic(
   }
 
   const exercise = mockExercises.find(e => e.id === exerciseId);
-  if (!exercise) {
-    return { success: false, message: "Exercício não encontrado." };
+  if (!exercise || !exercise.moduleId) {
+    return { success: false, message: "Exercício ou módulo associado não encontrado." };
   }
 
   const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
@@ -138,6 +174,24 @@ export async function completeExerciseLogic(
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'exercise', exerciseId);
   profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
   profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+
+  const moduleCompletionResult = await checkModuleCompletionAndUpdate(profileToUpdate, exercise.moduleId);
+  if(moduleCompletionResult.success && moduleCompletionResult.updatedProfile) {
+     const finalProfile = moduleCompletionResult.updatedProfile;
+     finalProfile.points += (moduleCompletionResult.pointsAdded || 0);
+     finalProfile.unlockedAchievements = [...new Set([...finalProfile.unlockedAchievements, ...(moduleCompletionResult.unlockedAchievementsDetails?.map(a => a.id) || [])])];
+     
+     const allUnlockedDetails = [...(achievementCheck.unlockedDetails || []), ...(moduleCompletionResult.unlockedAchievementsDetails || [])];
+     const totalPointsAdded = pointsForExercise + (achievementCheck.newPointsFromAchievements || 0) + (moduleCompletionResult.pointsAdded || 0);
+     
+     return {
+        success: true,
+        message: `Exercício "${exercise.title}" concluído! +${pointsForExercise} pontos. ` + (moduleCompletionResult.message.includes("concluído") ? moduleCompletionResult.message : ""),
+        updatedProfile: finalProfile,
+        unlockedAchievementsDetails: allUnlockedDetails,
+        pointsAdded: totalPointsAdded,
+     };
+  }
 
   return {
     success: true,
@@ -166,18 +220,9 @@ export async function completeModuleLogic(
     return { success: true, message: "Módulo já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
 
-  const allLessonsDone = module.lessons.every(l => profileToUpdate.lessonProgress[l.id]?.completed);
-  const moduleExercisesForThisModule = mockExercises.filter(ex => ex.moduleId === module.id);
-  const allExercisesDone = moduleExercisesForThisModule.every(e => profileToUpdate.completedExercises.includes(e.id));
-
-  if (!allLessonsDone || (moduleExercisesForThisModule.length > 0 && !allExercisesDone) ) {
-    return { 
-        success: false, 
-        message: "Ainda há lições ou exercícios pendentes neste módulo para marcá-lo como completo.", 
-        updatedProfile: profileToUpdate 
-    };
-  }
-
+  // A verificação se todas as lições/exercícios estão completos deve acontecer *antes* de chamar esta função.
+  // Esta função agora assume que a condição de conclusão foi satisfeita.
+  
   profileToUpdate.completedModules = [...new Set([...profileToUpdate.completedModules, moduleId])];
   const pointsForModule = 50;
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForModule;

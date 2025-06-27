@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 "use client";
 
@@ -117,15 +118,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             playSound('achievementUnlock');
             toast({
-              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-yellow-400" /> Conquista Desbloqueada! </div>),
+              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-amber-900" /> Conquista Desbloqueada! </div>),
               description: `${ach.title} - ${ach.description}`,
-              className: "bg-yellow-400 border-yellow-500 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-50",
+              variant: "achievement",
             });
           }, 100);
         });
 
-        if (result.message && (result.message.includes("concluída") || result.message.includes("concluído"))) {
-           toast({ title: "Progresso Salvo!", description: result.message, className: "bg-green-500 text-white dark:bg-green-600" });
+        if (result.message && !(result.message.includes("já estava concluíd"))) {
+           toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
         }
       } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) {
           toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
