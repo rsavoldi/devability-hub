@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type JSX } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -87,7 +87,7 @@ export function InteractiveWordChoice({
                     "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
                     "inline-flex items-center gap-1",
                     "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200",
-                    !isLessonCompleted && "hover:bg-green-200/60 dark:hover:bg-green-800/40",
+                    !isLessonCompleted && "hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-800 dark:hover:text-green-200",
                     isLessonCompleted ? "cursor-default" : "cursor-pointer"
                 )}
              >
