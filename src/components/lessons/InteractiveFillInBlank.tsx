@@ -10,9 +10,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Lesson } from '@/lib/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { shuffleArray } from '@/lib/utils';
 
 interface InteractiveFillInBlankProps {
   lesson: Lesson;
@@ -38,12 +35,9 @@ export function InteractiveFillInBlank({
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-  const isSubmitted = isInteractionCompleted || false;
+  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
 
-  useEffect(() => {
-    setShuffledOptions(shuffleArray(options));
-  }, [options]);
+  const blankPlaceholder = "______";
 
   useEffect(() => {
     if (isInteractionCompleted) {
@@ -95,13 +89,13 @@ export function InteractiveFillInBlank({
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
 
-  if (isSubmitted) {
-    prefixEmoji = '✅';
-    mainText = correctAnswer;
-    textColorClass = "text-green-800 dark:text-green-200";
-    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900 dark:border-green-700 hover:bg-green-200/80 dark:hover:bg-green-800/80";
-    cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
-    chevronIcon = null;
+  if (isSubmitted) { // Cobre o caso de isLessonAlreadyCompleted também
+    prefixEmoji = "✅";
+    mainText = correctAnswer; // Mostra a resposta correta
+    textColorClass = "text-green-700 dark:text-green-300";
+    borderColorClass = "border-green-500 bg-green-100 dark:bg-green-800/30 dark:border-green-700";
+    cursorClass = "cursor-default";
+    chevronIcon = null; // Remover chevron quando submetido e correto
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = '❌';
     mainText = filledAnswer;
@@ -111,14 +105,6 @@ export function InteractiveFillInBlank({
      mainText = filledAnswer;
      prefixEmoji = "";
   }
-  
-  if (isLessonCompleted && isSubmitted) {
-    chevronIcon = null;
-  }
-  
-  const popoverWidthClass = options.reduce((longest, current) => current.length > longest.length ? current : longest, "").length > 20
-    ? 'w-auto'
-    : 'min-w-[150px]';
 
   const triggerContent = (
     <span className="flex items-center justify-between w-full">
@@ -137,7 +123,7 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-            "w-auto inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose min-w-[96px]",
+            "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
             borderColorClass,
             textColorClass,
             cursorClass,
@@ -158,7 +144,7 @@ export function InteractiveFillInBlank({
           hidden={isSubmitted || isLessonCompleted}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {!isSubmitted && shuffledOptions.map((opt, index) => (
+        {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
           <Button
             key={index}
             type="button"
