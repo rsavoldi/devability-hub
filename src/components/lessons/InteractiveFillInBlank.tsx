@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, type JSX, useMemo } from 'react';
@@ -70,19 +69,14 @@ export function InteractiveFillInBlank({
   const handleTriggerClick = () => {
     if (isLessonCompleted) return;
 
-    if (isSubmitted) {
-      // Logic to un-complete the interaction
+    if (isSubmitted || (filledAnswer && isCorrect === false)) {
       setFilledAnswer(null);
       setIsCorrect(null);
-      onUncomplete(interactionId);
-      setIsPopoverOpen(true);
-    } else if (filledAnswer && isCorrect === false) {
-      // Logic to reset an incorrect answer
-      setFilledAnswer(null);
-      setIsCorrect(null);
+      if (isSubmitted) {
+        onUncomplete(interactionId);
+      }
       setIsPopoverOpen(true);
     } else {
-      // Default popover toggle
       setIsPopoverOpen(o => !o);
     }
   };
@@ -93,19 +87,23 @@ export function InteractiveFillInBlank({
   let cursorClass = "cursor-pointer";
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
+  let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
+
 
   if (isSubmitted) {
     prefixEmoji = "✅";
     mainText = correctAnswer;
     textColorClass = "text-green-800 dark:text-green-200";
-    borderColorClass = "border-green-600 bg-green-100 dark:bg-green-900/40 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/40";
+    borderColorClass = "border-green-600 dark:border-green-700";
+    backgroundClass = "bg-green-100 dark:bg-green-900/30";
     cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
     chevronIcon = isLessonCompleted ? null : chevronIcon;
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = '❌';
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
-    borderColorClass = "border-red-500 bg-red-100 dark:bg-red-900/30 dark:border-red-700";
+    borderColorClass = "border-red-500 dark:border-red-700";
+    backgroundClass = "bg-red-100 dark:bg-red-900/30";
   } else if (filledAnswer && isCorrect === null) {
      mainText = filledAnswer;
      prefixEmoji = "";
@@ -128,12 +126,13 @@ export function InteractiveFillInBlank({
             type="button"
             onClick={handleTriggerClick}
             className={cn(
-              "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose",
+              "inline-flex items-center justify-between gap-1 px-2 py-1 text-sm leading-tight transition-all duration-200 rounded group align-baseline not-prose min-w-[100px]",
               borderColorClass,
               textColorClass,
               cursorClass,
+              backgroundClass,
               isSubmitted ? "border" : "border border-dashed",
-              !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none hover:bg-accent/50 dark:hover:bg-accent/20"
+              !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
