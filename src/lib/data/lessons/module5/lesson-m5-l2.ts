@@ -52,7 +52,7 @@ A caracterização desses fenótipos cognitivos e comportamentais, embora extrem
 4.  **Promover uma visão mais nuançada**, complexa, dinâmica e respeitosa da deficiência, combatendo o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*capacitismo;reducionismo;essencialismo] --> e reconhecendo que diferentes condições genéticas ou neurológicas resultam em formas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*qualitativamente distintas;quantitativamente inferiores;essencialmente idênticas] --> de perceber, processar informações, aprender, sentir, se comunicar e interagir com o mundo. O conhecimento neuropsicológico deve ser uma ferramenta para a <!-- INTERACTIVE_FILL_IN_BLANK: [inclusão e empoderamento|exclusão e segregação|classificação e rotulação] -->. A neuropsicologia deve dialogar com a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*ética;medicina;genética] --> e com os <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*Estudos da Deficiência;Estudos Culturais;Estudos de Gênero] -->. O conhecimento deve <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*libertar;aprisionar;controlar] -->.
 `,
   estimatedTime: '14-17 mins',
-  coverImage: 'https://images.unsplash.com/photo-1597062238703-300邬e99d21?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxuZXVyb3NjaWVuY2UlMjBicmFpbiUyMHBhc3Npb258ZW58MHx8fHwxNzIxMTAyOTU5fDA&ixlib=rb-4.0.3&q=80&w=1080',
+  coverImage: '/images/Dev5.2.png',
   aiHint: 'fenótipos cognitivos síndrome down TEA DI deficiência sensorial neuropsicologia neurodiversidade inclusão neuroplasticidade Uta Frith',
   references: [
     "Anderson, V., Northam, E., & De Luca, C. R. (2022). *Developmental neuropsychology: A clinical approach* (3rd ed.). Routledge.",
