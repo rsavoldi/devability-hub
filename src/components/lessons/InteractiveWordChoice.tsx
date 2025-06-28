@@ -85,9 +85,15 @@ export function InteractiveWordChoice({
                 className={cn(
                   "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
                   "inline-flex items-center gap-1",
-                  "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200",
-                  !isLessonCompleted && "cursor-pointer",
-                   isLessonCompleted && "cursor-default"
+
+                  "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200", 
+                  
+                  !isLessonCompleted && 
+                  "hover:bg-green-100 dark:hover:bg-green-900/30           hover:text-green-800 dark:hover:text-green-200",
+                  
+                  isLessonCompleted ?
+                  "cursor-default" : "cursor-pointer",
+                  
                 )}
             >
               <span className="shrink-0 -ml-0.5 mr-0.5">✅</span>
