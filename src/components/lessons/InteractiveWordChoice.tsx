@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -85,7 +85,7 @@ export function InteractiveWordChoice({
                 className={cn(
                   "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
                   "inline-flex items-center gap-1",
-                  "border-green-600 bg-green-500/90 text-primary-foreground hover:bg-green-500/90 dark:bg-green-600/90 dark:hover:bg-green-600/90",
+                  "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200",
                   !isLessonCompleted && "cursor-pointer",
                    isLessonCompleted && "cursor-default"
                 )}
