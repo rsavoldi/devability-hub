@@ -6,7 +6,6 @@ import { mockLessons } from '@/lib/mockData';
 import type { Lesson } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation'; 
 import { useEffect, useState } from 'react';
-import { LessonUiProvider } from '@/contexts/LessonUiContext';
 
 export default function LessonPage() {
   const params = useParams<{ id: string }>(); 
@@ -37,8 +36,6 @@ export default function LessonPage() {
   }
   
   return (
-    <LessonUiProvider>
       <LessonView lesson={lesson} />
-    </LessonUiProvider>
   );
 }
