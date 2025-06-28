@@ -71,20 +71,24 @@ export function AppHeader() {
 
           {!isMobile && (
             lessonUi && lessonUi.lessonTitle ? (
-              <div className="flex-grow flex items-center justify-center px-8">
-                <div className="flex items-center gap-4 w-full max-w-xl">
-                    <span className="text-xl" role="img" aria-label="Lição">📖</span>
-                    <h2 className="font-semibold text-sm truncate text-foreground flex-shrink-0">{lessonUi.lessonTitle}</h2>
-                    <Progress 
-                      value={lessonUi.totalInteractions > 0 ? (lessonUi.completedInteractions / lessonUi.totalInteractions) * 100 : 0} 
-                      className="h-2 flex-grow" 
-                    />
-                    <span className="text-sm font-mono text-muted-foreground flex-shrink-0">
-                        {lessonUi.completedInteractions}/{lessonUi.totalInteractions}
-                    </span>
+              // MINI PROGRESS GUI (for lesson pages)
+              <div className="flex-1 flex items-center justify-center px-4">
+                <div className="flex items-center gap-3 text-sm font-medium border rounded-full px-3 py-1.5 bg-muted/50 shadow-inner">
+                  <span className="text-lg" role="img" aria-label="Lição">📖</span>
+                  <h2 className="font-semibold text-foreground truncate max-w-48" title={lessonUi.lessonTitle}>
+                    {lessonUi.lessonTitle}
+                  </h2>
+                  <Progress 
+                    value={lessonUi.totalInteractions > 0 ? (lessonUi.completedInteractions / lessonUi.totalInteractions) * 100 : 0} 
+                    className="h-2 w-32"
+                  />
+                  <span className="font-mono text-muted-foreground w-14 text-center">
+                    {lessonUi.completedInteractions}/{lessonUi.totalInteractions}
+                  </span>
                 </div>
               </div>
             ) : (
+            // MAIN NAV (for other pages)
             <nav className="ml-6 flex items-center gap-1">
               {mainNavItems.map((item) => (
                 <Tooltip key={item.href}>
@@ -118,11 +122,11 @@ export function AppHeader() {
             )
           )}
 
-
+          {/* This spacer is only needed when the main nav is visible */}
           <div className={cn("flex-grow", (lessonUi && lessonUi.lessonTitle && !isMobile) ? "hidden" : "block")} />
 
           <div className="flex items-center gap-2">
-            {userProfile && !(lessonUi && lessonUi.lessonTitle) && (
+            {userProfile && (
               <div className={cn("items-center gap-2 text-sm font-medium", isMobile ? "hidden" : "flex")}>
                 <span>💎</span>
                 <span>{userProfile.points} Pontos</span>
