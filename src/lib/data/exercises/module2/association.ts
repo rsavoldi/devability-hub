@@ -34,5 +34,40 @@ export const module2AssociationExercises: Exercise[] = [
     feedback: 'Ótimas associações! Esses conceitos são chave para entender o potencial cognitivo na vida adulta com deficiência.',
     points: 15,
     estimatedTime: '3 mins',
-  }
+  },
+  {
+    id: 'm2-e16',
+    moduleId: 'mod-trilha2-0',
+    title: 'Marcos da Transição para a Vida Adulta',
+    type: 'association',
+    question: 'Associe os marcos da transição para a vida adulta (Coluna A) com suas descrições ou exemplos (Coluna B), de acordo com a Lição 2.1.',
+    options: [
+      { id: 'mt1a', text: 'Coluna A: Educação Superior/Profissionalizante' }, { id: 'mt1b', text: 'Coluna B: Busca por qualificação para o mercado de trabalho.' },
+      { id: 'mt2a', text: 'Coluna A: Vida Independente' }, { id: 'mt2b', text: 'Coluna B: Morar sozinho ou com pouca supervisão, gerenciar finanças.' },
+      { id: 'mt3a', text: 'Coluna A: Relacionamentos Interpessoais' }, { id: 'mt3b', text: 'Coluna B: Construção de amizades duradouras e possíveis relacionamentos amorosos.' },
+    ],
+    correctAnswer: ["mt1a-mt1b", "mt2a-mt2b", "mt3a-mt3b"],
+    feedback: 'Muito bem! A transição envolve diversas áreas da vida, buscando maior autonomia e participação social.',
+    points: 15,
+    estimatedTime: '3 mins',
+  },
+  {
+    id: 'm2-e17',
+    moduleId: 'mod-trilha2-0',
+    title: 'Tipos de Cuidados de Longa Duração',
+    type: 'association',
+    question: 'Associe o tipo de cuidado de longa duração (Coluna A) com sua principal característica (Coluna B), conforme a Lição 2.8.',
+    options: [
+      { id: 'tcd1a', text: 'Coluna A: Cuidado Informal' }, { id: 'tcd1b', text: 'Coluna B: Prestado por familiares, amigos ou vizinhos, sem remuneração formal.' },
+      { id: 'tcd2a', text: 'Coluna A: Cuidado Formal Domiciliar' }, { id: 'tcd2b', text: 'Coluna B: Prestado por profissionais remunerados no domicílio da pessoa.' },
+      { id: 'tcd3a', text: 'Coluna A: Cuidado Institucional' }, { id: 'tcd3b', text: 'Coluna B: Prestado em instituições como ILPIs ou Centros-Dia.' },
+    ],
+    correctAnswer: ["tcd1a-tcd1b", "tcd2a-tcd2b", "tcd3a-tcd3b"],
+    feedback: 'Ótimo! Compreender os tipos de cuidados é essencial para planejar o suporte necessário.',
+    points: 15,
+    estimatedTime: '3 mins',
+  },
+
+
 ];
+

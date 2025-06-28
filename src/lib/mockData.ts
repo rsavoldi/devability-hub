@@ -431,5 +431,3 @@ if (mockRoadmapData.length > 0 && mockRoadmapData.every(t => t.isCompleted)) {
         }
     }
 }
-
-    
