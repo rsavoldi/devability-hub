@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { Moon, Sun, UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react";
+import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,9 @@ import { ChatbotDialog } from "@/components/chatbot/ChatbotDialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useLessonUi } from "@/contexts/LessonUiContext";
+import { Progress } from "../ui/progress";
+
 
 const mainNavItems: NavItem[] = [
   { href: "/", label: "Roadmap", emoji: "🗺️" },
@@ -39,6 +42,7 @@ export function AppHeader() {
   const isMobile = useIsMobile();
   const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth();
   const router = useRouter();
+  const lessonUi = useLessonUi();
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
@@ -66,6 +70,21 @@ export function AppHeader() {
           </div>
 
           {!isMobile && (
+            lessonUi && lessonUi.lessonTitle ? (
+              <div className="flex-grow flex items-center justify-center px-8">
+                <div className="flex items-center gap-4 w-full max-w-xl">
+                    <span className="text-xl" role="img" aria-label="Lição">📖</span>
+                    <h2 className="font-semibold text-sm truncate text-foreground flex-shrink-0">{lessonUi.lessonTitle}</h2>
+                    <Progress 
+                      value={lessonUi.totalInteractions > 0 ? (lessonUi.completedInteractions / lessonUi.totalInteractions) * 100 : 0} 
+                      className="h-2 flex-grow" 
+                    />
+                    <span className="text-sm font-mono text-muted-foreground flex-shrink-0">
+                        {lessonUi.completedInteractions}/{lessonUi.totalInteractions}
+                    </span>
+                </div>
+              </div>
+            ) : (
             <nav className="ml-6 flex items-center gap-1">
               {mainNavItems.map((item) => (
                 <Tooltip key={item.href}>
@@ -96,12 +115,14 @@ export function AppHeader() {
                </Tooltip>
               ))}
             </nav>
+            )
           )}
 
-          <div className="flex-grow" />
+
+          <div className={cn("flex-grow", (lessonUi && lessonUi.lessonTitle && !isMobile) ? "hidden" : "block")} />
 
           <div className="flex items-center gap-2">
-            {userProfile && (
+            {userProfile && !(lessonUi && lessonUi.lessonTitle) && (
               <div className={cn("items-center gap-2 text-sm font-medium", isMobile ? "hidden" : "flex")}>
                 <span>💎</span>
                 <span>{userProfile.points} Pontos</span>
@@ -115,9 +136,10 @@ export function AppHeader() {
               size="icon"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
               aria-label="Alternar tema"
+              className="text-xl"
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              {theme === 'dark' ? '☀️' : '🌙'}
+              <span className="sr-only">Alternar tema</span>
             </Button>
 
             <DropdownMenu>

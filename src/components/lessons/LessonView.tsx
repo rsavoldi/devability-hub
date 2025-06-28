@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { useLessonUi } from '@/contexts/LessonUiContext';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -110,6 +111,7 @@ const parseMarkdownForHTML = (text: string): string => {
 export function LessonView({ lesson }: LessonViewProps) {
   const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress } = useAuth();
   const router = useRouter();
+  const lessonUi = useLessonUi();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -128,18 +130,32 @@ export function LessonView({ lesson }: LessonViewProps) {
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
         await saveInteractionProgress(lesson.id, interactionId);
+        lessonUi?.incrementCompleted();
     }
-  }, [completedInteractions, saveInteractionProgress, lesson.id]);
+  }, [completedInteractions, saveInteractionProgress, lesson.id, lessonUi]);
 
   const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
     if(completedInteractions.has(interactionId)) {
         await uncompleteInteraction(lesson.id, interactionId);
+        lessonUi?.decrementCompleted();
     }
-  }, [completedInteractions, uncompleteInteraction, lesson.id]);
+  }, [completedInteractions, uncompleteInteraction, lesson.id, lessonUi]);
   
   const totalInteractiveElements = useMemo(() => {
     return countInteractions(lesson.content);
   }, [lesson.content]);
+
+  useEffect(() => {
+    if (lessonUi && userProfile && lesson.id) {
+      const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
+      lessonUi.setLessonData(lesson.title, totalInteractiveElements, completedCount);
+    }
+
+    return () => {
+      lessonUi?.resetLesson();
+    };
+  }, [lesson, userProfile, lessonUi, totalInteractiveElements]);
+
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
     const completedCount = completedInteractions.size;
@@ -266,6 +282,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   const handleResetLesson = async () => {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
+      lessonUi?.resetLesson(); 
       setIsResetting(false);
   };
 
@@ -286,10 +303,17 @@ export function LessonView({ lesson }: LessonViewProps) {
   
   const getButtonText = () => {
     if (isMarkingComplete) return "Marcando...";
-    if (isLessonAlreadyCompletedByProfile) return "Concluída";
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete Interações";
-    return "Marcar Concluída";
+    if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
+    return "Marcar como Concluída";
   };
+
+  const getButtonEmoji = () => {
+    if (isMarkingComplete) return <Loader2 className="mr-2 h-5 w-5 animate-spin" />;
+    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído" className="mr-2">✅</span>;
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado" className="mr-2">🔒</span>;
+    return <span role="img" aria-label="Finalizar" className="mr-2">🏁</span>;
+  }
 
 
   return (
@@ -380,11 +404,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               onClick={handleMarkAsCompleted}
               disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
-                {isMarkingComplete || isLessonAlreadyCompletedByProfile ? (
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                ) : (
-                    <CheckCircle className="mr-2 h-5 w-5" />
-                )}
+                {getButtonEmoji()}
                 {getButtonText()}
             </Button>
             {isLessonAlreadyCompletedByProfile && (

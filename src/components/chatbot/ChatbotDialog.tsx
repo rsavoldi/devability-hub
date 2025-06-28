@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Loader2, Bot, User } from "lucide-react"; // Changed MessageSquare to Bot
+import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -72,8 +72,7 @@ export function ChatbotDialog() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Abrir Chatbot">
-          <Bot className="h-5 w-5" />
-          {/* <span className="sr-only">Abrir Chatbot</span> */} {/* Removed to ensure Button has only one child element */}
+           <span className="text-xl" role="img" aria-label="Chatbot">💬</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] md:sm:max-w-[550px] flex flex-col h-[70vh] max-h-[600px]">
@@ -94,7 +93,7 @@ export function ChatbotDialog() {
               >
                 {message.sender === "bot" && (
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback><Bot size={18}/></AvatarFallback>
+                    <AvatarFallback><span role="img" aria-label="Bot">🤖</span></AvatarFallback>
                   </Avatar>
                 )}
                 <div
@@ -118,7 +117,7 @@ export function ChatbotDialog() {
                 </div>
                  {message.sender === "user" && (
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback><User size={18}/></AvatarFallback>
+                    <AvatarFallback><span role="img" aria-label="Usuário">👤</span></AvatarFallback>
                   </Avatar>
                 )}
               </div>
@@ -126,7 +125,7 @@ export function ChatbotDialog() {
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground">
                  <Avatar className="h-8 w-8">
-                    <AvatarFallback><Bot size={18}/></AvatarFallback>
+                    <AvatarFallback><span role="img" aria-label="Bot">🤖</span></AvatarFallback>
                   </Avatar>
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Thinking...</span>

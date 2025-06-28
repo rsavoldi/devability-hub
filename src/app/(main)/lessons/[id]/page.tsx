@@ -6,6 +6,7 @@ import { mockLessons } from '@/lib/mockData';
 import type { Lesson } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation'; 
 import { useEffect, useState } from 'react';
+import { LessonUiProvider } from '@/contexts/LessonUiContext';
 
 export default function LessonPage() {
   const params = useParams<{ id: string }>(); 
@@ -17,18 +18,15 @@ export default function LessonPage() {
       const foundLesson = mockLessons.find(l => l.id === lessonId);
       if (foundLesson) {
         setLesson(foundLesson);
-        // Atualiza o título do documento AQUI, quando a lição é encontrada
         document.title = `${foundLesson.title} | DevAbility Hub`;
       } else {
         setLesson(null);
-        // Atualiza o título do documento AQUI, quando a lição não é encontrada
         document.title = "Lição Não Encontrada | DevAbility Hub";
       }
     } else {
-      // Define um título padrão ou de carregamento se não houver lessonId ainda
       document.title = "Carregando Lição | DevAbility Hub";
     }
-  }, [lessonId]); // A dependência é lessonId, pois lesson e document.title são atualizados com base nele
+  }, [lessonId]);
 
   if (lesson === undefined) { 
     return <div className="text-center py-10">Carregando lição...</div>;
@@ -38,5 +36,9 @@ export default function LessonPage() {
     notFound(); 
   }
   
-  return <LessonView lesson={lesson} />;
+  return (
+    <LessonUiProvider>
+      <LessonView lesson={lesson} />
+    </LessonUiProvider>
+  );
 }
