@@ -73,13 +73,24 @@ export function AppHeader() {
             lessonUi && lessonUi.lessonTitle ? (
               // MINI PROGRESS GUI (for lesson pages)
               <div className="flex-1 flex items-center justify-center px-4">
-                <div className="flex items-center gap-3 text-sm font-medium border rounded-full px-3 py-1.5 bg-muted/50 shadow-inner">
-                  <span className="text-lg" role="img" aria-label="Lição">📖</span>
-                  <h2 className="font-semibold text-foreground truncate max-w-48" title={lessonUi.lessonTitle}>
-                    {lessonUi.lessonTitle}
+                <div
+                  className="flex items-center gap-3 text-sm font-medium border rounded-full px-3 py-1.5 bg-muted/50 shadow-inner"
+                  title={lessonUi.lessonTitle ?? undefined}
+                >
+                  <span className="text-lg" role="img" aria-label="Lição">
+                    📖
+                  </span>
+                  <h2 className="font-semibold text-foreground">
+                    Lição {lessonUi.lessonNumber}
                   </h2>
-                  <Progress 
-                    value={lessonUi.totalInteractions > 0 ? (lessonUi.completedInteractions / lessonUi.totalInteractions) * 100 : 0} 
+                  <Progress
+                    value={
+                      lessonUi.totalInteractions > 0
+                        ? (lessonUi.completedInteractions /
+                            lessonUi.totalInteractions) *
+                          100
+                        : 0
+                    }
                     className="h-2 w-32"
                   />
                   <span className="font-mono text-muted-foreground w-14 text-center">

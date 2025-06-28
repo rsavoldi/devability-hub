@@ -6,7 +6,6 @@ import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2, Info, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { InteractiveWordChoice } from './InteractiveWordChoice';
 import { InteractiveFillInBlank } from './InteractiveFillInBlank';
@@ -148,7 +147,8 @@ export function LessonView({ lesson }: LessonViewProps) {
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      lessonUi.setLessonData(lesson.title, totalInteractiveElements, completedCount);
+      const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
+      lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
     return () => {
@@ -289,7 +289,8 @@ export function LessonView({ lesson }: LessonViewProps) {
   if (authLoading || !lesson) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <span className="text-xl mr-3" role="img" aria-label="Carregando">⏳</span>
+        Carregando...
       </div>
     );
   }
@@ -302,17 +303,17 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const getButtonText = () => {
-    if (isMarkingComplete) return "Marcando...";
+    if (isMarkingComplete || isResetting) return "Processando...";
     if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
     return "Marcar como Concluída";
   };
 
   const getButtonEmoji = () => {
-    if (isMarkingComplete) return <Loader2 className="mr-2 h-5 w-5 animate-spin" />;
-    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído" className="mr-2">✅</span>;
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado" className="mr-2">🔒</span>;
-    return <span role="img" aria-label="Finalizar" className="mr-2">🏁</span>;
+    if (isMarkingComplete || isResetting) return <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span>;
+    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
+    return <span role="img" aria-label="Finalizar">🏁</span>;
   }
 
 
@@ -336,7 +337,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{lesson.title}</CardTitle>
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
             <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-1" />
+              <span className="text-lg mr-1" role="img" aria-label="Relógio">⏰</span>
               <span>{lesson.estimatedTime}</span>
             </div>
             {lesson.type && <span className="capitalize">Tipo: {lesson.type}</span>}
@@ -345,7 +346,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           <div className="mt-4 space-y-2">
             <div className="flex justify-between items-center text-sm text-primary">
               <div className="flex items-center">
-                  <Info className="h-4 w-4 mr-1.5 shrink-0" />
+                  <span className="text-lg mr-1.5 shrink-0" role="img" aria-label="Informação">ℹ️</span>
                   <span>{interactionsProgressText}</span>
               </div>
               <span>{progressPercentage.toFixed(0)}%</span>
@@ -383,7 +384,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
                   <span className="flex items-center justify-center w-full">
-                    <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2 shrink-0" />
+                    <span role="img" aria-label="Seta para Esquerda" className="mr-1 sm:mr-2 shrink-0">⬅️</span>
                     <span className="hidden sm:inline truncate">Anterior: {truncateTitle(prevLesson.title)}</span>
                     <span className="sm:hidden">Anterior</span>
                   </span>
@@ -402,7 +403,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
                 {getButtonEmoji()}
                 {getButtonText()}
@@ -413,9 +414,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                     size="sm"
                     className="w-full max-w-xs sm:w-auto"
                     onClick={handleResetLesson}
-                    disabled={isResetting}
+                    disabled={isResetting || isMarkingComplete}
                 >
-                    {isResetting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    {isResetting ? <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span> : <span role="img" aria-label="Reiniciar">🔄</span>}
                     Reiniciar Lição
                 </Button>
             )}
@@ -428,7 +429,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   <span className="flex items-center justify-center w-full">
                     <span className="hidden sm:inline truncate">Próxima: {truncateTitle(nextLesson.title)}</span>
                     <span className="sm:hidden">Próxima</span>
-                    <ArrowRight className="h-4 w-4 ml-1 sm:ml-2 shrink-0" />
+                    <span role="img" aria-label="Seta para Direita" className="ml-1 sm:ml-2 shrink-0">➡️</span>
                   </span>
                 </Link>
             </Button>

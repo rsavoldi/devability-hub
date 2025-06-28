@@ -1,12 +1,12 @@
-
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 interface LessonUiState {
   lessonTitle: string | null;
+  lessonNumber: string | null;
   totalInteractions: number;
   completedInteractions: number;
-  setLessonData: (title: string, total: number, completed: number) => void;
+  setLessonData: (title: string, number: string, total: number, completed: number) => void;
   incrementCompleted: () => void;
   decrementCompleted: () => void;
   resetLesson: () => void;
@@ -16,11 +16,13 @@ const LessonUiContext = createContext<LessonUiState | undefined>(undefined);
 
 export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
+  const [lessonNumber, setLessonNumber] = useState<string | null>(null);
   const [totalInteractions, setTotalInteractions] = useState(0);
   const [completedInteractions, setCompletedInteractions] = useState(0);
 
-  const setLessonData = useCallback((title: string, total: number, completed: number) => {
+  const setLessonData = useCallback((title: string, number: string, total: number, completed: number) => {
     setLessonTitle(title);
+    setLessonNumber(number);
     setTotalInteractions(total);
     setCompletedInteractions(completed);
   }, []);
@@ -35,6 +37,7 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   
   const resetLesson = useCallback(() => {
     setLessonTitle(null);
+    setLessonNumber(null);
     setTotalInteractions(0);
     setCompletedInteractions(0);
   }, []);
@@ -42,6 +45,7 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   return (
     <LessonUiContext.Provider value={{
       lessonTitle,
+      lessonNumber,
       totalInteractions,
       completedInteractions,
       setLessonData,
