@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type JSX, useMemo } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -36,10 +36,9 @@ export function InteractiveFillInBlank({
   const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  const shuffledDisplayOptions = useMemo(() => {
-    return shuffleArray(options);
-  }, [options]);
+  
+  // Initialize shuffled options only once when the component mounts
+  const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
 

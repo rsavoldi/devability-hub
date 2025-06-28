@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -29,11 +29,9 @@ export function InteractiveWordChoice({
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
-  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-
-  useEffect(() => {
-    setShuffledOptions(shuffleArray(options));
-  }, [options]);
+  
+  // Initialize shuffled options only once when the component mounts
+  const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
 
@@ -44,17 +42,14 @@ export function InteractiveWordChoice({
     } else {
       setSelectedOption(null);
       setIsCorrectSelection(null);
-      // Re-shuffle if we are resetting
-      setShuffledOptions(shuffleArray(options));
     }
-  }, [isSubmitted, correctAnswer, options]);
+  }, [isSubmitted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
     const isCurrentlySelected = selectedOption === option;
 
-    // Logic to deselect
     if (isCurrentlySelected) {
       setSelectedOption(null);
       setIsCorrectSelection(null);
@@ -64,7 +59,6 @@ export function InteractiveWordChoice({
       return;
     }
     
-    // Logic to select a new option
     setSelectedOption(option);
     const isCorrect = option === correctAnswer;
     setIsCorrectSelection(isCorrect);
@@ -75,25 +69,31 @@ export function InteractiveWordChoice({
   };
 
   if (isSubmitted) {
+    // Only show the correct answer button when submitted
+    const remainingOptions = shuffledOptions.filter(opt => isCorrectSelection ? opt === correctAnswer : true);
+
     return (
-        <span className="inline-flex items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
-             <Button
+        <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
+          {remainingOptions.map((option, index) => (
+            <Button
+                key={index}
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleOptionClick(correctAnswer)}
+                onClick={() => handleOptionClick(option)}
                 disabled={isLessonCompleted}
                 className={cn(
-                    "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
-                    "inline-flex items-center gap-1",
-                    "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200",
-                    !isLessonCompleted && "hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-800 dark:hover:text-green-200",
-                    isLessonCompleted ? "cursor-default" : "cursor-pointer"
+                  "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
+                  "inline-flex items-center gap-1",
+                  "border-green-600 bg-green-500/90 text-primary-foreground hover:bg-green-500/90 dark:bg-green-600/90 dark:hover:bg-green-600/90",
+                  !isLessonCompleted && "cursor-pointer",
+                   isLessonCompleted && "cursor-default"
                 )}
-             >
-                <span className="shrink-0 -ml-0.5 mr-0.5">✅</span>
-                <span>{correctAnswer}</span>
-             </Button>
+            >
+              <span className="shrink-0 -ml-0.5 mr-0.5">✅</span>
+              <span>{option}</span>
+            </Button>
+          ))}
         </span>
     );
   }
