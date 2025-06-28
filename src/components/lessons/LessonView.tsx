@@ -23,26 +23,39 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  const markdownRegex = /(\*\*.*?\*\*|\*.*?\*)/g;
+  // Regex atualizada para priorizar ***, depois **, depois *
+  const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   
   let match;
   
   while ((match = markdownRegex.exec(text)) !== null) {
+    // Adiciona o texto antes da correspondência
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
     
     const matchedText = match[0];
-    if (matchedText.startsWith('**')) {
+
+    // Lida com negrito e itálico: ***texto***
+    if (matchedText.startsWith('***')) {
+      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em>{matchedText.slice(3, -3)}</em></strong>);
+    } 
+    // Lida com negrito: **texto**
+    else if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
-    } else if (matchedText.startsWith('*')) {
+    } 
+    // Lida com itálico: *texto*
+    else if (matchedText.startsWith('*')) {
+       // Verifica os caracteres ao redor para evitar itálico incorreto (ex: no meio de palavras)
+       // Agora inclui parênteses nos caracteres permitidos ao redor.
        const preChar = text[match.index - 1];
        const postChar = text[match.index + matchedText.length];
-       if ((!preChar || /\s|[.,:;?!]/.test(preChar)) && (!postChar || /\s|[.,:;?!]/.test(postChar))) {
+       if ((!preChar || /[\s.,:;?!()]/.test(preChar)) && (!postChar || /[\s.,:;?!()]/.test(postChar))) {
           parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
        } else {
+         // Se não for um itálico válido, envia o texto como está
          parts.push(matchedText);
        }
     }
@@ -50,6 +63,7 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     lastIndex = markdownRegex.lastIndex;
   }
 
+  // Adiciona qualquer texto restante após a última correspondência
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
@@ -147,7 +161,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
+      const lessonNumber = lesson.id.replace(/^[a-z]+(\d+)-l(\d+)$/, '$1.$2'); // ex: "m1-l2" -> "1.2"
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
@@ -439,3 +453,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
