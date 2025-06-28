@@ -55,7 +55,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha1',
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
-    emoji: '🧒', 
+    emoji: '👶', 
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -73,7 +73,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha2',
     title: 'Pessoas Adultas com Deficiência: Desenvolvimento, Direitos e Perspectivas.',
     order: 2,
-    emoji: '👤', 
+    emoji: '👩‍🦰', 
     description: 'Compreenda as particularidades do desenvolvimento de adultos e idosos com deficiência, abordando aspectos físicos, cognitivos, sociais e afetivos ao longo do envelhecimento.',
     modules: [{
       id: 'mod-trilha2-0',
@@ -145,7 +145,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha6',
     title: 'Fundamentos da Avaliação Psicológica e do Psicodiagnóstico da pessoa com deficiência.',
     order: 6,
-    emoji: '📊', 
+    emoji: '📋', 
     description: 'Estude os fundamentos da avaliação psicológica e do psicodiagnóstico aplicados a pessoas com deficiência, considerando suas especificidades, instrumentos e ética.',
     modules: [{
       id: 'mod-trilha6-0',
@@ -163,7 +163,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha7',
     title: 'Pesquisa com Pessoas com Deficiência: Tópicos, Métodos e Ética.',
     order: 7,
-    emoji: '📝', 
+    emoji: '🔍', 
     description: 'Explore temas de pesquisa, métodos de coleta e análise de dados (qualitativos, quantitativos e mistos), e as considerações éticas envolvidas na investigação científica sobre deficiência.',
     modules: [{
       id: 'mod-trilha7-0',

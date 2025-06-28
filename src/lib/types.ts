@@ -100,6 +100,7 @@ export interface UserProfile {
   avatarUrl?: string;
   points: number;
   lessonProgress: Record<string, LessonProgress>; // lessonId -> progress
+  completedLessons: string[];
   completedExercises: string[];
   unlockedAchievements: string[];
   completedModules: string[];
