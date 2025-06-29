@@ -111,8 +111,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
-  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
-
+  
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
@@ -270,16 +269,8 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress || isSubmittingCompletion) return;
-    
-    setIsSubmittingCompletion(true);
-    try {
-      await completeLesson(lesson.id);
-    } finally {
-      // O estado global isUpdatingProgress e a re-renderização por userProfile
-      // cuidarão do estado final do botão, mas resetamos o local para permitir um novo envio em caso de falha.
-      setIsSubmittingCompletion(false);
-    }
+    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress) return;
+    await completeLesson(lesson.id);
   };
   
   const handleResetLesson = async () => {
@@ -304,14 +295,14 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const getButtonText = () => {
-    if (isUpdatingProgress || isSubmittingCompletion) return "Processando...";
+    if (isUpdatingProgress) return "Processando...";
     if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
     return "Marcar como Concluída";
   };
 
   const getButtonEmoji = () => {
-    if (isUpdatingProgress || isSubmittingCompletion) return <Loader2 className="h-5 w-5 animate-spin" />;
+    if (isUpdatingProgress) return <Loader2 className="h-5 w-5 animate-spin" />;
     if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
     return <span role="img" aria-label="Finalizar">🏁</span>;
@@ -402,7 +393,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress || isSubmittingCompletion}
+              disabled={isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress}
             >
                 {getButtonEmoji()}
                 {getButtonText()}
@@ -438,3 +429,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
