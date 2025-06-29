@@ -17,14 +17,14 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface LessonViewProps {
   lesson: Lesson;
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*|`.*?`)/g;
+  const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*|`.*?`|\(\*.*?\*\))/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   
@@ -36,14 +36,24 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     }
     
     const matchedText = match[0];
-    if (matchedText.startsWith('***')) {
+    
+    if (matchedText.startsWith('***') && matchedText.endsWith('***')) {
       parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em className="font-semibold">{matchedText.slice(3, -3)}</em></strong>);
-    } else if (matchedText.startsWith('**')) {
+    } 
+    else if (matchedText.startsWith('**') && matchedText.endsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
-    } else if (matchedText.startsWith('*')) {
+    }
+    else if (matchedText.startsWith('(*') && matchedText.endsWith('*)')) {
+         parts.push(<span key={`${baseKey}-p-i-start-${match.index}`}>(<em>{matchedText.slice(2, -2)}</em>)</span>);
+    }
+    else if (matchedText.startsWith('*') && matchedText.endsWith('*')) {
       parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
-    } else if (matchedText.startsWith('`')) {
+    } 
+    else if (matchedText.startsWith('`') && matchedText.endsWith('`')) {
       parts.push(<code key={`${baseKey}-c-${match.index}`} className="font-mono text-sm bg-muted text-muted-foreground rounded px-1 py-0.5">{matchedText.slice(1, -1)}</code>);
+    }
+    else {
+      parts.push(matchedText);
     }
     
     lastIndex = markdownRegex.lastIndex;
@@ -54,6 +64,7 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
   }
   return parts;
 };
+
 
 const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey: string): JSX.Element[] => {
   const outputParagraphs: JSX.Element[] = [];
@@ -100,7 +111,6 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   return outputParagraphs;
 };
 
-
 const parseMarkdownForHTML = (text: string): string => {
   return text
     .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
@@ -117,13 +127,12 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
-  const completedInteractions = useMemo(() => {
-    return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
+  const lessonProgressData = useMemo(() => {
+    return userProfile?.lessonProgress[lesson.id] || { completed: false, completedInteractions: [] };
   }, [userProfile, lesson.id]);
   
-  const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    return userProfile?.lessonProgress[lesson.id]?.completed || false;
-  }, [userProfile, lesson.id]);
+  const completedInteractions = useMemo(() => new Set(lessonProgressData.completedInteractions), [lessonProgressData]);
+  const isLessonAlreadyCompletedByProfile = useMemo(() => lessonProgressData.completed, [lessonProgressData]);
 
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
@@ -271,12 +280,12 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
   
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress) return;
+    if (isUpdatingProgress || !allInteractionsCompleted || isLessonAlreadyCompletedByProfile) return;
     await completeLesson(lesson.id);
   };
   
   const handleResetLesson = async () => {
-      if (isUpdatingProgress) return;
+      if (isUpdatingProgress || !isLessonAlreadyCompletedByProfile) return;
       await resetLessonProgress(lesson.id);
   };
 
@@ -295,6 +304,60 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return title;
   };
+
+  const renderFooterButtons = () => {
+    if (isLessonAlreadyCompletedByProfile) {
+      return (
+        <>
+          <Button size="lg" className="w-full sm:w-auto" disabled>
+            <CheckCircle className="mr-2 h-5 w-5" />
+            Lição Concluída!
+          </Button>
+          <Button 
+            variant="outline"
+            size="icon" 
+            onClick={handleResetLesson}
+            disabled={isUpdatingProgress}
+            aria-label="Reiniciar Lição"
+          >
+            {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+          </Button>
+        </>
+      );
+    }
+
+    if (isUpdatingProgress) {
+       return (
+         <>
+            <Button size="lg" className="w-full sm:w-auto" disabled>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processando...
+            </Button>
+            <Button variant="outline" size="icon" disabled aria-label="Reiniciar Lição">
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+         </>
+       );
+    }
+
+    return (
+      <>
+        <Button
+            size="lg"
+            className="w-full sm:w-auto"
+            onClick={handleMarkAsCompleted}
+            disabled={!allInteractionsCompleted}
+        >
+          <span role="img" aria-label="Finalizar" className="mr-2">🏁</span>
+          {allInteractionsCompleted ? "Marcar como Concluída" : "Complete as Interações"}
+        </Button>
+        <Button variant="outline" size="icon" disabled aria-label="Reiniciar Lição">
+            <RefreshCw className="h-5 w-5" />
+        </Button>
+      </>
+    );
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -373,47 +436,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
-          {!isLessonAlreadyCompletedByProfile ? (
-            <Button
-                size="lg"
-                className="w-full sm:w-auto"
-                onClick={handleMarkAsCompleted}
-                disabled={!allInteractionsCompleted || isUpdatingProgress}
-            >
-                {isUpdatingProgress ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : !allInteractionsCompleted && totalInteractiveElements > 0 ? (
-                    <span role="img" aria-label="Bloqueado" className="mr-2">🔒</span>
-                ) : (
-                    <span role="img" aria-label="Finalizar" className="mr-2">🏁</span>
-                )}
-                {isUpdatingProgress
-                    ? "Processando..."
-                    : !allInteractionsCompleted && totalInteractiveElements > 0
-                        ? "Complete as Interações"
-                        : "Marcar como Concluída"}
-            </Button>
-          ) : (
-              <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-green-500 hover:bg-green-600"
-                  disabled
-              >
-                  <span role="img" aria-label="Concluído" className="mr-2">✅</span>
-                  Lição Concluída!
-              </Button>
-          )}
-
-          <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={handleResetLesson}
-              disabled={!isLessonAlreadyCompletedByProfile || isUpdatingProgress}
-          >
-              <span role="img" aria-label="Reiniciar">🔄</span>
-              Reiniciar
-          </Button>
+          {renderFooterButtons()}
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
