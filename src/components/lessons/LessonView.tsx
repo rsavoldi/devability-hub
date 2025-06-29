@@ -142,8 +142,13 @@ export function LessonView({ lesson }: LessonViewProps) {
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumberMatch = lesson.id.match(/^m(\d+)-l(\d+)$/);
-      const lessonNumber = lessonNumberMatch ? `${lessonNumberMatch[1]}.${lessonNumberMatch[2]}` : lesson.id;
+      const lessonNumberMatch = lesson.id.match(/^(?:m(\d+)-)?l(\d+(?:\.\d+)*)$/);
+      let lessonNumber = lesson.id;
+      if(lessonNumberMatch){
+        const moduleNum = lessonNumberMatch[1];
+        const lessonNum = lessonNumberMatch[2];
+        lessonNumber = moduleNum ? `${moduleNum}.${lessonNum}`: lessonNum;
+      }
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
@@ -152,20 +157,23 @@ export function LessonView({ lesson }: LessonViewProps) {
     };
   }, [lesson, userProfile, lessonUi, totalInteractiveElements]);
 
-
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
-    const completedCount = completedInteractions.size;
+    if (!userProfile) return { progressPercentage: 0, interactionsProgressText: "" };
+    const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
     const totalCount = totalInteractiveElements;
     const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const text = totalCount > 0
       ? `Interações concluídas: ${completedCount} de ${totalCount}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [completedInteractions.size, totalInteractiveElements]);
+  }, [userProfile, lesson.id, totalInteractiveElements]);
+
 
   const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 ? completedInteractions.size >= totalInteractiveElements : true;
-  }, [totalInteractiveElements, completedInteractions]);
+    if (!userProfile) return false;
+    const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
+    return totalInteractiveElements > 0 ? completedCount >= totalInteractiveElements : true;
+  }, [totalInteractiveElements, userProfile, lesson.id]);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
@@ -185,7 +193,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile, lesson.id]);
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted) return;
+    if (isUpdatingProgress || !allInteractionsCompleted) return;
     await completeLesson(lesson.id);
   };
   
@@ -268,7 +276,20 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const canComplete = allInteractionsCompleted || totalInteractiveElements === 0;
-  const isButtonDisabled = isLessonAlreadyCompletedByProfile || isUpdatingProgress || !canComplete;
+  
+  const getButtonContent = () => {
+    if(isUpdatingProgress) {
+        return <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processando...</>;
+    }
+    if (isLessonAlreadyCompletedByProfile) {
+        return <>✅ Lição Concluída!</>;
+    }
+    if (!canComplete) {
+        return <>🔒 Complete as Interações</>;
+    }
+    return <>🏁 Marcar como Concluída</>;
+  };
+
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -351,34 +372,14 @@ export function LessonView({ lesson }: LessonViewProps) {
                 size="lg"
                 className={cn(
                   "w-full max-w-xs sm:w-auto",
-                  isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600 cursor-not-allowed" :
-                  !canComplete ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+                  isLessonAlreadyCompletedByProfile && "bg-green-500 hover:bg-green-600 cursor-not-allowed",
+                  !canComplete && !isLessonAlreadyCompletedByProfile && "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed"
                 )}
                 onClick={handleMarkAsCompleted}
-                disabled={isButtonDisabled}
+                disabled={isUpdatingProgress || isLessonAlreadyCompletedByProfile || !canComplete}
                 variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
              >
-                {isUpdatingProgress ? (
-                    <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processando...
-                    </>
-                ) : isLessonAlreadyCompletedByProfile ? (
-                    <>
-                        <span role="img" aria-label="Concluído">✅</span>
-                        Lição Concluída
-                    </>
-                ) : !canComplete ? (
-                    <>
-                        <span role="img" aria-label="Bloqueado">🔒</span>
-                        Complete as Interações
-                    </>
-                ) : (
-                    <>
-                        <span role="img" aria-label="Finalizar">🏁</span>
-                        Marcar como Concluída
-                    </>
-                )}
+                {getButtonContent()}
              </Button>
             {isLessonAlreadyCompletedByProfile && (
                 <Button
