@@ -204,6 +204,63 @@ export function LessonView({ lesson }: LessonViewProps) {
       await resetLessonProgress(lesson.id);
       lessonUi?.resetLesson(); 
   };
+  
+  const processedContentElements = useMemo(() => {
+    if (!lesson?.content) return [];
+    
+    const interactiveRegex = /(<!--\s*INTERACTIVE_WORD_CHOICE:.*?-->|<!--\s*INTERACTIVE_FILL_IN_BLANK:.*?-->)/g;
+    const parts = lesson.content.split(interactiveRegex);
+
+    return parts.map((part, index) => {
+      const wordChoiceMatch = /<!--\s*INTERACTIVE_WORD_CHOICE:\s*OPTIONS=\[(.*?)\]\s*-->/.exec(part);
+      if (wordChoiceMatch) {
+        const optionsString = wordChoiceMatch[1];
+        const options = optionsString.split(';').map(opt => opt.trim());
+        const correctAnswer = options.find(opt => opt.startsWith('*'))?.substring(1) || '';
+        const cleanOptions = options.map(opt => opt.startsWith('*') ? opt.substring(1) : opt);
+        const interactionId = `wc-${lesson.id}-${index}`;
+        
+        return (
+          <InteractiveWordChoice
+            key={interactionId}
+            lesson={lesson}
+            options={cleanOptions}
+            correctAnswer={correctAnswer}
+            interactionId={interactionId}
+            onCorrect={handleInteractionCorrect}
+            onUncomplete={handleInteractionUncomplete}
+            isInteractionCompleted={completedInteractions.has(interactionId)}
+            isLessonCompleted={isLessonAlreadyCompletedByProfile}
+          />
+        );
+      }
+
+      const fillBlankMatch = /<!--\s*INTERACTIVE_FILL_IN_BLANK:\s*\[(.*?)\]\s*-->/.exec(part);
+      if (fillBlankMatch) {
+        const optionsString = fillBlankMatch[1];
+        const options = optionsString.split('|').map(opt => opt.trim());
+        const correctAnswer = options[0];
+        const interactionId = `fib-${lesson.id}-${index}`;
+
+        return (
+          <InteractiveFillInBlank
+            key={interactionId}
+            lesson={lesson}
+            options={options}
+            correctAnswer={correctAnswer}
+            interactionId={interactionId}
+            onCorrect={handleInteractionCorrect}
+            onUncomplete={handleInteractionUncomplete}
+            isInteractionCompleted={completedInteractions.has(interactionId)}
+            isLessonCompleted={isLessonAlreadyCompletedByProfile}
+          />
+        );
+      }
+
+      return part;
+    });
+  }, [lesson, completedInteractions, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile]);
+
 
   if (authLoading || !lesson) {
     return (
