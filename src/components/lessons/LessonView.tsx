@@ -24,7 +24,6 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  // Regex atualizada para priorizar ***, depois **, depois *, e considerar parênteses
   const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -32,30 +31,24 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
   let match;
   
   while ((match = markdownRegex.exec(text)) !== null) {
-    // Adiciona o texto antes da correspondência
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
     
     const matchedText = match[0];
 
-    // Lida com negrito e itálico: ***texto***
     if (matchedText.startsWith('***')) {
       parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em>{matchedText.slice(3, -3)}</em></strong>);
     } 
-    // Lida com negrito: **texto**
     else if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
     } 
-    // Lida com itálico: *texto*
     else if (matchedText.startsWith('*')) {
-       // Permite que o itálico funcione mesmo dentro de parênteses
        const preChar = text[match.index - 1];
        const postChar = text[match.index + matchedText.length];
        if ((!preChar || /[\s.,:;?!()]/.test(preChar)) && (!postChar || /[\s.,:;?!()]/.test(postChar))) {
           parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
        } else {
-         // Se não for um itálico válido, envia o texto como está
          parts.push(matchedText);
        }
     }
@@ -63,7 +56,6 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     lastIndex = markdownRegex.lastIndex;
   }
 
-  // Adiciona qualquer texto restante após a última correspondência
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
@@ -127,35 +119,26 @@ export function LessonView({ lesson }: LessonViewProps) {
   const router = useRouter();
   const lessonUi = useLessonUi();
 
-  const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
-  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
-  
   const completedInteractions = useMemo(() => {
     return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
   }, [userProfile, lesson.id]);
-  
-  const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    return userProfile?.lessonProgress[lesson.id]?.completed || false;
-  }, [userProfile, lesson.id]);
 
-  const handleInteractionCorrect = useCallback(async (interactionId: string) => {
-    if (!completedInteractions.has(interactionId)) {
-        await saveInteractionProgress(lesson.id, interactionId);
-        lessonUi?.incrementCompleted();
-    }
-  }, [completedInteractions, saveInteractionProgress, lesson.id, lessonUi]);
-
-  const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
-    if(completedInteractions.has(interactionId)) {
-        await uncompleteInteraction(lesson.id, interactionId);
-        lessonUi?.decrementCompleted();
-    }
-  }, [completedInteractions, uncompleteInteraction, lesson.id, lessonUi]);
-  
   const totalInteractiveElements = useMemo(() => {
     return countInteractions(lesson.content);
   }, [lesson.content]);
 
+  const handleInteractionCorrect = useCallback(async (interactionId: string) => {
+    if (!completedInteractions.has(interactionId)) {
+        await saveInteractionProgress(lesson.id, interactionId);
+    }
+  }, [completedInteractions, saveInteractionProgress, lesson.id]);
+
+  const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
+    if(completedInteractions.has(interactionId)) {
+        await uncompleteInteraction(lesson.id, interactionId);
+    }
+  }, [completedInteractions, uncompleteInteraction, lesson.id]);
+  
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
@@ -184,6 +167,9 @@ export function LessonView({ lesson }: LessonViewProps) {
     return totalInteractiveElements > 0 ? completedInteractions.size >= totalInteractiveElements : true;
   }, [totalInteractiveElements, completedInteractions]);
 
+  const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
+  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
+
   useEffect(() => {
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
@@ -194,6 +180,10 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [lesson]);
   
+  const isLessonAlreadyCompletedByProfile = useMemo(() => {
+    return userProfile?.lessonProgress[lesson.id]?.completed || false;
+  }, [userProfile, lesson.id]);
+
   const handleMarkAsCompleted = async () => {
     if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted) return;
     await completeLesson(lesson.id);
@@ -202,17 +192,16 @@ export function LessonView({ lesson }: LessonViewProps) {
   const handleResetLesson = async () => {
       if (isUpdatingProgress) return;
       await resetLessonProgress(lesson.id);
-      lessonUi?.resetLesson(); 
   };
   
   const processedContentElements = useMemo(() => {
     if (!lesson?.content) return [];
     
-    const interactiveRegex = /(<!--\s*INTERACTIVE_WORD_CHOICE:.*?-->|<!--\s*INTERACTIVE_FILL_IN_BLANK:.*?-->)/g;
+    const interactiveRegex = /(<!--\\s*INTERACTIVE_WORD_CHOICE:.*?-->|<!--\\s*INTERACTIVE_FILL_IN_BLANK:.*?-->)/g;
     const parts = lesson.content.split(interactiveRegex);
 
     return parts.map((part, index) => {
-      const wordChoiceMatch = /<!--\s*INTERACTIVE_WORD_CHOICE:\s*OPTIONS=\[(.*?)\]\s*-->/.exec(part);
+      const wordChoiceMatch = /<!--\\s*INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]\\s*-->/.exec(part);
       if (wordChoiceMatch) {
         const optionsString = wordChoiceMatch[1];
         const options = optionsString.split(';').map(opt => opt.trim());
@@ -235,7 +224,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         );
       }
 
-      const fillBlankMatch = /<!--\s*INTERACTIVE_FILL_IN_BLANK:\s*\[(.*?)\]\s*-->/.exec(part);
+      const fillBlankMatch = /<!--\\s*INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]\\s*-->/.exec(part);
       if (fillBlankMatch) {
         const optionsString = fillBlankMatch[1];
         const options = optionsString.split('|').map(opt => opt.trim());
