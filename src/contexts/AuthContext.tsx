@@ -19,7 +19,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockLessons } from '@/lib/mockData';
 
@@ -39,6 +39,7 @@ interface AuthContextType {
   saveInteractionProgress: (lessonId: string, interactionId: string) => Promise<void>;
   uncompleteInteraction: (lessonId: string, interactionId: string) => Promise<void>;
   resetLessonProgress: (lessonId: string) => Promise<void>;
+  isUpdatingProgress: boolean; // Para controlar o estado de loading de ações
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,6 +57,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   unlockedAchievements: ['ach1'],
   completedModules: [],
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
+  completedLessons: [], // Adicionado para consistência
 });
 
 
@@ -78,6 +80,7 @@ const loadGuestProfile = (): UserProfile => {
         completedExercises: profile.completedExercises || [],
         unlockedAchievements: profile.unlockedAchievements || ['ach1'],
         completedModules: profile.completedModules || [],
+        completedLessons: profile.completedLessons || [], // Adicionado para consistência
       };
     } catch (e) {
       console.error("Error parsing guest profile from localStorage", e);
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const { toast } = useToast();
 
   const updateUserProfile = useCallback(async (newProfileData: UserProfile) => {
@@ -105,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleProgressUpdate = useCallback(async (resultPromise: Promise<any>) => {
+    setIsUpdatingProgress(true);
     try {
       const result = await resultPromise;
       if (result.success && result.updatedProfile) {
@@ -134,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
         console.error("Erro ao manusear atualização de progresso:", error);
           toast({ title: "Erro Crítico", description: "Ocorreu um erro inesperado ao atualizar seu progresso.", variant: "destructive" });
+    } finally {
+      setIsUpdatingProgress(false);
     }
   }, [updateUserProfile, toast]);
   
@@ -170,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveInteractionProgress = useCallback(async (lessonId: string, interactionId: string) => {
     if (!userProfile) return;
-
+    setIsUpdatingProgress(true);
     const newProfile = JSON.parse(JSON.stringify(userProfile));
     const currentLessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
     
@@ -179,11 +186,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       newProfile.lessonProgress[lessonId] = currentLessonProgress;
       await updateUserProfile(newProfile);
     }
+    setIsUpdatingProgress(false);
   }, [userProfile, updateUserProfile]);
 
-  const uncompleteInteraction = useCallback(async (lessonId: string, interactionId: string) => {
+  const uncompleteInteraction = useCallback(async(lessonId: string, interactionId: string) => {
     if (!userProfile) return;
-
+    setIsUpdatingProgress(true);
     const newProfile = JSON.parse(JSON.stringify(userProfile));
     const lessonProgress = newProfile.lessonProgress[lessonId];
 
@@ -193,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         newProfile.lessonProgress[lessonId] = lessonProgress;
         await updateUserProfile(newProfile);
     }
+    setIsUpdatingProgress(false);
   }, [userProfile, updateUserProfile]);
   
   const completeLesson = useCallback(async (lessonId: string) => {
@@ -202,20 +211,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userProfile, handleProgressUpdate]);
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
-      if (!userProfile) return;
-
-      const lessonToReset = mockLessons.find(l => l.id === lessonId);
-      const wasCompleted = userProfile.lessonProgress[lessonId]?.completed || false;
-      const pointsToSubtract = wasCompleted ? (lessonToReset?.points || 0) : 0;
-
-      const newProfile = JSON.parse(JSON.stringify(userProfile));
-      
-      newProfile.points = Math.max(0, newProfile.points - pointsToSubtract);
-      newProfile.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
-
-      await updateUserProfile(newProfile);
-      toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lessonToReset?.title}".`});
-  }, [userProfile, updateUserProfile, toast]);
+    if (!userProfile) return;
+    const resultPromise = resetLessonProgressLogic(userProfile, lessonId);
+    await handleProgressUpdate(resultPromise);
+    // Adicionado toast específico para o reset
+    const lesson = mockLessons.find(l => l.id === lessonId);
+    toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lesson?.title}".`});
+  }, [userProfile, handleProgressUpdate, toast]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
     if (!userProfile || userProfile.completedExercises.includes(exerciseId)) return;
@@ -331,6 +333,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveInteractionProgress,
       uncompleteInteraction,
       resetLessonProgress,
+      isUpdatingProgress,
     }}>
       {children}
     </AuthContext.Provider>

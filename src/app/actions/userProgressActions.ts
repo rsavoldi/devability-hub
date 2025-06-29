@@ -25,6 +25,7 @@ function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId
     unlockedAchievements: ['ach1'],
     completedModules: [],
     roles: userId === "guest_user" ? ['guest'] : ['user'],
+    completedLessons: [], // Adicionado para consistência
   };
 }
 
@@ -78,11 +79,14 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
   if (!moduleToUpdate) {
     return { success: false, message: "Módulo para verificação não encontrado." };
   }
+  
+  // Usando os dados dos módulos que já incluem as lições e exercícios.
+  const lessonsInModule = moduleToUpdate.lessons || [];
+  const exercisesInModule = moduleToUpdate.exercises || [];
 
-  const allLessonsDone = moduleToUpdate.lessons.every(l => profile.lessonProgress[l.id]?.completed);
-  const exercisesForModule = mockExercises.filter(ex => ex.moduleId === moduleToUpdate.id);
-  const allExercisesDone = exercisesForModule.every(e => profile.completedExercises.includes(e.id));
-
+  const allLessonsDone = lessonsInModule.every(l => profile.lessonProgress[l.id]?.completed);
+  const allExercisesDone = exercisesInModule.every(e => profile.completedExercises.includes(e.id));
+  
   if (allLessonsDone && allExercisesDone && !profile.completedModules.includes(moduleId)) {
     return completeModuleLogic(profile, moduleId);
   }
@@ -238,4 +242,47 @@ export async function completeModuleLogic(
     unlockedAchievementsDetails: achievementCheck.unlockedDetails,
     pointsAdded: pointsForModule + achievementCheck.newPointsFromAchievements,
   };
+}
+
+
+export async function resetLessonProgressLogic(
+    currentProfile: UserProfile | null,
+    lessonId: string
+): Promise<UpdateResult> {
+    if (!lessonId) {
+        return { success: false, message: "ID da lição ausente." };
+    }
+
+    const lesson = mockLessons.find(l => l.id === lessonId);
+    if (!lesson) {
+        return { success: false, message: "Lição não encontrada." };
+    }
+
+    const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+    const lessonProgress = profileToUpdate.lessonProgress[lessonId];
+
+    // Se a lição não estava completa, não há o que redefinir em termos de pontos.
+    if (!lessonProgress || !lessonProgress.completed) {
+        profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
+        return { 
+            success: true, 
+            message: "Progresso da lição reiniciado.", 
+            updatedProfile: profileToUpdate,
+            pointsAdded: 0,
+        };
+    }
+    
+    // Subtrai os pontos apenas se a lição estava completa
+    const pointsToSubtract = lesson.points || 10;
+    profileToUpdate.points = Math.max(0, (profileToUpdate.points || 0) - pointsToSubtract);
+
+    // Reseta o progresso da lição
+    profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
+
+    return {
+        success: true,
+        message: `Progresso da lição "${lesson.title}" reiniciado. Você pode refazê-la para ganhar os pontos novamente.`,
+        updatedProfile: profileToUpdate,
+        pointsAdded: -pointsToSubtract, // Indica que pontos foram subtraídos
+    };
 }

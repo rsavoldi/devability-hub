@@ -17,6 +17,7 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
+import { Loader2 } from 'lucide-react';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -117,12 +118,13 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 const parseMarkdownForHTML = (text: string): string => {
   return text
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>');
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
 
@@ -287,7 +289,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompleted) return;
+    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted) return;
     setIsMarkingComplete(true);
     await completeLesson(lesson.id);
     setIsMarkingComplete(false);
@@ -317,14 +319,14 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const getButtonText = () => {
-    if (isMarkingComplete || isResetting) return "Processando...";
+    if (isUpdatingProgress) return "Processando...";
     if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
     return "Marcar como Concluída";
   };
 
   const getButtonEmoji = () => {
-    if (isMarkingComplete || isResetting) return <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span>;
+    if (isUpdatingProgress) return <Loader2 className="h-5 w-5 animate-spin" />;
     if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
     return <span role="img" aria-label="Finalizar">🏁</span>;
@@ -413,11 +415,11 @@ export function LessonView({ lesson }: LessonViewProps) {
               size="lg"
               className={cn(
                 "w-full max-w-xs sm:w-auto",
-                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
+                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600 cursor-not-allowed" :
                 (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+              disabled={isLessonAlreadyCompletedByProfile || isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)}
             >
                 {getButtonEmoji()}
                 {getButtonText()}
@@ -428,9 +430,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                     size="sm"
                     className="w-full max-w-xs sm:w-auto"
                     onClick={handleResetLesson}
-                    disabled={isResetting || isMarkingComplete}
+                    disabled={isUpdatingProgress}
                 >
-                    {isResetting ? <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span> : <span role="img" aria-label="Reiniciar">🔄</span>}
+                    {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
                     Reiniciar Lição
                 </Button>
             )}
@@ -453,4 +455,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
