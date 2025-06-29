@@ -127,9 +127,6 @@ export function LessonView({ lesson }: LessonViewProps) {
   const router = useRouter();
   const lessonUi = useLessonUi();
 
-  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
@@ -162,7 +159,8 @@ export function LessonView({ lesson }: LessonViewProps) {
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumber = lesson.id.replace(/^[a-z]+(\\d+)-l(\\d+)$/, '$1.$2'); 
+      const lessonNumberMatch = lesson.id.match(/^m(\d+)-l(\d+)$/);
+      const lessonNumber = lessonNumberMatch ? `${lessonNumberMatch[1]}.${lessonNumberMatch[2]}` : lesson.id;
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
@@ -195,107 +193,16 @@ export function LessonView({ lesson }: LessonViewProps) {
       }
     }
   }, [lesson]);
-
-  const processedContentElements = useMemo(() => {
-    if (lesson?.content) {
-      const elements: (string | JSX.Element)[] = [];
-      let lastIndex = 0;
-      let interactionCounter = 0;
-  
-      const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
-      const fillBlankRegexSource = "INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]";
-      const combinedRegex = new RegExp(
-        `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
-        "g"
-      );
-
-      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
-      const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
-  
-      let match;
-      combinedRegex.lastIndex = 0;
-  
-      while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
-        const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
-        interactionCounter++;
-  
-        if (match.index > lastIndex) {
-          elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
-        }
-  
-        if (match[2]) { // INTERACTIVE_WORD_CHOICE
-          const optionsString = match[2];
-          if (optionsString) {
-            const rawOptions = optionsString.split(';').map(opt => opt.trim()).filter(Boolean);
-            let correctAnswer = "";
-            const parsedOptions = rawOptions.map(opt => {
-              if (opt.startsWith('*')) {
-                correctAnswer = opt.substring(1).trim();
-                return correctAnswer;
-              }
-              return opt;
-            });
-  
-            if (parsedOptions.length > 0 && correctAnswer) {
-              elements.push(
-                <InteractiveWordChoice
-                  key={interactionId}
-                  lesson={lesson}
-                  interactionId={interactionId}
-                  options={parsedOptions}
-                  correctAnswer={correctAnswer}
-                  onCorrect={handleInteractionCorrect}
-                  onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
-                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
-                />
-              );
-            }
-          }
-        } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
-          const optionsString = match[4];
-          if (optionsString) {
-            const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(Boolean);
-            if (allOptions.length > 0) {
-              const correctAnswerFillIn = allOptions[0];
-              elements.push(
-                <InteractiveFillInBlank
-                  key={interactionId}
-                  lesson={lesson}
-                  interactionId={interactionId}
-                  options={allOptions}
-                  correctAnswer={correctAnswerFillIn}
-                  onCorrect={handleInteractionCorrect}
-                  onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
-                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
-                />
-              );
-            }
-          }
-        }
-        lastIndex = combinedRegex.lastIndex;
-      }
-  
-      if (lastIndex < contentWithoutGeneralComments.length) {
-        elements.push(contentWithoutGeneralComments.substring(lastIndex));
-      }
-      return elements;
-    }
-    return [];
-  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
   
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted || isMarkingComplete) return;
-    setIsMarkingComplete(true);
+    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted) return;
     await completeLesson(lesson.id);
   };
   
   const handleResetLesson = async () => {
-      setIsResetting(true);
+      if (isUpdatingProgress) return;
       await resetLessonProgress(lesson.id);
       lessonUi?.resetLesson(); 
-      setIsResetting(false);
   };
 
   if (authLoading || !lesson) {
@@ -315,7 +222,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const canComplete = allInteractionsCompleted || totalInteractiveElements === 0;
-  const isButtonDisabled = isLessonAlreadyCompletedByProfile || isMarkingComplete || isUpdatingProgress || !canComplete;
+  const isButtonDisabled = isLessonAlreadyCompletedByProfile || isUpdatingProgress || !canComplete;
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -394,7 +301,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
-            <Button
+             <Button
                 size="lg"
                 className={cn(
                   "w-full max-w-xs sm:w-auto",
@@ -405,9 +312,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                 disabled={isButtonDisabled}
                 variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
              >
-                {isUpdatingProgress || isMarkingComplete ? (
+                {isUpdatingProgress ? (
                     <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Processando...
                     </>
                 ) : isLessonAlreadyCompletedByProfile ? (
@@ -433,9 +340,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                     size="sm"
                     className="w-full max-w-xs sm:w-auto"
                     onClick={handleResetLesson}
-                    disabled={isUpdatingProgress || isResetting}
+                    disabled={isUpdatingProgress}
                 >
-                    {isUpdatingProgress || isResetting ? <Loader2 className="h-5 w-5 animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
+                    {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
                     Reiniciar Lição
                 </Button>
             )}
@@ -458,4 +365,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
