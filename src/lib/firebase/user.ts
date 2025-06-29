@@ -30,6 +30,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         unlockedAchievements: fetchedData.unlockedAchievements || [],
         completedModules: fetchedData.completedModules || [],
         roles: fetchedData.roles || ['user'],
+        completedLessons: fetchedData.completedLessons || [],
       };
       return profile;
     } else {

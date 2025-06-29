@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
-import { mockLessons, mockUserProfile } from '@/lib/mockData';
+import { mockLessons } from '@/lib/mockData';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -56,7 +56,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   unlockedAchievements: ['ach1'],
   completedModules: [],
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
-  completedLessons: [], // Adicionado para consistência
+  completedLessons: [], 
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -68,8 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserProfile = useCallback(async (newProfileData: UserProfile) => {
       setUserProfile(newProfileData);
-      // No modo estático, a persistência é simulada via estado do React e recarregamento do mock.
-      // Em uma aplicação real, aqui seria a chamada para o Firestore/DB.
       if (newProfileData.id === GUEST_USER_ID) {
         if (typeof window !== 'undefined') {
             localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
@@ -128,10 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUserProfile(profile);
       } else {
-        // CORREÇÃO: Carrega o perfil do mock em vez de um perfil de convidado vazio.
-        // A cópia profunda garante que o estado não mute o arquivo original diretamente.
-        const initialProfile = JSON.parse(JSON.stringify(mockUserProfile));
-        setUserProfile(initialProfile);
+        let guestProfile: UserProfile | null = null;
+        if(typeof window !== 'undefined') {
+            const savedGuestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+            if(savedGuestProgress) {
+                guestProfile = JSON.parse(savedGuestProgress);
+            }
+        }
+        setUserProfile(guestProfile || createDefaultProfile(GUEST_USER_ID));
       }
       setLoading(false);
     });
@@ -144,9 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshedProfile = await getUserProfile(currentUser.uid);
       if(refreshedProfile) setUserProfile(refreshedProfile);
     } else {
-      // CORREÇÃO: Garante que o refresh também recarregue o perfil do mock.
-      const initialProfile = JSON.parse(JSON.stringify(mockUserProfile));
-      setUserProfile(initialProfile);
+        let guestProfile: UserProfile | null = null;
+        if(typeof window !== 'undefined') {
+            const savedGuestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+            if(savedGuestProgress) {
+                guestProfile = JSON.parse(savedGuestProgress);
+            }
+        }
+        setUserProfile(guestProfile || createDefaultProfile(GUEST_USER_ID));
     }
     setLoading(false);
   }, [currentUser]);
@@ -236,15 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const clearCurrentUserProgress = useCallback(async () => {
     if (userProfile) {
-      const resetProfile: UserProfile = {
-        ...userProfile, // Mantém ID, nome, avatar, etc.
-        points: 0,
-        lessonProgress: {},
-        completedExercises: [],
-        unlockedAchievements: ['ach1'], // Mantém a conquista inicial
-        completedModules: [],
-        completedLessons: [], // Reseta as lições completas
-      };
+      const resetProfile = createDefaultProfile(userProfile.id, userProfile.name, userProfile.email, userProfile.avatarUrl);
       await updateUserProfile(resetProfile);
       toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado com sucesso." });
     }
