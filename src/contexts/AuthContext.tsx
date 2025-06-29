@@ -1,4 +1,3 @@
-
 // src/contexts/AuthContext.tsx
 "use client";
 
@@ -21,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
-import { mockLessons } from '@/lib/mockData';
+import { mockLessons, mockUserProfile } from '@/lib/mockData';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -60,36 +59,6 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   completedLessons: [], // Adicionado para consistência
 });
 
-
-const loadGuestProfile = (): UserProfile => {
-  if (typeof window === 'undefined') {
-    return createDefaultProfile(GUEST_USER_ID);
-  }
-  const storedProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-  if (storedProfileRaw) {
-    try {
-      const profile = JSON.parse(storedProfileRaw);
-      return {
-        id: GUEST_USER_ID,
-        name: profile.name || "Convidado(a)",
-        email: null,
-        avatarUrl: profile.avatarUrl,
-        roles: profile.roles || ['guest'],
-        points: profile.points || 0,
-        lessonProgress: profile.lessonProgress || {},
-        completedExercises: profile.completedExercises || [],
-        unlockedAchievements: profile.unlockedAchievements || ['ach1'],
-        completedModules: profile.completedModules || [],
-        completedLessons: profile.completedLessons || [], // Adicionado para consistência
-      };
-    } catch (e) {
-      console.error("Error parsing guest profile from localStorage", e);
-    }
-  }
-  return createDefaultProfile(GUEST_USER_ID);
-};
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -99,14 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUserProfile = useCallback(async (newProfileData: UserProfile) => {
       setUserProfile(newProfileData);
+      // No modo estático, a persistência é simulada via estado do React e recarregamento do mock.
+      // Em uma aplicação real, aqui seria a chamada para o Firestore/DB.
       if (newProfileData.id === GUEST_USER_ID) {
         if (typeof window !== 'undefined') {
             localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
         }
-      } else {
-          await saveUserProfileToFirestore(newProfileData.id, newProfileData);
+      } else if(currentUser) {
+          await saveUserProfileToFirestore(currentUser.uid, newProfileData);
       }
-  }, []);
+  }, [currentUser]);
 
   const handleProgressUpdate = useCallback(async (resultPromise: Promise<any>) => {
     setIsUpdatingProgress(true);
@@ -157,7 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUserProfile(profile);
       } else {
-        setUserProfile(loadGuestProfile());
+        // CORREÇÃO: Carrega o perfil do mock em vez de um perfil de convidado vazio.
+        // A cópia profunda garante que o estado não mute o arquivo original diretamente.
+        const initialProfile = JSON.parse(JSON.stringify(mockUserProfile));
+        setUserProfile(initialProfile);
       }
       setLoading(false);
     });
@@ -170,7 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshedProfile = await getUserProfile(currentUser.uid);
       if(refreshedProfile) setUserProfile(refreshedProfile);
     } else {
-      setUserProfile(loadGuestProfile());
+      // CORREÇÃO: Garante que o refresh também recarregue o perfil do mock.
+      const initialProfile = JSON.parse(JSON.stringify(mockUserProfile));
+      setUserProfile(initialProfile);
     }
     setLoading(false);
   }, [currentUser]);
@@ -214,7 +190,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userProfile) return;
     const resultPromise = resetLessonProgressLogic(userProfile, lessonId);
     await handleProgressUpdate(resultPromise);
-    // Adicionado toast específico para o reset
     const lesson = mockLessons.find(l => l.id === lessonId);
     toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lesson?.title}".`});
   }, [userProfile, handleProgressUpdate, toast]);
@@ -260,14 +235,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const clearCurrentUserProgress = useCallback(async () => {
-    if (typeof window !== 'undefined') {
-      const activeUserId = currentUser?.uid || GUEST_USER_ID;
-      const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
-      await updateUserProfile(defaultProfile);
-      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado." });
+    if (userProfile) {
+      const resetProfile: UserProfile = {
+        ...userProfile, // Mantém ID, nome, avatar, etc.
+        points: 0,
+        lessonProgress: {},
+        completedExercises: [],
+        unlockedAchievements: ['ach1'], // Mantém a conquista inicial
+        completedModules: [],
+        completedLessons: [], // Reseta as lições completas
+      };
+      await updateUserProfile(resetProfile);
+      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado com sucesso." });
     }
-  }, [currentUser, updateUserProfile, toast]);
-
+  }, [userProfile, updateUserProfile, toast]);
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
     setLoading(true);

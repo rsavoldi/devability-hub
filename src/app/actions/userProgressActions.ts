@@ -12,22 +12,7 @@ interface UpdateResult {
   pointsAdded?: number;
 }
 
-function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId: string): UserProfile {
-  if (currentProfile) return { ...currentProfile };
-  return {
-    id: userId,
-    name: userId === "guest_user" ? "Convidado(a)" : "Usuário Anônimo",
-    email: null,
-    avatarUrl: `https://placehold.co/100x100.png?text=${(userId === "guest_user" ? "C" : "U").charAt(0).toUpperCase()}`,
-    points: 0,
-    lessonProgress: {},
-    completedExercises: [],
-    unlockedAchievements: ['ach1'],
-    completedModules: [],
-    roles: userId === "guest_user" ? ['guest'] : ['user'],
-    completedLessons: [], // Adicionado para consistência
-  };
-}
+// REMOVED createDefaultProfileIfNeeded to centralize profile creation in AuthContext
 
 export async function checkAndUnlockAchievementsLogic(
   profile: UserProfile,
@@ -80,7 +65,6 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
     return { success: false, message: "Módulo para verificação não encontrado." };
   }
   
-  // Usando os dados dos módulos que já incluem as lições e exercícios.
   const lessonsInModule = moduleToUpdate.lessons || [];
   const exercisesInModule = moduleToUpdate.exercises || [];
 
@@ -96,7 +80,7 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
 
 
 export async function completeLessonLogic(
-  currentProfile: UserProfile | null,
+  currentProfile: UserProfile, // Changed to non-nullable
   lessonId: string
 ): Promise<UpdateResult> {
   if (!lessonId) {
@@ -108,7 +92,7 @@ export async function completeLessonLogic(
     return { success: false, message: "Lição ou módulo associado não encontrado." };
   }
 
-  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+  const profileToUpdate = { ...currentProfile }; // Use a copy
   const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
 
   if (lessonProgress.completed) {
@@ -153,7 +137,7 @@ export async function completeLessonLogic(
 }
 
 export async function completeExerciseLogic(
-  currentProfile: UserProfile | null,
+  currentProfile: UserProfile, // Changed to non-nullable
   exerciseId: string
 ): Promise<UpdateResult> {
   if (!exerciseId) {
@@ -165,7 +149,7 @@ export async function completeExerciseLogic(
     return { success: false, message: "Exercício ou módulo associado não encontrado." };
   }
 
-  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+  const profileToUpdate = { ...currentProfile }; // Use a copy
 
   if (profileToUpdate.completedExercises.includes(exerciseId)) {
      return { success: true, message: "Exercício já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
@@ -207,7 +191,7 @@ export async function completeExerciseLogic(
 }
 
 export async function completeModuleLogic(
-  currentProfile: UserProfile | null,
+  currentProfile: UserProfile, // Changed to non-nullable
   moduleId: string
 ): Promise<UpdateResult> {
   if (!moduleId) {
@@ -218,15 +202,12 @@ export async function completeModuleLogic(
     return { success: false, message: "Módulo não encontrado."};
   }
 
-  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+  const profileToUpdate = { ...currentProfile }; // Use a copy
 
   if (profileToUpdate.completedModules.includes(moduleId)) {
     return { success: true, message: "Módulo já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
 
-  // A verificação se todas as lições/exercícios estão completos deve acontecer *antes* de chamar esta função.
-  // Esta função agora assume que a condição de conclusão foi satisfeita.
-  
   profileToUpdate.completedModules = [...new Set([...profileToUpdate.completedModules, moduleId])];
   const pointsForModule = 50;
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForModule;
@@ -244,9 +225,8 @@ export async function completeModuleLogic(
   };
 }
 
-
 export async function resetLessonProgressLogic(
-    currentProfile: UserProfile | null,
+    currentProfile: UserProfile, // Changed to non-nullable
     lessonId: string
 ): Promise<UpdateResult> {
     if (!lessonId) {
@@ -258,10 +238,9 @@ export async function resetLessonProgressLogic(
         return { success: false, message: "Lição não encontrada." };
     }
 
-    const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+    const profileToUpdate = { ...currentProfile }; // Use a copy
     const lessonProgress = profileToUpdate.lessonProgress[lessonId];
 
-    // Se a lição não estava completa, não há o que redefinir em termos de pontos.
     if (!lessonProgress || !lessonProgress.completed) {
         profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
         return { 
@@ -272,17 +251,18 @@ export async function resetLessonProgressLogic(
         };
     }
     
-    // Subtrai os pontos apenas se a lição estava completa
     const pointsToSubtract = lesson.points || 10;
     profileToUpdate.points = Math.max(0, (profileToUpdate.points || 0) - pointsToSubtract);
 
-    // Reseta o progresso da lição
     profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
+
+    // Also remove from completedLessons if it's there
+    profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter(id => id !== lessonId);
 
     return {
         success: true,
         message: `Progresso da lição "${lesson.title}" reiniciado. Você pode refazê-la para ganhar os pontos novamente.`,
         updatedProfile: profileToUpdate,
-        pointsAdded: -pointsToSubtract, // Indica que pontos foram subtraídos
+        pointsAdded: -pointsToSubtract,
     };
 }
