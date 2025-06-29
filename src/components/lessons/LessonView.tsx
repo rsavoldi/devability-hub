@@ -24,7 +24,7 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  // Regex atualizada para priorizar ***, depois **, depois *
+  // Regex atualizada para priorizar ***, depois **, depois *, e considerar parênteses
   const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -49,8 +49,7 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     } 
     // Lida com itálico: *texto*
     else if (matchedText.startsWith('*')) {
-       // Verifica os caracteres ao redor para evitar itálico incorreto (ex: no meio de palavras)
-       // Agora inclui parênteses nos caracteres permitidos ao redor.
+       // Permite que o itálico funcione mesmo dentro de parênteses
        const preChar = text[match.index - 1];
        const postChar = text[match.index + matchedText.length];
        if ((!preChar || /[\s.,:;?!()]/.test(preChar)) && (!postChar || /[\s.,:;?!()]/.test(postChar))) {
@@ -163,7 +162,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumber = lesson.id.replace(/^[a-z]+(\d+)-l(\d+)$/, '$1.$2'); // ex: "m1-l2" -> "1.2"
+      const lessonNumber = lesson.id.replace(/^[a-z]+(\\d+)-l(\\d+)$/, '$1.$2'); 
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
@@ -184,11 +183,10 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [completedInteractions.size, totalInteractiveElements]);
 
   const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
+    return totalInteractiveElements > 0 ? completedInteractions.size >= totalInteractiveElements : true;
   }, [totalInteractiveElements, completedInteractions]);
 
   useEffect(() => {
-    setIsMarkingComplete(false);
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
@@ -287,12 +285,10 @@ export function LessonView({ lesson }: LessonViewProps) {
     return [];
   }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
   
-
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted) return;
+    if (isLessonAlreadyCompletedByProfile || isUpdatingProgress || !allInteractionsCompleted || isMarkingComplete) return;
     setIsMarkingComplete(true);
     await completeLesson(lesson.id);
-    setIsMarkingComplete(false);
   };
   
   const handleResetLesson = async () => {
@@ -318,20 +314,8 @@ export function LessonView({ lesson }: LessonViewProps) {
     return title;
   };
   
-  const getButtonText = () => {
-    if (isUpdatingProgress) return "Processando...";
-    if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
-    return "Marcar como Concluída";
-  };
-
-  const getButtonEmoji = () => {
-    if (isUpdatingProgress) return <Loader2 className="h-5 w-5 animate-spin" />;
-    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
-    return <span role="img" aria-label="Finalizar">🏁</span>;
-  }
-
+  const canComplete = allInteractionsCompleted || totalInteractiveElements === 0;
+  const isButtonDisabled = isLessonAlreadyCompletedByProfile || isMarkingComplete || isUpdatingProgress || !canComplete;
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -411,28 +395,47 @@ export function LessonView({ lesson }: LessonViewProps) {
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
             <Button
-              variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
-              size="lg"
-              className={cn(
-                "w-full max-w-xs sm:w-auto",
-                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600 cursor-not-allowed" :
-                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
-              )}
-              onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)}
-            >
-                {getButtonEmoji()}
-                {getButtonText()}
-            </Button>
+                size="lg"
+                className={cn(
+                  "w-full max-w-xs sm:w-auto",
+                  isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600 cursor-not-allowed" :
+                  !canComplete ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+                )}
+                onClick={handleMarkAsCompleted}
+                disabled={isButtonDisabled}
+                variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
+             >
+                {isUpdatingProgress || isMarkingComplete ? (
+                    <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Processando...
+                    </>
+                ) : isLessonAlreadyCompletedByProfile ? (
+                    <>
+                        <span role="img" aria-label="Concluído">✅</span>
+                        Lição Concluída
+                    </>
+                ) : !canComplete ? (
+                    <>
+                        <span role="img" aria-label="Bloqueado">🔒</span>
+                        Complete as Interações
+                    </>
+                ) : (
+                    <>
+                        <span role="img" aria-label="Finalizar">🏁</span>
+                        Marcar como Concluída
+                    </>
+                )}
+             </Button>
             {isLessonAlreadyCompletedByProfile && (
                 <Button
                     variant="outline"
                     size="sm"
                     className="w-full max-w-xs sm:w-auto"
                     onClick={handleResetLesson}
-                    disabled={isUpdatingProgress}
+                    disabled={isUpdatingProgress || isResetting}
                 >
-                    {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
+                    {isUpdatingProgress || isResetting ? <Loader2 className="h-5 w-5 animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
                     Reiniciar Lição
                 </Button>
             )}
@@ -455,3 +458,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
