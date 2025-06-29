@@ -24,6 +24,10 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
+  // Regex aprimorada para lidar com ***negrito e itálico*** e *itálico* dentro de parênteses.
+  // 1. Captura ***...*** (negrito e itálico)
+  // 2. Captura **...** (negrito)
+  // 3. Captura *...* (itálico), garantindo que não faça parte dos outros dois.
   const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -31,31 +35,27 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
   let match;
   
   while ((match = markdownRegex.exec(text)) !== null) {
+    // Adiciona o texto que veio antes da correspondência
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
     
     const matchedText = match[0];
-
     if (matchedText.startsWith('***')) {
-      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em>{matchedText.slice(3, -3)}</em></strong>);
-    } 
-    else if (matchedText.startsWith('**')) {
+      // Negrito e Itálico
+      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em className="font-semibold">{matchedText.slice(3, -3)}</em></strong>);
+    } else if (matchedText.startsWith('**')) {
+      // Apenas Negrito
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
-    } 
-    else if (matchedText.startsWith('*')) {
-       const preChar = text[match.index - 1];
-       const postChar = text[match.index + matchedText.length];
-       if ((!preChar || /[\s.,:;?!()]/.test(preChar)) && (!postChar || /[\s.,:;?!()]/.test(postChar))) {
-          parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
-       } else {
-         parts.push(matchedText);
-       }
+    } else if (matchedText.startsWith('*')) {
+      // Apenas Itálico
+      parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
     }
     
     lastIndex = markdownRegex.lastIndex;
   }
 
+  // Adiciona o restante do texto após a última correspondência
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
@@ -107,6 +107,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
   return outputParagraphs;
 };
 
+
 const parseMarkdownForHTML = (text: string): string => {
   return text
     .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
@@ -114,18 +115,22 @@ const parseMarkdownForHTML = (text: string): string => {
     .replace(/\*(.*?)\*/g, '<em>$1</em>');
 };
 
+
 export function LessonView({ lesson }: LessonViewProps) {
   const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
 
+  const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
+  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
+  
   const completedInteractions = useMemo(() => {
     return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
   }, [userProfile, lesson.id]);
-
-  const totalInteractiveElements = useMemo(() => {
-    return countInteractions(lesson.content);
-  }, [lesson.content]);
+  
+  const isLessonAlreadyCompletedByProfile = useMemo(() => {
+    return userProfile?.lessonProgress[lesson.id]?.completed || false;
+  }, [userProfile, lesson.id]);
 
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
@@ -139,16 +144,16 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [completedInteractions, uncompleteInteraction, lesson.id]);
   
+  const totalInteractiveElements = useMemo(() => {
+    return countInteractions(lesson.content);
+  }, [lesson.content]);
+
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
       const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumberMatch = lesson.id.match(/^(?:m(\d+)-)?l(\d+(?:\.\d+)*)$/);
-      let lessonNumber = lesson.id;
-      if(lessonNumberMatch){
-        const moduleNum = lessonNumberMatch[1];
-        const lessonNum = lessonNumberMatch[2];
-        lessonNumber = moduleNum ? `${moduleNum}.${lessonNum}`: lessonNum;
-      }
+      const lessonNumberMatch = lesson.id.match(/m(\d+)-l(\d+)/);
+      const lessonNumber = lessonNumberMatch ? `${lessonNumberMatch[1]}.${lessonNumberMatch[2]}` : lesson.id;
+      
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
@@ -157,26 +162,20 @@ export function LessonView({ lesson }: LessonViewProps) {
     };
   }, [lesson, userProfile, lessonUi, totalInteractiveElements]);
 
+
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
-    if (!userProfile) return { progressPercentage: 0, interactionsProgressText: "" };
-    const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
+    const completedCount = completedInteractions.size;
     const totalCount = totalInteractiveElements;
     const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const text = totalCount > 0
       ? `Interações concluídas: ${completedCount} de ${totalCount}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [userProfile, lesson.id, totalInteractiveElements]);
-
+  }, [completedInteractions.size, totalInteractiveElements]);
 
   const allInteractionsCompleted = useMemo(() => {
-    if (!userProfile) return false;
-    const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-    return totalInteractiveElements > 0 ? completedCount >= totalInteractiveElements : true;
-  }, [totalInteractiveElements, userProfile, lesson.id]);
-
-  const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
-  const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
+    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
+  }, [totalInteractiveElements, completedInteractions]);
 
   useEffect(() => {
     if (lesson && allMockLessons && allMockLessons.length > 0) {
@@ -187,13 +186,99 @@ export function LessonView({ lesson }: LessonViewProps) {
       }
     }
   }, [lesson]);
+
+  const processedContentElements = useMemo(() => {
+    if (lesson?.content) {
+      const elements: (string | JSX.Element)[] = [];
+      let lastIndex = 0;
+      let interactionCounter = 0;
   
-  const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    return userProfile?.lessonProgress[lesson.id]?.completed || false;
-  }, [userProfile, lesson.id]);
+      const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
+      const fillBlankRegexSource = "INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]";
+      const combinedRegex = new RegExp(
+        `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
+        "g"
+      );
+
+      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
+      const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
+  
+      let match;
+      combinedRegex.lastIndex = 0;
+  
+      while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
+        const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
+        interactionCounter++;
+  
+        if (match.index > lastIndex) {
+          elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
+        }
+  
+        if (match[2]) { // INTERACTIVE_WORD_CHOICE
+          const optionsString = match[2];
+          if (optionsString) {
+            const rawOptions = optionsString.split(';').map(opt => opt.trim()).filter(Boolean);
+            let correctAnswer = "";
+            const parsedOptions = rawOptions.map(opt => {
+              if (opt.startsWith('*')) {
+                correctAnswer = opt.substring(1).trim();
+                return correctAnswer;
+              }
+              return opt;
+            });
+  
+            if (parsedOptions.length > 0 && correctAnswer) {
+              elements.push(
+                <InteractiveWordChoice
+                  key={interactionId}
+                  lesson={lesson}
+                  interactionId={interactionId}
+                  options={parsedOptions}
+                  correctAnswer={correctAnswer}
+                  onCorrect={handleInteractionCorrect}
+                  onUncomplete={handleInteractionUncomplete}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
+                />
+              );
+            }
+          }
+        } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
+          const optionsString = match[4];
+          if (optionsString) {
+            const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(Boolean);
+            if (allOptions.length > 0) {
+              const correctAnswerFillIn = allOptions[0];
+              elements.push(
+                <InteractiveFillInBlank
+                  key={interactionId}
+                  lesson={lesson}
+                  interactionId={interactionId}
+                  options={allOptions}
+                  correctAnswer={correctAnswerFillIn}
+                  onCorrect={handleInteractionCorrect}
+                  onUncomplete={handleInteractionUncomplete}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isLessonCompleted={isLessonAlreadyCompletedByProfile}
+                />
+              );
+            }
+          }
+        }
+        lastIndex = combinedRegex.lastIndex;
+      }
+  
+      if (lastIndex < contentWithoutGeneralComments.length) {
+        elements.push(contentWithoutGeneralComments.substring(lastIndex));
+      }
+      return elements;
+    }
+    return [];
+  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
+  
 
   const handleMarkAsCompleted = async () => {
-    if (isUpdatingProgress || !allInteractionsCompleted) return;
+    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress) return;
     await completeLesson(lesson.id);
   };
   
@@ -201,63 +286,6 @@ export function LessonView({ lesson }: LessonViewProps) {
       if (isUpdatingProgress) return;
       await resetLessonProgress(lesson.id);
   };
-  
-  const processedContentElements = useMemo(() => {
-    if (!lesson?.content) return [];
-    
-    const interactiveRegex = /(<!--\\s*INTERACTIVE_WORD_CHOICE:.*?-->|<!--\\s*INTERACTIVE_FILL_IN_BLANK:.*?-->)/g;
-    const parts = lesson.content.split(interactiveRegex);
-
-    return parts.map((part, index) => {
-      const wordChoiceMatch = /<!--\\s*INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]\\s*-->/.exec(part);
-      if (wordChoiceMatch) {
-        const optionsString = wordChoiceMatch[1];
-        const options = optionsString.split(';').map(opt => opt.trim());
-        const correctAnswer = options.find(opt => opt.startsWith('*'))?.substring(1) || '';
-        const cleanOptions = options.map(opt => opt.startsWith('*') ? opt.substring(1) : opt);
-        const interactionId = `wc-${lesson.id}-${index}`;
-        
-        return (
-          <InteractiveWordChoice
-            key={interactionId}
-            lesson={lesson}
-            options={cleanOptions}
-            correctAnswer={correctAnswer}
-            interactionId={interactionId}
-            onCorrect={handleInteractionCorrect}
-            onUncomplete={handleInteractionUncomplete}
-            isInteractionCompleted={completedInteractions.has(interactionId)}
-            isLessonCompleted={isLessonAlreadyCompletedByProfile}
-          />
-        );
-      }
-
-      const fillBlankMatch = /<!--\\s*INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]\\s*-->/.exec(part);
-      if (fillBlankMatch) {
-        const optionsString = fillBlankMatch[1];
-        const options = optionsString.split('|').map(opt => opt.trim());
-        const correctAnswer = options[0];
-        const interactionId = `fib-${lesson.id}-${index}`;
-
-        return (
-          <InteractiveFillInBlank
-            key={interactionId}
-            lesson={lesson}
-            options={options}
-            correctAnswer={correctAnswer}
-            interactionId={interactionId}
-            onCorrect={handleInteractionCorrect}
-            onUncomplete={handleInteractionUncomplete}
-            isInteractionCompleted={completedInteractions.has(interactionId)}
-            isLessonCompleted={isLessonAlreadyCompletedByProfile}
-          />
-        );
-      }
-
-      return part;
-    });
-  }, [lesson, completedInteractions, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile]);
-
 
   if (authLoading || !lesson) {
     return (
@@ -275,20 +303,19 @@ export function LessonView({ lesson }: LessonViewProps) {
     return title;
   };
   
-  const canComplete = allInteractionsCompleted || totalInteractiveElements === 0;
-  
-  const getButtonContent = () => {
-    if(isUpdatingProgress) {
-        return <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processando...</>;
-    }
-    if (isLessonAlreadyCompletedByProfile) {
-        return <>✅ Lição Concluída!</>;
-    }
-    if (!canComplete) {
-        return <>🔒 Complete as Interações</>;
-    }
-    return <>🏁 Marcar como Concluída</>;
+  const getButtonText = () => {
+    if (isUpdatingProgress) return "Processando...";
+    if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
+    return "Marcar como Concluída";
   };
+
+  const getButtonEmoji = () => {
+    if (isUpdatingProgress) return <Loader2 className="h-5 w-5 animate-spin" />;
+    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
+    return <span role="img" aria-label="Finalizar">🏁</span>;
+  }
 
 
   return (
@@ -368,19 +395,18 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
-             <Button
-                size="lg"
-                className={cn(
-                  "w-full max-w-xs sm:w-auto",
-                  isLessonAlreadyCompletedByProfile && "bg-green-500 hover:bg-green-600 cursor-not-allowed",
-                  !canComplete && !isLessonAlreadyCompletedByProfile && "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed"
-                )}
-                onClick={handleMarkAsCompleted}
-                disabled={isUpdatingProgress || isLessonAlreadyCompletedByProfile || !canComplete}
-                variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
-             >
-                {getButtonContent()}
-             </Button>
+            <Button
+              size="lg"
+              className={cn(
+                "w-full max-w-xs sm:w-auto",
+                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" : ""
+              )}
+              onClick={handleMarkAsCompleted}
+              disabled={isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress}
+            >
+                {getButtonEmoji()}
+                {getButtonText()}
+            </Button>
             {isLessonAlreadyCompletedByProfile && (
                 <Button
                     variant="outline"
@@ -412,3 +438,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
