@@ -24,10 +24,6 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  // Regex aprimorada para lidar com ***negrito e itálico*** e *itálico* dentro de parênteses.
-  // 1. Captura ***...*** (negrito e itálico)
-  // 2. Captura **...** (negrito)
-  // 3. Captura *...* (itálico), garantindo que não faça parte dos outros dois.
   const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -35,27 +31,22 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
   let match;
   
   while ((match = markdownRegex.exec(text)) !== null) {
-    // Adiciona o texto que veio antes da correspondência
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
     
     const matchedText = match[0];
     if (matchedText.startsWith('***')) {
-      // Negrito e Itálico
       parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em className="font-semibold">{matchedText.slice(3, -3)}</em></strong>);
     } else if (matchedText.startsWith('**')) {
-      // Apenas Negrito
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
     } else if (matchedText.startsWith('*')) {
-      // Apenas Itálico
       parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
     }
     
     lastIndex = markdownRegex.lastIndex;
   }
 
-  // Adiciona o restante do texto após a última correspondência
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
@@ -120,6 +111,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
+  const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
@@ -278,8 +270,16 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress) return;
-    await completeLesson(lesson.id);
+    if (isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress || isSubmittingCompletion) return;
+    
+    setIsSubmittingCompletion(true);
+    try {
+      await completeLesson(lesson.id);
+    } finally {
+      // O estado global isUpdatingProgress e a re-renderização por userProfile
+      // cuidarão do estado final do botão, mas resetamos o local para permitir um novo envio em caso de falha.
+      setIsSubmittingCompletion(false);
+    }
   };
   
   const handleResetLesson = async () => {
@@ -304,14 +304,14 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
   
   const getButtonText = () => {
-    if (isUpdatingProgress) return "Processando...";
+    if (isUpdatingProgress || isSubmittingCompletion) return "Processando...";
     if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
     return "Marcar como Concluída";
   };
 
   const getButtonEmoji = () => {
-    if (isUpdatingProgress) return <Loader2 className="h-5 w-5 animate-spin" />;
+    if (isUpdatingProgress || isSubmittingCompletion) return <Loader2 className="h-5 w-5 animate-spin" />;
     if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
     return <span role="img" aria-label="Finalizar">🏁</span>;
@@ -402,7 +402,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                 isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" : ""
               )}
               onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress}
+              disabled={isLessonAlreadyCompletedByProfile || !allInteractionsCompleted || isUpdatingProgress || isSubmittingCompletion}
             >
                 {getButtonEmoji()}
                 {getButtonText()}
@@ -438,4 +438,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
