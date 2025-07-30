@@ -203,7 +203,8 @@ export function LessonView({ lesson }: LessonViewProps) {
         "g"
       );
 
-      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
+      // @ts-ignore
+      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs; 
       const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
   
       let match;
@@ -298,7 +299,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     );
   }
 
-  const truncateTitle = (title: string, maxLength: number = 20) => {
+  const truncateTitle = (title: string, maxLength: number = 20): string => {
     if (title.length > maxLength) {
       return title.substring(0, maxLength) + "...";
     }

@@ -55,7 +55,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha1',
     title: 'Desenvolvimento Físico, Cognitivo, Social e Afetivo de crianças e adolescentes com deficiência.',
     order: 1,
-    emoji: '👶', 
+    emoji: '🧒🏾', 
     description: 'Explore o desenvolvimento integral de crianças e adolescentes com deficiência em suas múltiplas dimensões: física, cognitiva, social e afetiva, e as intervenções que promovem seu bem-estar e inclusão.',
     modules: [{
       id: 'mod-trilha1-0',
@@ -253,7 +253,7 @@ export const mockRoadmapData: RoadmapStep[] = [
     id: 'trilha12',
     title: 'Envelhecimento humano, funcionalidade, autonomia e qualidade de vida de pessoas idosas com deficiência e combate ao etarismo.',
     order: 12,
-    emoji: '🧑‍🦳', 
+    emoji: '🧓🏽', 
     description: 'Aborde o envelhecimento humano, funcionalidade, autonomia, qualidade de vida de pessoas idosas (incluindo aquelas com deficiência) e estratégias de combate ao etarismo.',
     modules: [{
       id: 'mod-trilha12-0',
