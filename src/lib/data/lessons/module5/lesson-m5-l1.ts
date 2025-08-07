@@ -53,7 +53,7 @@ Compreender esses fundamentos neurocientíficos permite que profissionais planej
   aiHint: 'neuropsicologia desenvolvimento cérebro plasticidade funções executivas períodos críticos gene-ambiente neurodiversidade ética', // Adicionado mais termos
   references: [
     "American Psychological Association (APA). (2020). *Multicultural Guidelines: An Ecological Approach to Context, Identity, and Intersectionality*. APA. (Para sensibilidade cultural)",
-    "Anderson, V., Northam, E., & De Luca, C. R. (2022). *Developmental neuropsychology: A clinical approach* (3rd ed.). Routledge. (Edição recente de manual de referência)",
+    "Anderson, V., Northam, E., & De Luca, C. R. (2022). *Developmental neuropsychology: A clinical approach* (3rd ed.). Routledge.",
     "Ardila, A. (2022). Cultural neuropsychology: The new and the old. *Journal of the International Neuropsychological Society, 28*(8), 789-798. <a href='https://doi.org/10.1017/S135561772100112X' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Boyd, L. A. (2022). Promoting neuroplasticity for motor recovery after stroke: a DOSE approach. *Current Opinion in Neurology, 35*(6), 705-710. <a href='https://journals.lww.com/co-neurology/Abstract/2022/12000/Promoting_neuroplasticity_for_motor_recovery.8.aspx' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Cardin, V., et al. (2020). Visual and Multisensory Brain Plasticity in the Deaf. *Frontiers in Human Neuroscience, 14*, 355. <a href='https://www.frontiersin.org/articles/10.3389/fnhum.2020.00355/full' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
