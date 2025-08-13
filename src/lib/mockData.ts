@@ -161,13 +161,13 @@ export const mockRoadmapData: RoadmapStep[] = [
   },
   {
     id: 'trilha7',
-    title: 'Pesquisa com Pessoas com Deficiência: Tópicos, Métodos e Ética.',
+    title: 'Pesquisa com pessoas com deficiência: Tópicos, Métodos e Ética.',
     order: 7,
     emoji: '🔍', 
     description: 'Explore temas de pesquisa, métodos de coleta e análise de dados (qualitativos, quantitativos e mistos), e as considerações éticas envolvidas na investigação científica sobre deficiência.',
     modules: [{
       id: 'mod-trilha7-0',
-      title: 'Pesquisa Científica em Deficiência: Métodos e Ética',
+      title: 'Pesquisa Científica com Pessoas com Deficiência: Métodos e Ética',
       order: 7,
       lessons: module7Lessons,
       exercises: module7Exercises,
@@ -197,7 +197,7 @@ export const mockRoadmapData: RoadmapStep[] = [
   },
   {
     id: 'trilha9',
-    title: 'Políticas e Processos de inclusão da pessoa com deficiência nos contextos educacionais, laborais e sociais.',
+    title: 'Políticas e processos de inclusão da pessoa com deficiência nos contextos educacionais, laborais e sociais.',
     order: 9,
     emoji: '🏛️', 
     description: 'Conheça as políticas e os processos que visam a inclusão de pessoas com deficiência em diversos contextos, como educação, trabalho e sociedade.',

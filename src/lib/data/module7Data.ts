@@ -17,7 +17,7 @@ export const module7Lessons: Lesson[] = [
   lessonM7L4,
   lessonM7L5,
   lessonM7L6,
-  lessonM7L7, // Nova lição adicionada
+  lessonM7L7, 
 ];
 
     
