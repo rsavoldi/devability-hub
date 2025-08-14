@@ -17,17 +17,16 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { Loader2, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface LessonViewProps {
   lesson: Lesson;
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*|`.*?`|\(\*.*?\*\))/g;
+  // Regex atualizada para incluir links no formato [texto](url)
+  const markdownRegex = /(\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  
   let match;
   
   while ((match = markdownRegex.exec(text)) !== null) {
@@ -36,24 +35,35 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     }
     
     const matchedText = match[0];
-    
-    if (matchedText.startsWith('***') && matchedText.endsWith('***')) {
-      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em className="font-semibold">{matchedText.slice(3, -3)}</em></strong>);
-    } 
-    else if (matchedText.startsWith('**') && matchedText.endsWith('**')) {
+
+    if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
-    }
-    else if (matchedText.startsWith('(*') && matchedText.endsWith('*)')) {
-         parts.push(<span key={`${baseKey}-p-i-start-${match.index}`}>(<em>{matchedText.slice(2, -2)}</em>)</span>);
-    }
-    else if (matchedText.startsWith('*') && matchedText.endsWith('*')) {
-      parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
-    } 
-    else if (matchedText.startsWith('`') && matchedText.endsWith('`')) {
-      parts.push(<code key={`${baseKey}-c-${match.index}`} className="font-mono text-sm bg-muted text-muted-foreground rounded px-1 py-0.5">{matchedText.slice(1, -1)}</code>);
-    }
-    else {
-      parts.push(matchedText);
+    } else if (matchedText.startsWith('*')) {
+       const preChar = text[match.index - 1];
+       const postChar = text[match.index + matchedText.length];
+       if ((!preChar || /\s|[.,:;?!]/.test(preChar)) && (!postChar || /\s|[.,:;?!]/.test(postChar))) {
+          parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
+       } else {
+         parts.push(matchedText);
+       }
+    } else if (matchedText.startsWith('[')) {
+      const linkRegex = /\[(.*?)\]\((.*?)\)/;
+      const linkMatch = matchedText.match(linkRegex);
+      if (linkMatch && linkMatch.length === 3) {
+        const linkText = linkMatch[1];
+        const linkUrl = linkMatch[2];
+        parts.push(
+          <a
+            key={`${baseKey}-a-${match.index}`}
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-medium"
+          >
+            {linkText}
+          </a>
+        );
+      }
     }
     
     lastIndex = markdownRegex.lastIndex;
@@ -113,38 +123,43 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 const parseMarkdownForHTML = (text: string): string => {
   return text
-    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`(.*?)`/g, '<code class="font-mono text-sm bg-muted text-muted-foreground rounded px-1 py-0.5">$1</code>');
+    .replace(/\[(.*?)\]\((.*?)\)/g, '&lt;a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium"&gt;$1&lt;/a&gt;');
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, isUpdatingProgress } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
-  
+
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
-  const lessonProgressData = useMemo(() => {
-    return userProfile?.lessonProgress[lesson.id] || { completed: false, completedInteractions: [] };
+  const completedInteractions = useMemo(() => {
+    return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
   }, [userProfile, lesson.id]);
   
-  const completedInteractions = useMemo(() => new Set(lessonProgressData.completedInteractions), [lessonProgressData]);
-  const isLessonAlreadyCompletedByProfile = useMemo(() => lessonProgressData.completed, [lessonProgressData]);
+  const isLessonAlreadyCompletedByProfile = useMemo(() => {
+    return userProfile?.lessonProgress[lesson.id]?.completed || false;
+  }, [userProfile, lesson.id]);
 
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
         await saveInteractionProgress(lesson.id, interactionId);
+        lessonUi?.incrementCompleted();
     }
-  }, [completedInteractions, saveInteractionProgress, lesson.id]);
+  }, [completedInteractions, saveInteractionProgress, lesson.id, lessonUi]);
 
   const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
     if(completedInteractions.has(interactionId)) {
         await uncompleteInteraction(lesson.id, interactionId);
+        lessonUi?.decrementCompleted();
     }
-  }, [completedInteractions, uncompleteInteraction, lesson.id]);
+  }, [completedInteractions, uncompleteInteraction, lesson.id, lessonUi]);
   
   const totalInteractiveElements = useMemo(() => {
     return countInteractions(lesson.content);
@@ -152,17 +167,15 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
-      const completedCount = completedInteractions.size;
-      const lessonNumberMatch = lesson.id.match(/m(\d+)-l(\d+)/);
-      const lessonNumber = lessonNumberMatch ? `${lessonNumberMatch[1]}.${lessonNumberMatch[2]}` : lesson.id;
-      
+      const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
+      const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
       lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
     }
 
     return () => {
       lessonUi?.resetLesson();
     };
-  }, [lesson, userProfile, lessonUi, completedInteractions, totalInteractiveElements]);
+  }, [lesson, userProfile, lessonUi, totalInteractiveElements]);
 
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
@@ -176,11 +189,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [completedInteractions.size, totalInteractiveElements]);
 
   const allInteractionsCompleted = useMemo(() => {
-    if (totalInteractiveElements === 0) return true; // If no interactions, lesson is ready to be completed.
-    return completedInteractions.size >= totalInteractiveElements;
+    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
   }, [totalInteractiveElements, completedInteractions]);
 
   useEffect(() => {
+    setIsMarkingComplete(false);
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
@@ -203,8 +216,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         "g"
       );
 
-      // @ts-ignore
-      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs; 
+      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
       const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
   
       let match;
@@ -280,14 +292,19 @@ export function LessonView({ lesson }: LessonViewProps) {
     return [];
   }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
   
+
   const handleMarkAsCompleted = async () => {
-    if (isUpdatingProgress || !allInteractionsCompleted || isLessonAlreadyCompletedByProfile) return;
+    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompleted) return;
+    setIsMarkingComplete(true);
     await completeLesson(lesson.id);
+    setIsMarkingComplete(false);
   };
   
   const handleResetLesson = async () => {
-      if (isUpdatingProgress || !isLessonAlreadyCompletedByProfile) return;
+      setIsResetting(true);
       await resetLessonProgress(lesson.id);
+      lessonUi?.resetLesson(); 
+      setIsResetting(false);
   };
 
   if (authLoading || !lesson) {
@@ -299,64 +316,25 @@ export function LessonView({ lesson }: LessonViewProps) {
     );
   }
 
-  const truncateTitle = (title: string, maxLength: number = 20): string => {
+  const truncateTitle = (title: string, maxLength: number = 20) => {
     if (title.length > maxLength) {
       return title.substring(0, maxLength) + "...";
     }
     return title;
   };
+  
+  const getButtonText = () => {
+    if (isMarkingComplete || isResetting) return "Processando...";
+    if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
+    return "Marcar como Concluída";
+  };
 
-  const renderFooterButtons = () => {
-    if (isLessonAlreadyCompletedByProfile) {
-      return (
-        <>
-          <Button size="lg" className="w-full sm:w-auto" disabled>
-            <CheckCircle className="mr-2 h-5 w-5" />
-            Lição Concluída!
-          </Button>
-          <Button 
-            variant="outline"
-            size="icon" 
-            onClick={handleResetLesson}
-            disabled={isUpdatingProgress}
-            aria-label="Reiniciar Lição"
-          >
-            {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
-          </Button>
-        </>
-      );
-    }
-
-    if (isUpdatingProgress) {
-       return (
-         <>
-            <Button size="lg" className="w-full sm:w-auto" disabled>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Processando...
-            </Button>
-            <Button variant="outline" size="icon" disabled aria-label="Reiniciar Lição">
-              <RefreshCw className="h-5 w-5" />
-            </Button>
-         </>
-       );
-    }
-
-    return (
-      <>
-        <Button
-            size="lg"
-            className="w-full sm:w-auto"
-            onClick={handleMarkAsCompleted}
-            disabled={!allInteractionsCompleted}
-        >
-          <span role="img" aria-label="Finalizar" className="mr-2">🏁</span>
-          {allInteractionsCompleted ? "Marcar como Concluída" : "Complete as Interações"}
-        </Button>
-        <Button variant="outline" size="icon" disabled aria-label="Reiniciar Lição">
-            <RefreshCw className="h-5 w-5" />
-        </Button>
-      </>
-    );
+  const getButtonEmoji = () => {
+    if (isMarkingComplete || isResetting) return <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span>;
+    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
+    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
+    return <span role="img" aria-label="Finalizar">🏁</span>;
   }
 
 
@@ -436,8 +414,33 @@ export function LessonView({ lesson }: LessonViewProps) {
             ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
 
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
-          {renderFooterButtons()}
+        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
+            <Button
+              variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
+              size="lg"
+              className={cn(
+                "w-full max-w-xs sm:w-auto",
+                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
+                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
+              )}
+              onClick={handleMarkAsCompleted}
+              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+            >
+                {getButtonEmoji()}
+                {getButtonText()}
+            </Button>
+            {isLessonAlreadyCompletedByProfile && (
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full max-w-xs sm:w-auto"
+                    onClick={handleResetLesson}
+                    disabled={isResetting || isMarkingComplete}
+                >
+                    {isResetting ? <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span> : <span role="img" aria-label="Reiniciar">🔄</span>}
+                    Reiniciar Lição
+                </Button>
+            )}
         </div>
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
