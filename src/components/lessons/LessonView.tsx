@@ -17,6 +17,7 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
+import { ArrowUpCircle } from 'lucide-react';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -125,7 +126,7 @@ const parseMarkdownForHTML = (text: string): string => {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\[(.*?)\]\((.*?)\)/g, '&lt;a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium"&gt;$1&lt;/a&gt;');
+    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">$1</a>');
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
@@ -135,6 +136,8 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
 
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
@@ -191,6 +194,22 @@ export function LessonView({ lesson }: LessonViewProps) {
   const allInteractionsCompleted = useMemo(() => {
     return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
   }, [totalInteractiveElements, completedInteractions]);
+  
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  useEffect(() => {
+    const checkScroll = () => {
+      if (window.scrollY > 300) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+    window.addEventListener('scroll', checkScroll);
+    return () => window.removeEventListener('scroll', checkScroll);
+  }, []);
 
   useEffect(() => {
     setIsMarkingComplete(false);
@@ -398,6 +417,17 @@ export function LessonView({ lesson }: LessonViewProps) {
             </>
           )}
       </Card>
+      
+      {showBackToTop && (
+        <Button
+          onClick={handleScrollToTop}
+          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full p-0 shadow-lg animate-in fade-in zoom-in-90"
+          aria-label="Voltar ao topo"
+          variant="secondary"
+        >
+          <ArrowUpCircle className="h-8 w-8" />
+        </Button>
+      )}
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-start">
