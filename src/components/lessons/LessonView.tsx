@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
@@ -24,29 +23,25 @@ interface LessonViewProps {
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  // Regex atualizada para incluir links no formato [texto](url)
-  const markdownRegex = /(\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))/g;
+  // Regex para Markdown: negrito-itálico (***), negrito (**), itálico (*), e links [texto](url)
+  const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match;
-  
+
   while ((match = markdownRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
-    
+
     const matchedText = match[0];
 
-    if (matchedText.startsWith('**')) {
+    if (matchedText.startsWith('***') && matchedText.endsWith('***')) {
+      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em >{matchedText.slice(3, -3)}</em></strong>);
+    } else if (matchedText.startsWith('**')) {
       parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
     } else if (matchedText.startsWith('*')) {
-       const preChar = text[match.index - 1];
-       const postChar = text[match.index + matchedText.length];
-       if ((!preChar || /\s|[.,:;?!]/.test(preChar)) && (!postChar || /\s|[.,:;?!]/.test(postChar))) {
-          parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
-       } else {
-         parts.push(matchedText);
-       }
+       parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
     } else if (matchedText.startsWith('[')) {
       const linkRegex = /\[(.*?)\]\((.*?)\)/;
       const linkMatch = matchedText.match(linkRegex);
@@ -64,7 +59,11 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
             {linkText}
           </a>
         );
+      } else {
+        parts.push(matchedText); // Fallback caso o regex do link falhe
       }
+    } else {
+      parts.push(matchedText); // Fallback para texto não reconhecido
     }
     
     lastIndex = markdownRegex.lastIndex;
@@ -124,6 +123,7 @@ const renderContentWithParagraphs = (elements: (string | JSX.Element)[], baseKey
 
 const parseMarkdownForHTML = (text: string): string => {
   return text
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline font-medium">$1</a>');
