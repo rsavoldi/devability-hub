@@ -1,44 +1,53 @@
 
-// src/lib/sounds.ts
-"use client";
+type Sound =
+  | 'achievementUnlock'
+  | 'exerciseCorrect'
+  | 'lessonComplete'
+  | 'moduleComplete'
+  | 'pointGain';
 
-interface SoundMap {
-  pointGain: string;
-  achievementUnlock: string;
-  // Adicionar novos sons conforme necessário
-  lessonComplete: string;
-  exerciseCorrect: string;
-  moduleComplete: string;
-}
-
-const soundFiles: SoundMap = {
-  pointGain: "/sounds/placeholder_point_gain.mp3",
-  // TODO: Add the actual placeholder_achievement_unlock.mp3 file to /public/sounds and uncomment the line below
-  // achievementUnlock: "/sounds/placeholder_achievement_unlock.mp3",
-  achievementUnlock: "", // Temporarily set to empty string or a known existing sound if you have one as a general fallback
-  lessonComplete: "/sounds/placeholder_lesson_complete.mp3",
-  exerciseCorrect: "/sounds/placeholder_exercise_correct.mp3",
-  moduleComplete: "/sounds/placeholder_module_complete.mp3",
+const sounds: { [key in Sound]: HTMLAudioElement | null } = {
+  achievementUnlock: null,
+  exerciseCorrect: null,
+  lessonComplete: null,
+  moduleComplete: null,
+  pointGain: null,
 };
 
-export function playSound(soundName: keyof SoundMap): void {
-  if (typeof window !== "undefined" && typeof Audio !== "undefined") {
-    const soundPath = soundFiles[soundName];
-    if (!soundPath) {
-      console.warn(`Sound "${soundName}" is not defined or path is empty.`);
-      return;
-    }
-    try {
-      const audio = new Audio(soundPath);
-      audio.play().catch(error => {
-        // Log a more specific warning if playing fails, e.g., due to browser restrictions or if the path was valid but file unplayable
-        console.warn(`Could not play sound "${soundName}" from path "${soundPath}":`, error);
-      });
-    } catch (error) {
-      console.error(`Error initializing Audio for sound "${soundName}":`, error);
-    }
-  } else {
-    console.warn("Audio playback not supported in this environment or Audio object is not available.");
-  }
-}
+const soundFiles: { [key in Sound]: string } = {
+  achievementUnlock: '/sounds/achievementUnlock.mp3',
+  exerciseCorrect: '/sounds/exerciseCorrect.mp3',
+  lessonComplete: '/sounds/lessonComplete.mp3',
+  moduleComplete: '/sounds/moduleComplete.mp3',
+  pointGain: '/sounds/exerciseCorrect.mp3',
+};
 
+const initializeAudio = (sound: Sound) => {
+  if (typeof window !== 'undefined' && !sounds[sound]) {
+    const audio = new Audio(soundFiles[sound]);
+    audio.preload = 'auto';
+    sounds[sound] = audio;
+  }
+};
+
+export const playSound = (sound: Sound) => {
+  if (typeof window !== 'undefined') {
+    if (!sounds[sound]) {
+      initializeAudio(sound);
+    }
+    
+    const audio = sounds[sound];
+    
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(error => console.error(`Error playing sound: ${sound}`, error));
+    }
+  }
+};
+
+// Pre-initialize sounds on module load
+if (typeof window !== 'undefined') {
+  (Object.keys(sounds) as Sound[]).forEach(key => {
+    initializeAudio(key);
+  });
+}

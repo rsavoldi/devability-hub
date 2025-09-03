@@ -26,11 +26,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         avatarUrl: fetchedData.avatarUrl,
         points: fetchedData.points || 0,
         lessonProgress: fetchedData.lessonProgress || {},
+        completedLessons: fetchedData.completedLessons || [],
         completedExercises: fetchedData.completedExercises || [],
         unlockedAchievements: fetchedData.unlockedAchievements || [],
         completedModules: fetchedData.completedModules || [],
         roles: fetchedData.roles || ['user'],
-        completedLessons: fetchedData.completedLessons || [],
       };
       return profile;
     } else {

@@ -17,7 +17,7 @@ import {
   updateProfile as updateFirebaseProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"
 import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
@@ -53,6 +53,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   avatarUrl: userAvatar || `https://placehold.co/100x100.png?text=${(userName || "G").charAt(0).toUpperCase()}`,
   points: 0,
   lessonProgress: {},
+  completedLessons: [],
   completedExercises: [],
   unlockedAchievements: ['ach1'],
   completedModules: [],
@@ -76,6 +77,7 @@ const loadGuestProfile = (): UserProfile => {
         roles: profile.roles || ['guest'],
         points: profile.points || 0,
         lessonProgress: profile.lessonProgress || {},
+        completedLessons: profile.completedLessons || [],
         completedExercises: profile.completedExercises || [],
         unlockedAchievements: profile.unlockedAchievements || ['ach1'],
         completedModules: profile.completedModules || [],
@@ -121,8 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             playSound('achievementUnlock');
             toast({
-              title: (<div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-amber-900" /> Conquista Desbloqueada! </div>),
-              description: `${ach.title} - ${ach.description}`,
+              title: "Conquista Desbloqueada!",
+              description: (
+                <div className="flex items-center">
+                  <Trophy className="h-5 w-5 mr-2 text-amber-900" />
+                  <span>{ach.title} - {ach.description}</span>
+                </div>
+              ),
               variant: "achievement",
             });
           }, 100);
@@ -194,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const lessonProgress = newProfile.lessonProgress[lessonId];
 
     if (lessonProgress) {
-        lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter(id => id !== interactionId);
+        lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
         lessonProgress.completed = false; // Se uma interação é desfeita, a lição não pode mais ser considerada completa
         newProfile.lessonProgress[lessonId] = lessonProgress;
         await updateUserProfile(newProfile);
@@ -218,6 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       newProfile.points = Math.max(0, newProfile.points - pointsToSubtract);
       newProfile.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
+      // Also remove from completedLessons array if it exists
+      newProfile.completedLessons = newProfile.completedLessons.filter((id: string) => id !== lessonId);
 
       await updateUserProfile(newProfile);
       setIsUpdatingProgress(false);
