@@ -61,26 +61,50 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     setParentTrilha(foundTrilha);
     setTimeout(() => setIsLoading(false), 300);
   }, [moduleId, moduleLessons, moduleExercises]);
-
-  const { moduleProgress, allItemsCompleted } = useMemo(() => {
-    if (!userProfile || !module) {
-      return { moduleProgress: 0, allItemsCompleted: false };
+  
+  const getLessonProgress = useCallback((lessonId: string, lessonContent: string): number => {
+    if (!userProfile) return 0;
+    const progress = userProfile.lessonProgress[lessonId];
+    if (progress?.completed) return 100;
+    
+    const totalInteractions = countInteractions(lessonContent);
+    if (totalInteractions === 0) {
+      // If a lesson has no interactions, it's completed when marked as such.
+      // For progress calculation, we can consider it 100% if completed, 0% otherwise.
+      return userProfile.completedLessons.includes(lessonId) ? 100 : 0;
     }
-
-    const totalModuleLessons = module.lessons?.length || 0;
-    const completedLessonsCount = module.lessons?.filter(l => userProfile.lessonProgress[l.id]?.completed).length || 0;
     
-    const totalModuleExercises = module.exercises?.length || 0;
-    const completedExercisesCount = module.exercises?.filter(e => userProfile.completedExercises.includes(e.id)).length || 0;
+    const completedCount = progress?.completedInteractions.length || 0;
+    return Math.round((completedCount / totalInteractions) * 100);
+  }, [userProfile]);
 
-    const totalModuleItems = totalModuleLessons + totalModuleExercises;
-    if (totalModuleItems === 0) return { moduleProgress: 0, allItemsCompleted: true };
-
-    const completedItems = completedLessonsCount + completedExercisesCount;
-    const progress = Math.round((completedItems / totalModuleItems) * 100);
-    
-    return { moduleProgress: progress, allItemsCompleted: completedItems === totalModuleItems };
-  }, [module, userProfile]);
+  const { moduleProgress, lessonsOnlyProgress, allItemsCompleted } = useMemo(() => {
+    if (!userProfile || !module || !module.lessons || !module.exercises) {
+      return { moduleProgress: 0, lessonsOnlyProgress: 0, allItemsCompleted: false };
+    }
+  
+    const totalLessons = module.lessons.length;
+    const totalExercises = module.exercises.length;
+  
+    const completedLessonsCount = module.lessons.filter(l => getLessonProgress(l.id, l.content) === 100).length;
+    const lessonsProgressPercentage = totalLessons > 0 ? Math.round((completedLessonsCount / totalLessons) * 100) : 0;
+  
+    const completedExercisesCount = module.exercises.filter(e => userProfile.completedExercises.includes(e.id)).length;
+    const exercisesProgressPercentage = totalExercises > 0 ? Math.round((completedExercisesCount / totalExercises) * 100) : 0;
+  
+    const totalItems = totalLessons + totalExercises;
+    const progressPercentage = totalItems > 0
+      ? Math.round(((completedLessonsCount + completedExercisesCount) / totalItems) * 100)
+      : 0;
+  
+    const allItemsCompleted = progressPercentage === 100;
+  
+    return {
+      moduleProgress: progressPercentage,
+      lessonsOnlyProgress: lessonsProgressPercentage,
+      allItemsCompleted,
+    };
+  }, [module, userProfile, getLessonProgress]);
 
   const moduleIsCompletedByProfile = useMemo(() => {
     if (!userProfile || !module) return false;
@@ -91,20 +115,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     if (moduleIsCompletedByProfile || isUpdatingProgress || !allItemsCompleted || !module) return;
     await completeModule(module.id);
   };
-
-  const getLessonProgress = useCallback((lessonId: string, lessonContent: string): number => {
-    if (!userProfile) return 0;
-    const progress = userProfile.lessonProgress[lessonId];
-    if (progress?.completed) return 100;
-    
-    const totalInteractions = countInteractions(lessonContent);
-    if (totalInteractions === 0) {
-      return progress?.completed ? 100 : 0;
-    }
-    
-    const completedCount = progress?.completedInteractions.length || 0;
-    return Math.round((completedCount / totalInteractions) * 100);
-  }, [userProfile]);
 
   if (isLoading || authLoading) {
     return (
@@ -147,7 +157,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           </CardDescription>
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm font-medium text-muted-foreground">Progresso do Módulo</span>
+              <span className="text-sm font-medium text-muted-foreground">Progresso Geral do Módulo</span>
               <Badge variant={moduleIsCompletedByProfile ? "default" : "secondary"} className={cn(moduleIsCompletedByProfile ? "bg-green-500 hover:bg-green-600" : "bg-secondary hover:bg-secondary/80")}>
                 {moduleProgress.toFixed(0)}% {moduleIsCompletedByProfile ? "Concluído" : ""}
               </Badge>
@@ -158,20 +168,30 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
 
         <CardContent className="p-6">
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center">
+            <h2 className="text-2xl font-semibold mb-2 flex items-center">
               <span role="img" aria-label="Livro Aberto" className="text-2xl mr-2">📖</span>
               Lições
             </h2>
+            
             {(module.lessons?.length || 0) > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {module.lessons.map(lesson => (
-                   <LessonItemCard 
-                      key={lesson.id} 
-                      lesson={lesson} 
-                      progress={getLessonProgress(lesson.id, lesson.content)}
-                    />
-                ))}
-              </div>
+              <>
+                <div className="mb-4 mt-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium text-muted-foreground">Progresso das Lições</span>
+                      <span className="text-sm font-semibold text-primary">{lessonsOnlyProgress.toFixed(0)}%</span>
+                    </div>
+                    <Progress value={lessonsOnlyProgress} aria-label={`${lessonsOnlyProgress.toFixed(0)}% de progresso das lições`} className="h-2" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mt-6">
+                  {module.lessons.map(lesson => (
+                     <LessonItemCard 
+                        key={lesson.id} 
+                        lesson={lesson} 
+                        progress={getLessonProgress(lesson.id, lesson.content)}
+                      />
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-muted-foreground">Nenhuma lição neste módulo ainda.</p>
             )}

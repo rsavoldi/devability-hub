@@ -12,7 +12,22 @@ interface UpdateResult {
   pointsAdded?: number;
 }
 
-// REMOVED createDefaultProfileIfNeeded to centralize profile creation in AuthContext
+function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId: string): UserProfile {
+  if (currentProfile) return { ...currentProfile };
+  return {
+    id: userId,
+    name: userId === "guest_user" ? "Convidado(a)" : "Usuário Anônimo",
+    email: null,
+    avatarUrl: `https://placehold.co/100x100.png?text=${(userId === "guest_user" ? "C" : "U").charAt(0).toUpperCase()}`,
+    points: 0,
+    lessonProgress: {},
+    completedLessons: [],
+    completedExercises: [],
+    unlockedAchievements: ['ach1'],
+    completedModules: [],
+    roles: userId === "guest_user" ? ['guest'] : ['user'],
+  };
+}
 
 export async function checkAndUnlockAchievementsLogic(
   profile: UserProfile,
@@ -23,9 +38,7 @@ export async function checkAndUnlockAchievementsLogic(
   let pointsFromAchievements = 0;
   const unlockedDetails: Array<Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded'>> = [];
 
-  const completedLessonIds = Object.keys(profile.lessonProgress).filter(
-    (lessonId) => profile.lessonProgress[lessonId].completed
-  );
+  const completedLessonIds = profile.completedLessons || [];
 
   mockAchievements.forEach(achievement => {
     if (!profile.unlockedAchievements.includes(achievement.id)) {
@@ -64,13 +77,11 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
   if (!moduleToUpdate) {
     return { success: false, message: "Módulo para verificação não encontrado." };
   }
-  
-  const lessonsInModule = moduleToUpdate.lessons || [];
-  const exercisesInModule = moduleToUpdate.exercises || [];
 
-  const allLessonsDone = lessonsInModule.every(l => profile.lessonProgress[l.id]?.completed);
-  const allExercisesDone = exercisesInModule.every(e => profile.completedExercises.includes(e.id));
-  
+  const allLessonsDone = moduleToUpdate.lessons.every(l => profile.completedLessons.includes(l.id));
+  const exercisesForModule = mockExercises.filter(ex => ex.moduleId === moduleToUpdate.id);
+  const allExercisesDone = exercisesForModule.every(e => profile.completedExercises.includes(e.id));
+
   if (allLessonsDone && allExercisesDone && !profile.completedModules.includes(moduleId)) {
     return completeModuleLogic(profile, moduleId);
   }
@@ -80,7 +91,7 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
 
 
 export async function completeLessonLogic(
-  currentProfile: UserProfile, // Changed to non-nullable
+  currentProfile: UserProfile | null,
   lessonId: string
 ): Promise<UpdateResult> {
   if (!lessonId) {
@@ -92,13 +103,16 @@ export async function completeLessonLogic(
     return { success: false, message: "Lição ou módulo associado não encontrado." };
   }
 
-  const profileToUpdate = { ...currentProfile }; // Use a copy
-  const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
-
-  if (lessonProgress.completed) {
+  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+  
+  if (profileToUpdate.completedLessons.includes(lessonId)) {
     return { success: true, message: "Lição já estava concluída.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
 
+  profileToUpdate.completedLessons = [...new Set([...profileToUpdate.completedLessons, lessonId])];
+  
+  // Set progress to 100%
+  const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
   lessonProgress.completed = true;
   profileToUpdate.lessonProgress = { ...profileToUpdate.lessonProgress, [lessonId]: lessonProgress };
   
@@ -137,7 +151,7 @@ export async function completeLessonLogic(
 }
 
 export async function completeExerciseLogic(
-  currentProfile: UserProfile, // Changed to non-nullable
+  currentProfile: UserProfile | null,
   exerciseId: string
 ): Promise<UpdateResult> {
   if (!exerciseId) {
@@ -149,7 +163,7 @@ export async function completeExerciseLogic(
     return { success: false, message: "Exercício ou módulo associado não encontrado." };
   }
 
-  const profileToUpdate = { ...currentProfile }; // Use a copy
+  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
 
   if (profileToUpdate.completedExercises.includes(exerciseId)) {
      return { success: true, message: "Exercício já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
@@ -191,7 +205,7 @@ export async function completeExerciseLogic(
 }
 
 export async function completeModuleLogic(
-  currentProfile: UserProfile, // Changed to non-nullable
+  currentProfile: UserProfile | null,
   moduleId: string
 ): Promise<UpdateResult> {
   if (!moduleId) {
@@ -202,12 +216,15 @@ export async function completeModuleLogic(
     return { success: false, message: "Módulo não encontrado."};
   }
 
-  const profileToUpdate = { ...currentProfile }; // Use a copy
+  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
 
   if (profileToUpdate.completedModules.includes(moduleId)) {
     return { success: true, message: "Módulo já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
 
+  // A verificação se todas as lições/exercícios estão completos deve acontecer *antes* de chamar esta função.
+  // Esta função agora assume que a condição de conclusão foi satisfeita.
+  
   profileToUpdate.completedModules = [...new Set([...profileToUpdate.completedModules, moduleId])];
   const pointsForModule = 50;
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForModule;
@@ -223,46 +240,4 @@ export async function completeModuleLogic(
     unlockedAchievementsDetails: achievementCheck.unlockedDetails,
     pointsAdded: pointsForModule + achievementCheck.newPointsFromAchievements,
   };
-}
-
-export async function resetLessonProgressLogic(
-    currentProfile: UserProfile, // Changed to non-nullable
-    lessonId: string
-): Promise<UpdateResult> {
-    if (!lessonId) {
-        return { success: false, message: "ID da lição ausente." };
-    }
-
-    const lesson = mockLessons.find(l => l.id === lessonId);
-    if (!lesson) {
-        return { success: false, message: "Lição não encontrada." };
-    }
-
-    const profileToUpdate = { ...currentProfile }; // Use a copy
-    const lessonProgress = profileToUpdate.lessonProgress[lessonId];
-
-    if (!lessonProgress || !lessonProgress.completed) {
-        profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
-        return { 
-            success: true, 
-            message: "Progresso da lição reiniciado.", 
-            updatedProfile: profileToUpdate,
-            pointsAdded: 0,
-        };
-    }
-    
-    const pointsToSubtract = lesson.points || 10;
-    profileToUpdate.points = Math.max(0, (profileToUpdate.points || 0) - pointsToSubtract);
-
-    profileToUpdate.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
-
-    // Also remove from completedLessons if it's there
-    profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter(id => id !== lessonId);
-
-    return {
-        success: true,
-        message: `Progresso da lição "${lesson.title}" reiniciado. Você pode refazê-la para ganhar os pontos novamente.`,
-        updatedProfile: profileToUpdate,
-        pointsAdded: -pointsToSubtract,
-    };
 }

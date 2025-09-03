@@ -19,7 +19,7 @@ export interface Module {
   lessons: Lesson[];
   exercises: Exercise[];
   isCompleted?: boolean;
-  roadmapIcon?: any;
+  roadmapIcon?: LucideIcon;
   progress?: number; // 0-100
 }
 
@@ -100,8 +100,8 @@ export interface UserProfile {
   avatarUrl?: string;
   points: number;
   lessonProgress: Record<string, LessonProgress>; // lessonId -> progress
-  completedLessons: string[];
   completedExercises: string[];
+  completedLessons: string[]; // Adicionado para rastrear lições 100% concluídas
   unlockedAchievements: string[];
   completedModules: string[];
   roles: string[];

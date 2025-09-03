@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 "use client";
 
@@ -18,7 +19,7 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockLessons } from '@/lib/mockData';
 
@@ -26,6 +27,7 @@ interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isUpdatingProgress: boolean;
   refreshUserProfile: () => void;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
@@ -38,7 +40,6 @@ interface AuthContextType {
   saveInteractionProgress: (lessonId: string, interactionId: string) => Promise<void>;
   uncompleteInteraction: (lessonId: string, interactionId: string) => Promise<void>;
   resetLessonProgress: (lessonId: string) => Promise<void>;
-  isUpdatingProgress: boolean; // Para controlar o estado de loading de ações
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,8 +57,36 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   unlockedAchievements: ['ach1'],
   completedModules: [],
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
-  completedLessons: [], 
 });
+
+
+const loadGuestProfile = (): UserProfile => {
+  if (typeof window === 'undefined') {
+    return createDefaultProfile(GUEST_USER_ID);
+  }
+  const storedProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+  if (storedProfileRaw) {
+    try {
+      const profile = JSON.parse(storedProfileRaw);
+      return {
+        id: GUEST_USER_ID,
+        name: profile.name || "Convidado(a)",
+        email: null,
+        avatarUrl: profile.avatarUrl,
+        roles: profile.roles || ['guest'],
+        points: profile.points || 0,
+        lessonProgress: profile.lessonProgress || {},
+        completedExercises: profile.completedExercises || [],
+        unlockedAchievements: profile.unlockedAchievements || ['ach1'],
+        completedModules: profile.completedModules || [],
+      };
+    } catch (e) {
+      console.error("Error parsing guest profile from localStorage", e);
+    }
+  }
+  return createDefaultProfile(GUEST_USER_ID);
+};
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
@@ -72,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (typeof window !== 'undefined') {
             localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
         }
-      } else if(currentUser) {
-          await saveUserProfileToFirestore(currentUser.uid, newProfileData);
+      } else {
+          await saveUserProfileToFirestore(newProfileData.id, newProfileData);
       }
-  }, [currentUser]);
+  }, []);
 
   const handleProgressUpdate = useCallback(async (resultPromise: Promise<any>) => {
     setIsUpdatingProgress(true);
@@ -126,14 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setUserProfile(profile);
       } else {
-        let guestProfile: UserProfile | null = null;
-        if(typeof window !== 'undefined') {
-            const savedGuestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-            if(savedGuestProgress) {
-                guestProfile = JSON.parse(savedGuestProgress);
-            }
-        }
-        setUserProfile(guestProfile || createDefaultProfile(GUEST_USER_ID));
+        setUserProfile(loadGuestProfile());
       }
       setLoading(false);
     });
@@ -146,14 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshedProfile = await getUserProfile(currentUser.uid);
       if(refreshedProfile) setUserProfile(refreshedProfile);
     } else {
-        let guestProfile: UserProfile | null = null;
-        if(typeof window !== 'undefined') {
-            const savedGuestProgress = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-            if(savedGuestProgress) {
-                guestProfile = JSON.parse(savedGuestProgress);
-            }
-        }
-        setUserProfile(guestProfile || createDefaultProfile(GUEST_USER_ID));
+      setUserProfile(loadGuestProfile());
     }
     setLoading(false);
   }, [currentUser]);
@@ -172,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsUpdatingProgress(false);
   }, [userProfile, updateUserProfile]);
 
-  const uncompleteInteraction = useCallback(async(lessonId: string, interactionId: string) => {
+  const uncompleteInteraction = useCallback(async (lessonId: string, interactionId: string) => {
     if (!userProfile) return;
     setIsUpdatingProgress(true);
     const newProfile = JSON.parse(JSON.stringify(userProfile));
@@ -189,28 +204,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const completeLesson = useCallback(async (lessonId: string) => {
     if (!userProfile || (userProfile.lessonProgress[lessonId]?.completed)) return;
-    const resultPromise = completeLessonLogic(userProfile, lessonId);
-    await handleProgressUpdate(resultPromise);
+    await handleProgressUpdate(completeLessonLogic(userProfile, lessonId));
   }, [userProfile, handleProgressUpdate]);
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
-    if (!userProfile) return;
-    const resultPromise = resetLessonProgressLogic(userProfile, lessonId);
-    await handleProgressUpdate(resultPromise);
-    const lesson = mockLessons.find(l => l.id === lessonId);
-    toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lesson?.title}".`});
-  }, [userProfile, handleProgressUpdate, toast]);
+      if (!userProfile) return;
+      setIsUpdatingProgress(true);
+      const lessonToReset = mockLessons.find(l => l.id === lessonId);
+      const wasCompleted = userProfile.lessonProgress[lessonId]?.completed || false;
+      const pointsToSubtract = wasCompleted ? (lessonToReset?.points || 0) : 0;
+
+      const newProfile = JSON.parse(JSON.stringify(userProfile));
+      
+      newProfile.points = Math.max(0, newProfile.points - pointsToSubtract);
+      newProfile.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
+
+      await updateUserProfile(newProfile);
+      setIsUpdatingProgress(false);
+      toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lessonToReset?.title}".`});
+  }, [userProfile, updateUserProfile, toast]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
     if (!userProfile || userProfile.completedExercises.includes(exerciseId)) return;
-    const resultPromise = completeExerciseLogic(userProfile, exerciseId);
-    await handleProgressUpdate(resultPromise);
+    await handleProgressUpdate(completeExerciseLogic(userProfile, exerciseId));
   }, [userProfile, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
     if (!userProfile || userProfile.completedModules.includes(moduleId)) return;
-    const resultPromise = completeModuleLogic(userProfile, moduleId);
-    await handleProgressUpdate(resultPromise);
+    await handleProgressUpdate(completeModuleLogic(userProfile, moduleId));
   }, [userProfile, handleProgressUpdate]);
 
   const signInWithGoogle = async () => {
@@ -242,12 +263,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const clearCurrentUserProgress = useCallback(async () => {
-    if (userProfile) {
-      const resetProfile = createDefaultProfile(userProfile.id, userProfile.name, userProfile.email, userProfile.avatarUrl);
-      await updateUserProfile(resetProfile);
-      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado com sucesso." });
+    if (typeof window !== 'undefined') {
+      setIsUpdatingProgress(true);
+      const activeUserId = currentUser?.uid || GUEST_USER_ID;
+      const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
+      await updateUserProfile(defaultProfile);
+      setIsUpdatingProgress(false);
+      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado." });
     }
-  }, [userProfile, updateUserProfile, toast]);
+  }, [currentUser, updateUserProfile, toast]);
+
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
     setLoading(true);
@@ -301,6 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentUser,
       userProfile,
       loading,
+      isUpdatingProgress,
       refreshUserProfile,
       signInWithGoogle,
       signOutFirebase,
@@ -313,7 +339,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveInteractionProgress,
       uncompleteInteraction,
       resetLessonProgress,
-      isUpdatingProgress,
     }}>
       {children}
     </AuthContext.Provider>

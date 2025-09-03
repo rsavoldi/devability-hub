@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legislação Inclusiva no Brasil: Guia Interativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #27272a; /* zinc-800 */
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 50%;
+            background-color: #f59e0b; /* amber-500 */
+            border: 4px solid #f8fafc; /* slate-50 */
+            left: -0.625rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            max-height: 450px;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="header" class="bg-slate-50/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-slate-800">Inclusão em Foco</h1>
+            <div class="hidden md:flex space-x-6">
+                <a href="#paradigmas" class="text-slate-600 hover:text-amber-600 transition-colors">Paradigmas</a>
+                <a href="#timeline" class="text-slate-600 hover:text-amber-600 transition-colors">Linha do Tempo</a>
+                <a href="#ferramentas" class="text-slate-600 hover:text-amber-600 transition-colors">Ferramentas</a>
+                <a href="#conceitos" class="text-slate-600 hover:text-amber-600 transition-colors">Conceitos-Chave</a>
+                <a href="#direitos" class="text-slate-600 hover:text-amber-600 transition-colors">Direitos</a>
+                <a href="#realidade" class="text-slate-600 hover:text-amber-600 transition-colors">Realidade</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-slate-800">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden px-6 pb-4 flex flex-col space-y-2">
+            <a href="#paradigmas" class="text-slate-600 hover:text-amber-600 transition-colors block">Paradigmas</a>
+            <a href="#timeline" class="text-slate-600 hover:text-amber-600 transition-colors block">Linha do Tempo</a>
+            <a href="#ferramentas" class="text-slate-600 hover:text-amber-600 transition-colors block">Ferramentas</a>
+            <a href="#conceitos" class="text-slate-600 hover:text-amber-600 transition-colors block">Conceitos-Chave</a>
+            <a href="#direitos" class="text-slate-600 hover:text-amber-600 transition-colors block">Direitos</a>
+            <a href="#realidade" class="text-slate-600 hover:text-amber-600 transition-colors block">Realidade</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="hero" class="bg-white py-20 md:py-32">
+            <div class="container mx-auto px-6 text-center">
+                <h2 class="text-4xl md:text-6xl font-bold text-slate-900 leading-tight">O Direito à Inclusão no Brasil</h2>
+                <p class="mt-4 text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">Um guia interativo pela legislação brasileira que fundamenta os direitos das pessoas com deficiência, sob uma ótica anticapacitista.</p>
+            </div>
+        </section>
+
+        <section id="paradigmas" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold text-slate-800">A Evolução dos Paradigmas</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">A forma como a sociedade enxerga a deficiência mudou radicalmente. Conheça os modelos que influenciaram a legislação e as políticas públicas ao longo do tempo.</p>
+                </div>
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex flex-wrap justify-center border-b border-slate-200 mb-8">
+                        <button data-paradigm="caridade" class="paradigm-btn px-4 py-3 font-semibold border-b-2 border-amber-500 text-amber-600">Modelo da Caridade</button>
+                        <button data-paradigm="medico" class="paradigm-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Modelo Médico</button>
+                        <button data-paradigm="social" class="paradigm-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Modelo Social</button>
+                    </div>
+                    <div id="paradigm-content-container">
+                        <!-- Conteúdo dos paradigmas será renderizado aqui pelo JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="timeline" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h3 class="text-3xl font-bold text-slate-800">Linha do Tempo dos Marcos Legais</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">A legislação brasileira sobre inclusão é fruto de décadas de luta. Navegue pela linha do tempo para conhecer os principais avanços que moldaram os direitos das pessoas com deficiência no país.</p>
+                </div>
+                <div id="timeline-container" class="relative max-w-3xl mx-auto border-l-4 border-slate-200 pl-8 space-y-16">
+                </div>
+            </div>
+        </section>
+
+        <section id="ferramentas" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold text-slate-800">Ferramentas Modernas de Avaliação</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">Para aplicar os direitos, é preciso avaliar a deficiência de forma justa e completa. O Brasil adotou modelos internacionais que usam uma abordagem biopsicossocial.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                         <h4 class="text-lg font-bold text-slate-800">CIF - Classificação Internacional de Funcionalidade</h4>
+                         <p class="text-slate-600 mt-2 text-sm flex-grow">Desenvolvida pela OMS, a CIF é um modelo que descreve a saúde e a funcionalidade em vez de focar na doença. Ela avalia como a condição de saúde interage com fatores ambientais e pessoais, impactando a participação social.</p>
+                         <a href="https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health" target="_blank" rel="noopener noreferrer" class="text-amber-600 hover:underline mt-4 text-sm font-semibold">Saiba mais na OMS →</a>
+                    </div>
+                     <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                         <h4 class="text-lg font-bold text-slate-800">IFBrA - Índice de Funcionalidade Brasileiro Aplicado</h4>
+                         <p class="text-slate-600 mt-2 text-sm flex-grow">É a ferramenta usada no Brasil, baseada na CIF, para a avaliação da deficiência para fins de acesso a benefícios como BPC/LOAS. Uma equipe multiprofissional avalia as barreiras que a pessoa enfrenta no seu dia a dia.</p>
+                         <a href="https://www.gov.br/trabalho-e-previdencia/pt-br/assuntos/previdencia-social/saude-e-seguranca-do-trabalhador/pericia-medica-federal/ifbra" target="_blank" rel="noopener noreferrer" class="text-amber-600 hover:underline mt-4 text-sm font-semibold">Ver manual do IFBrA →</a>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
+                         <h4 class="text-lg font-bold text-slate-800">IFBrM - Índice de Funcionalidade Brasileiro Modificado</h4>
+                         <p class="text-slate-600 mt-2 text-sm flex-grow">Uma versão adaptada do IFBrA, desenvolvida para ser utilizada em perícias judiciais. O IFBrM auxilia magistrados a tomarem decisões sobre a concessão de benefícios que dependem da comprovação da deficiência em juízo.</p>
+                         <a href="https://www.cjf.jus.br/cjf/noticias/2016/abril/manual-pratico-do-ifbrm-ja-esta-disponivel-para-download" target="_blank" rel="noopener noreferrer" class="text-amber-600 hover:underline mt-4 text-sm font-semibold">Acessar manual do CJF →</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="conceitos" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold text-slate-800">Desconstruindo o Capacitismo</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">Para lutar contra o preconceito, precisamos nomeá-lo. Conheça os conceitos fundamentais que a legislação utiliza para identificar e combater as diversas formas de discriminação.</p>
+                </div>
+                <div id="glossary-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+            </div>
+        </section>
+
+        <section id="direitos" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold text-slate-800">Direitos em Foco</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">A Lei Brasileira de Inclusão (LBI) e outras normas garantem direitos em diversas áreas da vida. Explore alguns dos principais eixos e entenda o que a lei assegura.</p>
+                </div>
+                <div class="max-w-5xl mx-auto">
+                    <div class="flex flex-wrap justify-center border-b border-slate-200 mb-8">
+                        <button data-tab="educacao" class="tab-btn px-4 py-3 font-semibold border-b-2 border-amber-500 text-amber-600">Educação</button>
+                        <button data-tab="trabalho" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Trabalho</button>
+                        <button data-tab="acessibilidade" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Acessibilidade</button>
+                        <button data-tab="saude" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Saúde</button>
+                        <button data-tab="transporte" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Transporte</button>
+                        <button data-tab="cultura" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-500 hover:text-amber-600">Cultura e Lazer</button>
+                    </div>
+                    <div id="rights-content-container">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="realidade" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h3 class="text-3xl font-bold text-slate-800">O Abismo entre a Lei e a Realidade</h3>
+                    <p class="mt-2 text-slate-600 max-w-2xl mx-auto">Apesar de termos uma das legislações mais avançadas do mundo, a efetivação dos direitos ainda é um desafio. A falta de fiscalização e o capacitismo estrutural criam um abismo entre o que está no papel e a vida real.</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg">
+                        <h4 class="text-xl font-bold text-center mb-2">Evolução do Cumprimento da Lei de Cotas</h4>
+                        <p class="text-center text-slate-600 mb-6">O percentual de vagas preenchidas tem crescido lentamente ao longo dos anos, mas ainda está longe do ideal, mostrando a dificuldade persistente das empresas em incluir e a necessidade de maior fiscalização.</p>
+                        <div class="chart-container">
+                            <canvas id="cotasChart"></canvas>
+                        </div>
+                         <p class="text-xs text-center mt-4 text-slate-500">Fonte: MTE, dados de 2018 a 2023. *Estimativa baseada em relatórios anuais.</p>
+                    </div>
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg">
+                        <h4 class="text-xl font-bold text-center mb-2">Matrículas no Ensino Superior</h4>
+                        <p class="text-center text-slate-600 mb-6">Embora o número de alunos com deficiência tenha crescido, sua representatividade no total de matrículas ainda é mínima, evidenciando as barreiras de acesso e permanência na educação superior.</p>
+                        <div class="chart-container">
+                            <canvas id="cotasEnsinoSuperiorChart"></canvas>
+                        </div>
+                        <p class="text-xs text-center mt-4 text-slate-500">Fonte: Censo da Educação Superior (INEP). *Valores aproximados para ilustração.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="futuro" class="py-20 bg-slate-800 text-white">
+            <div class="container mx-auto px-6 text-center">
+                <h3 class="text-3xl font-bold">Construindo um Futuro Anticapacitista</h3>
+                <p class="mt-4 text-slate-300 max-w-3xl mx-auto">O plano "Novo Viver Sem Limite" (2023-2026) estabelece metas claras para acelerar a inclusão. A fiscalização e o engajamento cívico são essenciais para transformar esses objetivos em realidade.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 max-w-4xl mx-auto text-left">
+                    <div class="bg-slate-700 p-6 rounded-lg">
+                        <h4 class="font-bold text-amber-400">Eixo: Gestão Inclusiva e Participativa</h4>
+                        <p class="text-slate-300 mt-2 text-sm">Fortalecer conselhos de direitos, ampliar a participação social e criar um sistema nacional de avaliação da deficiência para unificar critérios e facilitar o acesso a políticas públicas.</p>
+                    </div>
+                    <div class="bg-slate-700 p-6 rounded-lg">
+                        <h4 class="font-bold text-amber-400">Eixo: Combate à Violência e ao Capacitismo</h4>
+                        <p class="text-slate-300 mt-2 text-sm">Implementar canais de denúncia acessíveis, capacitar agentes públicos para o atendimento qualificado e promover campanhas de conscientização para desconstruir o capacitismo na sociedade.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-8">
+        <div class="container mx-auto px-6 text-center text-sm">
+            <p>Este site é uma ferramenta educacional interativa baseada no relatório "O Arcabouço Legal da Inclusão no Brasil".</p>
+            <p class="mt-2">Desenvolvido para fins de aprendizado e conscientização.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            const icons = {
+                good: `<svg class="w-5 h-5 text-green-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`,
+                bad: `<svg class="w-5 h-5 text-red-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`
+            };
+            
+            // --- Paradigms Section Logic ---
+            const paradigmData = {
+                caridade: {
+                    title: 'Modelo da Caridade / Religioso',
+                    description: 'Nesta visão histórica, a deficiência era vista como uma provação divina ou castigo. A pessoa com deficiência era marginalizada e dependia da caridade e da benevolência da sociedade, como visto nas Santas Casas de Misericórdia.',
+                    points: [
+                        { text: 'Posiciona a pessoa com deficiência como um objeto de caridade, incapaz e dependente.', type: 'bad' },
+                        { text: 'Leva à institucionalização em asilos e abrigos, segregando-os da sociedade.', type: 'bad' },
+                        { text: 'Não reconhece direitos, apenas a necessidade de assistência e piedade.', type: 'bad' }
+                    ]
+                },
+                medico: {
+                    title: 'Modelo Médico-Assistencialista',
+                    description: 'A deficiência é tratada como uma "doença" ou "problema" do indivíduo. O foco está na limitação corporal, buscando a "cura" ou a "reabilitação" para "normalizar" a pessoa, exemplificado pela criação de escolas especiais.',
+                    points: [
+                        { text: 'Posiciona a pessoa com deficiência como um paciente passivo.', type: 'bad' },
+                        { text: 'A responsabilidade pela "superação" das dificuldades recai sobre o indivíduo.', type: 'bad' },
+                        { text: 'Gera políticas de segregação e assistencialismo, em vez de inclusão.', type: 'bad' }
+                    ]
+                },
+                social: {
+                    title: 'Modelo Social e de Direitos Humanos',
+                    description: 'Aqui, a deficiência é o resultado da interação entre a pessoa e as barreiras impostas pela sociedade. A "incapacidade" não está no corpo, mas na estrutura social que exclui, como fundamentado na Convenção da ONU.',
+                    points: [
+                        { text: 'Redefine a deficiência como uma questão de direitos humanos e diversidade.', type: 'good' },
+                        { text: 'A responsabilidade pela inclusão é da sociedade, que deve eliminar as barreiras.', type: 'good' },
+                        { text: 'Fundamenta leis como a LBI e promove a acessibilidade e o desenho universal.', type: 'good' }
+                    ]
+                }
+            };
+
+            const paradigmContentContainer = document.getElementById('paradigm-content-container');
+            const paradigmBtns = document.querySelectorAll('.paradigm-btn');
+
+            function renderParadigmContent(paradigm) {
+                const data = paradigmData[paradigm];
+                const pointsHtml = data.points.map(p => `
+                    <li class="flex items-start">${icons[p.type]}<span>${p.text}</span></li>
+                `).join('');
+
+                paradigmContentContainer.innerHTML = `
+                    <div class="bg-white p-8 rounded-lg shadow-md animate-fade-in">
+                        <h4 class="text-2xl font-bold text-slate-800 mb-4">${data.title}</h4>
+                        <p class="text-slate-700 mb-4">${data.description}</p>
+                        <ul class="space-y-2">${pointsHtml}</ul>
+                    </div>
+                `;
+            }
+
+            paradigmBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    paradigmBtns.forEach(b => {
+                        b.classList.remove('border-amber-500', 'text-amber-600');
+                        b.classList.add('border-transparent', 'text-slate-500');
+                    });
+                    btn.classList.add('border-amber-500', 'text-amber-600');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                    renderParadigmContent(btn.dataset.paradigm);
+                });
+            });
+            renderParadigmContent('caridade');
+
+            // --- Timeline Section Logic ---
+            const timelineData = [
+                { type: 'era', title: 'Antiguidade à Idade Moderna: O Modelo da Prescindência e Caridade', description: 'Neste longo período, a deficiência era vista como um castigo divino ou algo inútil para a sociedade. A sobrevivência dependia da caridade e as pessoas com deficiência eram frequentemente marginalizadas ou escondidas.' },
+                { type: 'era', title: 'Séculos XVIII-XIX: O Modelo Médico e a Segregação', description: 'Período marcado pela visão da deficiência como uma doença a ser tratada e pela criação de instituições especializadas que, embora educacionais, promoviam a segregação.' },
+                { year: 1854, title: 'Criação do Imperial Instituto dos Meninos Cegos', description: 'Fundado por D. Pedro II, é um marco inicial na educação de pessoas com deficiência no Brasil. Hoje é o Instituto Benjamin Constant.', link: 'https://www.ibc.gov.br/a-instituicao/historico' },
+                { year: 1857, title: 'Criação do Imperial Instituto de Surdos-Mudos', description: 'Também fundado por D. Pedro II, foi a primeira escola para surdos da América Latina. Hoje é o Instituto Nacional de Educação de Surdos (INES).', link: 'https://www.ines.gov.br/historico/' },
+                { type: 'era', title: 'Século XX: O Modelo da Integração', description: 'Avanços ocorrem, com foco em "integrar" a pessoa com deficiência na sociedade, mas ainda com a expectativa de que ela se adapte às estruturas existentes, sem modificá-las. A educação especial em classes separadas é um exemplo dessa visão.' },
+                { year: 1961, title: 'Primeira LDB (Lei nº 4.024)', description: 'A primeira Lei de Diretrizes e Bases da Educação Nacional menciona o direito dos "excepcionais" à educação, preferencialmente dentro do sistema geral de ensino.', link: 'http://www.planalto.gov.br/ccivil_03/leis/l4024.htm' },
+                { type: 'era', title: 'Final do Século XX - Presente: O Modelo Social e a Luta pela Inclusão', description: 'Inaugurado pela Constituição de 1988 e consolidado pela Convenção da ONU, este é o paradigma atual. A deficiência é entendida como o resultado das barreiras sociais, e a luta é por uma sociedade que se adapte para incluir todas as pessoas.' },
+                { year: 1988, title: 'Constituição Federal', description: 'Estabelece os princípios da igualdade e da dignidade, além de direitos específicos como cotas no serviço público e acessibilidade, fundamentando todo o sistema de proteção.', link: 'http://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm' },
+                { year: 1989, title: 'Lei nº 7.853 (Apoio à Pessoa com Deficiência)', description: 'Lei fundamental que dispõe sobre o apoio às pessoas com deficiência, sua integração social, define a atuação do Ministério Público e tipifica crimes de preconceito.', link: 'http://www.planalto.gov.br/ccivil_03/leis/l7853.htm' },
+                { year: 1991, title: 'Lei de Cotas (Lei nº 8.213)', description: 'Obriga empresas com 100 ou mais funcionários a contratarem pessoas com deficiência ou reabilitados, em percentuais que variam de 2% a 5%.', link: 'http://www.planalto.gov.br/ccivil_03/leis/l8213cons.htm' },
+                { year: 1994, title: 'Declaração de Salamanca', description: 'Marco mundial da educação inclusiva, influenciou o Brasil a adotar políticas para garantir o acesso e a permanência de todos os alunos na escola regular, combatendo a segregação.', link: 'https://unesdoc.unesco.org/ark:/48223/pf0000098427_por' },
+                { year: 1996, title: 'Lei de Diretrizes e Bases da Educação (LDB)', description: 'Reforça o dever do Estado com a educação das pessoas com deficiência, preferencialmente na rede regular de ensino, e garante o Atendimento Educacional Especializado (AEE).', link: 'http://www.planalto.gov.br/ccivil_03/leis/l9394.htm' },
+                { year: 1999, title: 'Decreto nº 3.298', description: 'Regulamenta a Lei nº 7.853/89 e detalha a Política Nacional para a Integração da Pessoa com Deficiência, estabelecendo diretrizes para a inclusão.', link: 'http://www.planalto.gov.br/ccivil_03/decreto/d3298.htm' },
+                { year: 2000, title: 'Lei do Atendimento Prioritário (Lei nº 10.048)', description: 'Assegura atendimento prioritário a pessoas com deficiência, idosos, gestantes, lactantes e pessoas com crianças de colo em repartições públicas e empresas concessionárias de serviços públicos.', link: 'http://www.planalto.gov.br/ccivil_03/leis/l10048.htm' },
+                { year: 2000, title: 'Lei da Acessibilidade (Lei nº 10.098)', description: 'Estabelece normas gerais e critérios básicos para a promoção da acessibilidade das pessoas com deficiência ou com mobilidade reduzida, mediante a supressão de barreiras e de obstáculos.', link: 'http://www.planalto.gov.br/ccivil_03/leis/l10098.htm' },
+                { year: 2002, title: 'Reconhecimento da Libras (Lei nº 10.436)', description: 'Reconhece a Língua Brasileira de Sinais (Libras) como meio legal de comunicação e expressão da comunidade surda, um marco na luta por identidade linguística.', link: 'http://www.planalto.gov.br/ccivil_03/leis/2002/l10436.htm' },
+                { year: 2004, title: 'Decreto da Acessibilidade (Decreto nº 5.296)', description: 'Regulamenta as leis de acessibilidade (10.048 e 10.098), estabelecendo normas técnicas e critérios para a promoção da acessibilidade arquitetônica, nos transportes e na comunicação.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2004-2006/2004/decreto/d5296.htm' },
+                { year: 2005, title: 'Programa Incluir (MEC)', description: 'Instituído pelo Ministério da Educação, o programa visa promover a acessibilidade e a inclusão de pessoas com deficiência nas instituições federais de ensino superior.', link: 'http://portal.mec.gov.br/programa-incluir' },
+                { year: 2005, title: 'Decreto nº 5.626 (Regulamentação da Lei de Libras)', description: 'Detalha a inclusão da Libras no sistema educacional, a formação de intérpretes e garante o acesso à saúde para pessoas surdas.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2004-2006/2005/decreto/d5626.htm' },
+                { year: 2008, title: 'Convenção da ONU com Status Constitucional', description: 'O Brasil ratifica a Convenção da ONU sobre os Direitos das Pessoas com Deficiência com status de Emenda Constitucional, consolidando o modelo social da deficiência no país.', link: 'http://www.planalto.gov.br/ccivil_03/decreto/d6949.htm' },
+                { year: 2011, title: 'Plano Viver sem Limite', description: 'Primeiro plano interministerial com ações estratégicas em educação, saúde, inclusão social e acessibilidade para promover a autonomia das pessoas com deficiência.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/decreto/d7612.htm' },
+                { year: 2012, title: 'Lei de Cotas no Ensino Superior (Lei nº 12.711)', description: 'Institui a reserva de vagas em universidades federais para estudantes de escolas públicas, incluindo critérios para pessoas com deficiência, um marco para o acesso à educação superior.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12711.htm' },
+                { year: 2012, title: 'Lei Berenice Piana (Lei nº 12.764)', description: 'Institui a Política Nacional de Proteção dos Direitos da Pessoa com Transtorno do Espectro Autista (TEA), reconhecendo-a como pessoa com deficiência para todos os efeitos legais.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2012/lei/l12764.htm' },
+                { year: 2015, title: 'Lei Brasileira de Inclusão (LBI - Lei nº 13.146)', description: 'Conhecida como Estatuto da Pessoa com Deficiência, consolida e amplia direitos em todas as áreas (saúde, educação, trabalho, acessibilidade, capacidade civil), sendo a lei mais completa sobre o tema.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm' },
+                { year: 2016, title: 'Alteração na Lei de Cotas (Lei nº 13.409)', description: 'Altera a Lei nº 12.711/2012 para incluir, de forma explícita, as pessoas com deficiência no cálculo e na reserva de vagas das instituições federais de ensino.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2016/lei/l13409.htm' },
+                { year: 2020, title: 'Lei Romeo Mion (Lei nº 13.977)', description: 'Cria a Carteira de Identificação da Pessoa com Transtorno do Espectro Autista (Ciptea), facilitando a identificação e o acesso a direitos prioritários.', link: 'http://www.planalto.gov.br/ccivil_03/_ato2019-2022/2020/lei/l13977.htm' },
+                { year: 2021, title: 'Apoio a Alunos com Dislexia/TDAH (Lei nº 14.254)', description: 'Garante acompanhamento integral para educandos com dislexia, TDAH ou outro transtorno de aprendizagem, reforçando o dever da escola em oferecer apoio e adaptações.', link: 'https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14254.htm' },
+                { year: 2023, title: 'Lei do Cordão de Girassol (Lei nº 14.624)', description: 'Institui o uso do cordão de fita com desenhos de girassóis como símbolo nacional para a identificação de pessoas com deficiências ocultas, facilitando o suporte e o atendimento prioritário.', link: 'https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14624.htm' },
+                { year: 2023, title: 'Plano "Novo Viver Sem Limite"', description: 'Relança e atualiza a política nacional para os direitos da pessoa com deficiência, com ações interministeriais e foco no combate ao capacitismo.', link: 'https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/decreto/d11793.htm' },
+                { year: 2024, title: 'Plano Nacional de Educação (PNE 2024-2034)', description: 'O novo PNE estabelece metas para a educação inclusiva, incluindo a universalização do AEE para estudantes com deficiência e a formação de professores para a inclusão.', link: 'https://www.gov.br/mec/pt-br/assuntos/pne' },
+                { year: 2025, title: 'Lei nº 15.176 (Reconhece Fibromialgia como Deficiência)', description: 'Com vigência em 2026, reconhece a fibromialgia como deficiência para efeitos legais em todo o Brasil, garantindo acesso a políticas públicas como cotas em concursos e isenção fiscal.', link: 'https://normas.leg.br/?urn=urn:lex:br:federal:lei:2025-07-23;15176' }
+            ].sort((a, b) => (a.year || 0) - (b.year || 0));
+
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineData.forEach(item => {
+                const div = document.createElement('div');
+                if (item.type === 'era') {
+                    div.className = 'relative text-center';
+                    div.innerHTML = `<div class="inline-block bg-amber-100 text-amber-800 rounded-lg px-6 py-3 shadow-sm"><h3 class="text-xl font-bold">${item.title}</h3><p class="mt-2 text-sm max-w-2xl mx-auto">${item.description}</p></div>`;
+                } else {
+                    div.className = 'timeline-item relative';
+                    const titleHtml = item.link ? `<a href="${item.link}" target="_blank" rel="noopener noreferrer" class="hover:underline hover:text-amber-700 transition-colors">${item.title}</a>` : item.title;
+                    div.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md border border-slate-100"><span class="font-bold text-amber-600">${item.year}</span><h4 class="text-xl font-bold text-slate-800 mt-1">${titleHtml}</h4><p class="text-slate-600 mt-2">${item.description}</p></div>`;
+                }
+                timelineContainer.appendChild(div);
+            });
+
+            // --- Glossary Section Logic ---
+            const glossaryContainer = document.getElementById('glossary-container');
+            const glossaryData = [
+                { term: 'Capacitismo', definition: 'Discriminação contra pessoas com deficiência, baseada na crença de que corpos sem deficiência são o padrão e superiores. É um sistema de opressão.', example: 'Elogiar uma pessoa com deficiência por realizar uma tarefa cotidiana como um ato de "superação".' },
+                { term: 'Teoria Crip (Crip Theory)', definition: 'Uma perspectiva acadêmica radical que celebra a deficiência como identidade. Critica a pressão social pela "normalização" e questiona as noções de corpo "normal".', example: 'Analisar como filmes retratam a deficiência, expondo estereótipos que reforçam o capacitismo.' },
+                { term: 'Adaptações Razoáveis', definition: 'Modificações e ajustes necessários que não acarretem ônus desproporcional, para assegurar que a pessoa com deficiência possa gozar de seus direitos.', example: 'Flexibilizar o horário de um funcionário com doença crônica para que ele possa ir a consultas médicas.' },
+                { term: 'Barreiras Atitudinais', definition: 'Atitudes ou comportamentos que impedem a participação social, como estereótipos, preconceitos e estigmas. São a raiz de todas as outras barreiras.', example: 'Um recrutador que descarta um candidato qualificado por acreditar que sua deficiência o tornaria menos produtivo.' },
+                { term: 'Barreiras Tecnológicas', definition: 'Dificuldades ou impossibilidade de acesso a tecnologias da informação e comunicação (TICs).', example: 'Um aplicativo de banco que não funciona com leitores de tela, impedindo que uma pessoa cega faça transações.' },
+                { term: 'Desenho Universal', definition: 'Concepção de produtos, ambientes e serviços para serem usados por todas as pessoas, sem necessidade de adaptação específica.', example: 'Legendas em programas de TV, que beneficiam pessoas surdas, idosos, e quem está em um ambiente barulhento.' }
+            ];
+            glossaryData.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-6 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer';
+                div.innerHTML = `<h4 class="text-lg font-bold text-slate-800">${item.term}</h4><p class="text-slate-600 mt-2 text-sm">${item.definition}</p><p class="text-amber-700 bg-amber-100 rounded px-2 py-1 mt-4 text-xs font-semibold">Exemplo: ${item.example}</p>`;
+                glossaryContainer.appendChild(div);
+            });
+
+            // --- Rights Section Logic ---
+            const rightsContentContainer = document.getElementById('rights-content-container');
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const rightsData = {
+                educacao: { title: 'Educação Inclusiva', content: `A LBI garante um sistema educacional inclusivo em todos os níveis. É proibido que escolas recusem a matrícula de um estudante por sua deficiência ou cobrem valores adicionais por serviços de apoio, como a presença de um profissional de apoio escolar.`, icon: '🎓' },
+                trabalho: { title: 'Trabalho e Emprego', content: `Além de reforçar a Lei de Cotas, a LBI introduz o conceito de "adaptações razoáveis", o dever do empregador de modificar o ambiente de trabalho para garantir a participação do funcionário com deficiência. A discriminação no trabalho é crime.`, icon: '💼' },
+                acessibilidade: { title: 'Acessibilidade Universal', content: `A acessibilidade é um direito que permeia todas as áreas. A lei determina a remoção de barreiras em transportes, edificações, sites e serviços. O conceito vai além do físico, incluindo as dimensões comunicacional e atitudinal.`, icon: '♿' },
+                saude: { title: 'Saúde Integral', content: `A lei garante o acesso a uma rede de serviços de saúde integral e de qualidade, sem discriminação. Isso inclui não apenas o tratamento, mas também serviços de habilitação e reabilitação para promover a autonomia e a qualidade de vida.`, icon: '❤️' },
+                transporte: { title: 'Transporte e Mobilidade', content: `A LBI assegura o direito ao transporte e à mobilidade com segurança e autonomia. Frotas de transporte coletivo devem ser acessíveis, e são garantidas vagas de estacionamento reservadas, bem como o Passe Livre para pessoas com deficiência comprovadamente carentes.`, icon: '🚌'},
+                cultura: { title: 'Cultura e Lazer', content: `É garantido o acesso a cinemas, teatros, museus e eventos em igualdade de condições, incluindo o direito à meia-entrada extensivo ao acompanhante, se necessário. Os espaços devem oferecer recursos de acessibilidade como audiodescrição, Libras e legendas.`, icon: '🎭'}
+            };
+
+            function renderRightsContent(tab) {
+                const data = rightsData[tab];
+                rightsContentContainer.innerHTML = `<div class="bg-slate-50 p-8 rounded-lg shadow-inner animate-fade-in"><h4 class="text-2xl font-bold text-slate-800 flex items-center"><span class="text-3xl mr-3">${data.icon}</span> ${data.title}</h4><p class="mt-4 text-slate-700 leading-relaxed">${data.content}</p></div>`;
+            }
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => {
+                        b.classList.remove('border-amber-500', 'text-amber-600');
+                        b.classList.add('border-transparent', 'text-slate-500');
+                    });
+                    btn.classList.add('border-amber-500', 'text-amber-600');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+                    renderRightsContent(btn.dataset.tab);
+                });
+            });
+            renderRightsContent('educacao');
+
+            // --- Charts Logic ---
+            const cotasCtx = document.getElementById('cotasChart').getContext('2d');
+            new Chart(cotasCtx, {
+                type: 'bar',
+                data: { 
+                    labels: ['2018', '2020', '2022', '2023'], 
+                    datasets: [{ 
+                        label: '% de Vagas Preenchidas', 
+                        data: [48.1, 50.3, 51.2, 53.4], 
+                        backgroundColor: '#f59e0b', 
+                        borderColor: '#b45309', 
+                        borderWidth: 1 
+                    }] 
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { min: 40, max: 100 } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.raw.toFixed(1)}%` } } } }
+            });
+            
+            const cotasEnsinoSuperiorCtx = document.getElementById('cotasEnsinoSuperiorChart').getContext('2d');
+            new Chart(cotasEnsinoSuperiorCtx, {
+                type: 'line',
+                data: {
+                    labels: ['2018', '2019', '2020', '2021', '2022'],
+                    datasets: [
+                        { label: 'Matrículas PCD (em milhares)', data: [53, 59, 68, 77, 86], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.4, yAxisID: 'y' },
+                        { label: 'Total de Matrículas (em milhões)', data: [8.4, 8.6, 8.6, 8.9, 9.4], borderColor: '#a8a29e', backgroundColor: 'rgba(168, 162, 158, 0.2)', fill: false, tension: 0.4, yAxisID: 'y1' }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Alunos PCD (Milhares)' } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Total Alunos (Milhões)' }, grid: { drawOnChartArea: false } }
+                    }, 
+                    plugins: { legend: { position: 'top' } } 
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+

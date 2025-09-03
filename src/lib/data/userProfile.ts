@@ -9,6 +9,7 @@ export const mockUserProfile: UserProfile = {
   lessonProgress: {
     'm1-l1': { completed: true, completedInteractions: [] }
   },
+  completedLessons: ['m1-l1'],
   completedExercises: ['m1-e1.1.1'], // Exemplo de exercício completado
   unlockedAchievements: ['ach1', 'ach3'], // Conquistas iniciais e por completar 1 lição
   completedModules: [],

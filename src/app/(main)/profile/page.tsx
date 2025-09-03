@@ -26,7 +26,7 @@ export default function ProfilePage() {
       completedLessonsCount: 0,
       totalLessons: mockLessons.length,
       lessonProgress: 0,
-      completedExercisesCount: mockExercises.length,
+      completedExercisesCount: 0,
       totalExercises: mockExercises.length,
       exerciseProgress: 0,
       unlockedAchievementsCount: 0,
@@ -35,7 +35,7 @@ export default function ProfilePage() {
       userUnlockedAchievementDetails: []
     };
 
-    const completedLessonsCount = Object.values(userProfile.lessonProgress || {}).filter(p => p.completed).length;
+    const completedLessonsCount = userProfile.completedLessons?.length || 0;
     const totalLessons = mockLessons.length;
     const lessonProgress = totalLessons > 0 ? (completedLessonsCount / totalLessons) * 100 : 0;
 
