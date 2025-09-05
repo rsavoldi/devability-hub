@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
@@ -35,13 +36,14 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
     }
 
     const matchedText = match[0];
+    const matchKey = `${baseKey}-${match.index}`;
 
     if (matchedText.startsWith('***') && matchedText.endsWith('***')) {
-      parts.push(<strong key={`${baseKey}-bi-${match.index}`}><em >{matchedText.slice(3, -3)}</em></strong>);
+      parts.push(<strong key={`${matchKey}-bi`}><em >{matchedText.slice(3, -3)}</em></strong>);
     } else if (matchedText.startsWith('**')) {
-      parts.push(<strong key={`${baseKey}-b-${match.index}`}>{matchedText.slice(2, -2)}</strong>);
+      parts.push(<strong key={`${matchKey}-b`}>{matchedText.slice(2, -2)}</strong>);
     } else if (matchedText.startsWith('*')) {
-       parts.push(<em key={`${baseKey}-i-${match.index}`}>{matchedText.slice(1, -1)}</em>);
+       parts.push(<em key={`${matchKey}-i`}>{matchedText.slice(1, -1)}</em>);
     } else if (matchedText.startsWith('[')) {
       const linkRegex = /\[(.*?)\]\((.*?)\)/;
       const linkMatch = matchedText.match(linkRegex);
@@ -50,13 +52,13 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
         const linkUrl = linkMatch[2];
         parts.push(
           <a
-            key={`${baseKey}-a-${match.index}`}
+            key={`${matchKey}-a`}
             href={linkUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline font-medium"
           >
-            {linkText}
+            {renderTextWithFormatting(linkText, `${matchKey}-linktext`)}
           </a>
         );
       } else {
@@ -490,3 +492,5 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
+    
