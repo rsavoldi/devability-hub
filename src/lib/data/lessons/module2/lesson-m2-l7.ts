@@ -69,7 +69,7 @@ O envelhecimento com deficiência é marcado por desafios que se sobrepõem.
 
 A proteção legal vem do **Estatuto da Pessoa Idosa** e da **Lei Brasileira de Inclusão**. As políticas públicas devem ser <!-- INTERACTIVE_FILL_IN_BLANK: [intersetoriais e integradas|focadas em benefícios|desenvolvidas separadamente] -->. O acesso à justiça e saúde deve ser <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*equitativo;prioritário;limitado] -->.
 
-A jornada do envelhecimento para pessoas com deficiência é multifacetada. Requer o desmantelamento vigoroso do capacitismo e etarismo. O protagonismo da pessoa idosa com deficiência em suas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*próprias vidas;decisões médicas;rotinas diárias] --> é fundamental. O respeito é a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*base;consequência;exceção] -->.
+O envelhecimento para pessoas com deficiência é multifacetado. Requer o desmantelamento vigoroso do capacitismo e etarismo. O protagonismo da pessoa idosa com deficiência em suas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*próprias vidas;decisões médicas;rotinas diárias] --> é fundamental. O respeito é a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*base;consequência;exceção] -->.
 `,
   estimatedTime: '9-11 mins',
   coverImage: '/images/Dev2.7.png',
@@ -79,10 +79,16 @@ A jornada do envelhecimento para pessoas com deficiência é multifacetada. Requ
     "Brasil. (2009). Decreto nº 6.949, de 25 de agosto de 2009. Promulga a Convenção Internacional sobre os Direitos das Pessoas com Deficiência. <a href='http://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/decreto/d6949.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Brasil. (2015). Lei nº 13.146, de 6 de julho de 2015. Institui a Lei Brasileira de Inclusão da Pessoa com Deficiência (Estatuto da Pessoa com Deficiência). <a href='https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Campbell, F. K. (2009). *Contours of Ableism: The Production of Disability and Abledness*. Palgrave Macmillan.",
+    "CAST. (2018). *Universal Design for Learning Guidelines version 2.2*. <a href='http://udlguidelines.cast.org' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>http://udlguidelines.cast.org</a>",
+    "Conselho Federal de Psicologia (CFP). (2019). Resolução CFP nº 006/2019. Institui regras para a elaboração de documentos escritos produzidos pela psicóloga e pelo psicólogo no exercício profissional. <a href='https://site.cfp.org.br/wp-content/uploads/2019/04/Resolu%C3%A7%C3%A3o-CFP-n-6-2019-comentada.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
+    "Conselho Federal de Psicologia (CFP). (2022). Resolução CFP nº 31/2022. Estabelece diretrizes para a realização de Avaliação Psicológica no exercício profissional da psicóloga e do psicólogo, regulamenta o Sistema de Avaliação de Testes Psicológicos - SATEPSI e revoga a Resolução CFP nº 09/2018. <a href='https://atosoficiais.com.br/cfp/resolucao-do-exercicio-profissional-n-31-2022-estabelece-diretrizes-para-a-realizacao-de-avaliacao-psicologica-no-exercicio-profissional-da-psicologa-e-do-psicologo-regulamenta-o-sistema-de-avaliacao-de-testes-psicologicos-satepsi-e-revoga-a-resolucao-cfp-no-09-2018?origin=instituicao' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
+    "Cunha, J. A. (2000). *Psicodiagnóstico-V* (5ª ed.). Artmed.",
     "Diniz, D. (2012). O que é deficiência. São Paulo: Brasiliense.",
     "Gesser M., Böck G. L. K., & Lopes P. H. (Orgs.) (2020). *Estudos da Deficiência: Anticapacitismo e Emancipação Social*, 1.ª Ed., pp. 17-35. Curitiba: CRV. <a href='https://www.researchgate.net/publication/346966229_Estudos_da_deficiencia_anticapacitismo_e_emancipacao_social' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
     "Mota, P. H. D. S., & Bousquat, A. (2021). Deficiência: palavras, modelos e exclusão. *Saúde em Debate, 45*(130), 847-860. <a href='https://www.scielo.br/j/sdeb/a/ZqfX3hVq9bK7R8Z8YwL5ZJg/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Organização das Nações Unidas (ONU). (2006). Convenção sobre os Direitos das Pessoas com Deficiência. <a href='https://www.un.org/disabilities/documents/convention/convoptprot-p.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui (Português)</a>.",
-    "Papalia, D. E., & Martorell, G. (2021). Desenvolvimento Humano-14. McGraw Hill Brasil."
+    "Papalia, D. E., & Martorell, G. (2021). Desenvolvimento Humano-14. McGraw Hill Brasil.",
+    "Sassaki, R. K. (2010). *Inclusão: Construindo uma sociedade para todos* (8ª ed.). WVA.",
+    "World Wide Web Consortium (W3C). (2023). *Web Content Accessibility Guidelines (WCAG) 2.2*. <a href='https://www.w3.org/TR/WCAG22/' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>."
   ]
 };
