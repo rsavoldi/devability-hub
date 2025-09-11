@@ -45,7 +45,7 @@ A forma como se "mede" a deficiência tem consequências <!-- INTERACTIVE_WORD_C
 Compreender as nuances da coleta, análise e interpretação de dados sobre deficiência, e suas profundas implicações para as políticas públicas, é um passo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*crucial;opcional;final] --> e um desafio <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*contínuo;superado;impossível] --> para a construção de uma sociedade e de políticas que sejam verdadeiramente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*inclusivas;homogêneas;perfeitas] -->, equitativas, <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*anticapacitistas;assistencialistas;paternalistas] --> e promotoras da cidadania <!-- INTERACTIVE_FILL_IN_BLANK: [plena|parcial|assistida] --> para todas as pessoas com deficiência. O conhecimento produzido deve <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*empoderar;rotular;controlar] -->.
 `,
   estimatedTime: '12-15 mins', 
-  coverImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxxdWFudGl0YXRpdmUlMjByZXNlYXJjaCUyMGRhdGElMjBncmFwaHxlbnwwfHx8fDE3MjA0NzgyMDl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+  coverImage: '/images/Dev7.1.png',
   aiHint: 'epidemiologia deficiência dados censo políticas públicas CIF IBGE PNAD Grupo de Washington interseccionalidade',
   references: [
     "Brasil. Conselho Nacional de Saúde. (2012). Resolução nº 466, de 12 de dezembro de 2012. Aprova diretrizes e normas regulamentadoras de pesquisas envolvendo seres humanos. *Diário Oficial da União*. <a href='https://conselho.saude.gov.br/resolucoes/2012/Reso466.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>",
