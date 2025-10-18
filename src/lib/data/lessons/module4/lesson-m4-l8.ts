@@ -48,22 +48,13 @@ A teoria de Wallon, embora clássica, continua a inspirar práticas contemporân
 
 A teoria de Henri Wallon, com sua ênfase na pessoa completa e integrada, na dialética fundamental entre o orgânico e o social, e no papel central e organizador da <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*afetividade;imitação;reversibilidade] -->e da motricidade no desenvolvimento psíquico, oferece uma perspectiva rica, dinâmica e profundamente humanista para compreender o desenvolvimento de pessoas com deficiência. Ela nos convida a valorizar suas múltiplas formas de ser, de sentir, de se expressar e de estar no mundo, e a orientar práticas educacionais, terapêuticas e sociais que sejam mais sensíveis, eficazes e promotoras de uma vida com <!-- INTERACTIVE_FILL_IN_BLANK: [significado, autonomia e participação|normalidade, conformidade e adaptação|proteção, cuidado e dependência] -->. Wallon nos lembra que o desenvolvimento é uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*aventura humana;tragédia biológica;construção social] -->.
 `,
-  estimatedTime: '130-160 mins', // Ajustado devido à expansão massiva e interatividade
-  coverImage: 'https://images.unsplash.com/photo-1576085999995-d9215806a750?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwaGVucmktd2FsbG9uJTIwYWZmZWN0aXZpdHl8ZW58MHx8fHwxNzIxMjE0NzY2fDA&ixlib=rb-4.0.3&q=80&w=1080', // Imagem mais conceitual
+  estimatedTime: '13-16 mins', 
+  coverImage: '/images/Dev4.8.png', 
   aiHint: 'Wallon psicomotricidade afetividade emoção desenvolvimento social integração pessoa completa estágios', // Adicionado mais termos
   references: [
-    "Bowlby, J. (1988). *A secure base: Parent-child attachment and healthy human development*. Basic Books. (Contexto para vínculos afetivos)",
-    "Dainez, D., & Smolka, A. L. B. (2020). Vigotski e o estudo da deficiência: implicações para a educação especial. *Educação e Pesquisa, 46*, e219117. <a href='https://www.scielo.br/j/ep/a/k7jVq5X7wXQ4D6G8jYfW3Qc/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a> (Para diálogo com Vygotsky)",
-    "Dantas, H. (1992). *A infância da razão: uma introdução à psicologia da inteligência de Henri Wallon*. São Paulo: Manole.",
-    "Galvão, I. (2007). *Henri Wallon: uma concepção dialética do desenvolvimento infantil* (15ª ed.). Petrópolis: Vozes.",
-    "Galvão, I. (2021). Henri Wallon e a educação: revisitando temas e questões. *Schème: Revista Eletrônica de Psicologia e Epistemologia Genéticas, 13*(Especial), 1-20. <a href='https://revistas.marilia.unesp.br/index.php/scheme/article/view/11621' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a> (Artigo recente da autora)",
-    "Mahoney, A. A., & Almeida, L. R. (Orgs.). (2000). *Henri Wallon: psicologia e educação*. São Paulo: Loyola.",
-    "Piaget, J. (1970). *A epistemologia genética*. Vozes. (Para contraponto e contexto histórico)",
-    "Silva, A. B., & Almeida, L. P. (2022). A psicomotricidade na educação infantil inclusiva: contribuições da teoria de Henri Wallon. *Revista Brasileira de Estudos Pedagógicos, 103*(263), 112-130. <a href='https://www.scielo.br/j/rbeped/a/XYZ123ABCDEF' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>(Nota: Link fictício, verificar publicação real)</a>",
-    "Souza, D. N., & Mendes, V. L. P. (2021). Afetividade e aprendizagem na perspectiva walloniana: implicações para a prática pedagógica com crianças com deficiência. *Educação em Revista, 37*, e234567. <a href='https://www.scielo.br/j/edur/a/QRS456TUV789' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>(Nota: Link fictício, verificar publicação real)</a>",
-    "Vayer, P., & Destrooper, J. (2021). *A dinâmica da ação educativa na criança*. (Reedição de obra clássica sobre psicomotricidade relacional, verificar editora e disponibilidade). Manole. (Título original pode variar, mas é um clássico influenciado por Wallon).",
-    "Vygotsky, L. S. (1997). *Obras escogidas V: Fundamentos de defectología*. Madrid: Visor. (Para diálogo sobre consequências secundárias e mediação)",
-    "Wallon, H. (1975). *Psicologia e educação da infância*. Lisboa: Estampa. (Obra original de 1941, tradução).",
-    "Wallon, H. (1995). *As origens do caráter na criança*. São Paulo: Nova Alexandria. (Tradução de obra original de 1934).",
+    "Brasil. (2018). Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD). <a href='http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
+    "Diniz, D. (2007). *O que é deficiência*. Brasiliense.",
+    "Gesser M., Böck G. L. K., & Lopes P. H. (Orgs.) (2020). *Estudos da Deficiência: Anticapacitismo e Emancipação Social*, 1.ª Ed., pp. 17-35. Curitiba: CRV. <a href='https://www.researchgate.net/publication/346966229_Estudos_da_deficiencia_anticapacitismo_e_emancipacao_social' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
+    "Organização das Nações Unidas (ONU). (2006). Convenção sobre os Direitos das Pessoas com Deficiência. <a href='https://www.un.org/disabilities/documents/convention/convoptprot-p.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui (Português)</a>.",
   ]
 };

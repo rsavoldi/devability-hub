@@ -64,24 +64,13 @@ A escuta <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*analítica;médica;pedagógica]
 
 A psicanálise contribui para uma compreensão mais profunda e complexa da dimensão subjetiva, relacional e singular da experiência da deficiência. Ela nos lembra que, para além do corpo biológico, das interações sociais e das classificações diagnósticas, existe um sujeito do <!-- INTERACTIVE_FILL_IN_BLANK: [inconsciente|consciente|comportamento] --> com sua história única, seus desejos singulares, seus conflitos constitutivos e sua inesgotável capacidade de invenção, criação e resiliência. Ela oferece uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*escuta;solução;cura] --> para o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*sofrimento;déficit;sintoma] -->.
 `,
-  estimatedTime: '140-170 mins', // Ajustado devido à expansão massiva e interatividade
-  coverImage: 'https://images.unsplash.com/photo-1604881988758-f76ad2f7aac1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwYXN5Y2hvYW5hbHlzaXMlMjBjb3VjaHxlbnwwfHx8fDE3MjEyMTUwMjN8MA&ixlib=rb-4.0.3&q=80&w=1080',
+  estimatedTime: '14-17 mins', 
+  coverImage: '/images/Dev4.9.png', 
   aiHint: 'psicanálise Freud Lacan Erikson deficiência subjetividade inconsciente desejo desenvolvimento psicossocial Édipo narcisismo', // Adicionado mais termos
   references: [
-    "Beauchamp, T. L., & Childress, J. F. (2019). *Principles of biomedical ethics* (8th ed.). Oxford University Press.",
-    "Cunha, E. L. (2020). *Psicanálise e deficiência: entre o Édipo e a singularidade*. Juruá Editora.",
-    "Erikson, E. H. (1998). *O ciclo de vida completo*. Artmed. (Obra original publicada em 1982).",
-    "Figueiredo, L. C. (2020). *As diversas faces do cuidar: Novos ensaios de psicanálise contemporânea*. Blucher.",
-    "Freud, S. (2010). Três ensaios sobre a teoria da sexualidade. Em *Obras completas, Vol. 6*. Companhia das Letras. (Obra original publicada em 1905).",
-    "Freud, S. (2011). O eu e o id. Em *Obras completas, Vol. 16*. Companhia das Letras. (Obra original publicada em 1923).",
-    "Jerusalinsky, A. (Org.). (1999). *Psicanálise e desenvolvimento infantil: Um enfoque transdisciplinar*. Artes e Ofícios.",
-    "Kafer, A. (2013). *Feminist, queer, crip*. Indiana University Press.",
-    "Kehl, M. R. (2021). *O tempo e o cão: A atualidade das depressões*. Boitempo Editorial.",
-    "Kupfer, M. C. M. (2007). *Freud e a educação: O mestre do impossível* (10ª ed.). Scipione.",
-    "Lacan, J. (1998). O estádio do espelho como formador da função do eu. Em *Escritos* (pp. 96-103). Jorge Zahar Editor. (Texto original de 1949).",
-    "Lacan, J. (2008). *O seminário, livro 5: As formações do inconsciente*. Jorge Zahar Editor. (Seminário original de 1957-1958).",
-    "Mannoni, M. (1985). *A criança retardada e a mãe: A criança, seu “duplo” e a psicose*. Martins Fontes. (Obra original publicada em 1964).",
-    "Rosa, M. D. (2020). *A clínica psicanalítica em face da dimensão sociopolítica do sofrimento*. Zagodoni Editora.",
-    "Volnovich, J. (2021). *Psicanálise e deficiência: A clínica do impossível*. Editora Escuta. (Nota: Título adaptado para ilustrar, verificar obras reais do autor sobre o tema)."
+    "Brasil. (2018). Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD). <a href='http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
+    "Diniz, D. (2007). *O que é deficiência*. Brasiliense.",
+    "Gesser M., Böck G. L. K., & Lopes P. H. (Orgs.) (2020). *Estudos da Deficiência: Anticapacitismo e Emancipação Social*, 1.ª Ed., pp. 17-35. Curitiba: CRV. <a href='https://www.researchgate.net/publication/346966229_Estudos_da_deficiencia_anticapacitismo_e_emancipacao_social' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
+    "Organização das Nações Unidas (ONU). (2006). Convenção sobre os Direitos das Pessoas com Deficiência. <a href='https://www.un.org/disabilities/documents/convention/convoptprot-p.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui (Português)</a>.",
   ]
 };

@@ -36,32 +36,13 @@ As implicações dessas perspectivas sociais e críticas da deficiência para a 
 
 Compreender os Estudos da Deficiência e suas diversas e ricas abordagens críticas é, portanto, essencial para qualquer profissional, pesquisador, formulador de políticas ou cidadão comprometido com a construção de uma sociedade verdadeiramente inclusiva, equitativa, anticapacitista e emancipatória. Essa luta, como destacam autoras como Angelucci, Santos & Pedott (2020) e hooks (2021, na perspectiva da educação como prática da liberdade), é contínua, desafiadora e requer um engajamento <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*político, ético e afetivo;apenas acadêmico e teórico;individual, isolado e apolítico] -->. Os Estudos da Deficiência buscam dar <!-- INTERACTIVE_FILL_IN_BLANK: [voz e agência|tratamento e cura|assistência e proteção] --> às pessoas com deficiência, e não apenas falar <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*sobre elas;por elas;contra elas] -->. A transformação social é um <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*objetivo central;resultado secundário;sonho distante] -->.
 `,
-  estimatedTime: '130-160 mins', // Ajustado devido à expansão massiva e interatividade
-  coverImage: 'https://images.unsplash.com/photo-1508672019048-805c876b67e2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjcml0aWNhbCUyMHRoaW5raW5nJTIwZGlzY3Vzc2lvbnxlbnwwfHx8fDE3MjExMDI4MTh8MA&ixlib=rb-4.0.3&q=80&w=1080', // Imagem mais conceitual e atual
+  estimatedTime: '13-16 mins', 
+  coverImage: '/images/Dev4.4.png', 
   aiHint: 'Estudos da Deficiência modelo social feminismo crip teoria capacitismo corponormatividade interseccionalidade direitos humanos', // Adicionado mais termos
   references: [
-    "Akotirene, C. (2019). *Interseccionalidade*. Pólen.",
-    "Angelucci, C. B., Santos, L. S. dos, & Pedott, L. G. O. (2020). Conhecer é transformar: notas sobre a produção implicada de modos anticapacitistas de habitar a universidade. In M. Gesser, G. L. K. Böck, & P. H. Lopes (Orgs.), *Estudos da deficiência: anticapacitismo e emancipação social* (Cap. 3). Curitiba: CRV.",
-    "Campbell, F. K. (2001). Inciting Legal Fictions: Disability’s Date with Ontology and the Ableist Body of the Law. *Griffith Law Review, 10*(1), 42-62.",
-    "Campbell, F. K. (2009). *Contours of Ableism: The Production of Disability and Abledness*. Palgrave Macmillan.",
-    "Charlton, J. I. (2000). *Nothing about us without us: Disability oppression and empowerment*. University of California Press. (Obra seminal sobre o lema)",
-    "Clare, E. (2017). *Brilliant Imperfection: Grappling with Cure*. Duke University Press. (Perspectiva crip sobre cura)",
-    "Collins, P. H., & Bilge, S. (2020). *Intersectionality* (2nd ed.). Polity Press.",
-    "Crenshaw, K. W. (1989). Demarginalizing the Intersection of Race and Sex: A Black Feminist Critique of Antidiscrimination Doctrine, Feminist Theory and Antiracist Politics. *University of Chicago Legal Forum, 1989*(1), 139-167.",
+    "Brasil. (2018). Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD). <a href='http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Diniz, D. (2007). *O que é deficiência*. Brasiliense.",
-    "Garland-Thomson, R. (2002). Integrating disability, transforming feminist theory. *NWSA Journal, 14*(3), 1-32.",
-    "Garland-Thomson, R. (2005). Feminist disability studies. *Signs: Journal of Women in Culture and Society, 30*(2), 1557-1587.",
-    "Gesser, M., Block, P., & Mello, A. G. (2020). Estudos da Deficiência: Interseccionalidade, anticapacitismo e emancipação social. In M. Gesser, G. L. K. Böck, & P. H. Lopes (Orgs.), *Estudos da deficiência: anticapacitismo e emancipação social* (Cap. 1). Curitiba: CRV.",
-    "Goodley, D. (2022). *Disability Studies: An Interdisciplinary Introduction* (3rd ed.). Sage. (Edição recente de texto introdutório importante)",
-    "hooks, b. (2021). *Ensinando a transgredir: A educação como prática da liberdade* (Edição revista). Paz & Terra.",
-    "Kafer, A. (2013). *Feminist, queer, crip*. Indiana University Press.",
-    "McRuer, R. (2006). *Crip theory: Cultural signs of queerness and disability*. NYU Press.",
-    "Mello, A. G. de. (2016). Deficiência, incapacidade e Vulnerabilidade: do capacitismo ou a preeminência capacitista e biomédica do Comitê de Ética em Pesquisa da UFSC. *Ciência & Saúde Coletiva, 21*(10), 3265-3276. <a href='https://www.scielo.br/j/csc/a/XTFDBc8BGFcW7T8tkjPhcMh/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
-    "Mello, A. G., & Nuernberg, A. H. (2012). Gênero e deficiência: interseções e perspectivas. *Revista Estudos Feministas, 20*(3), 635-655. <a href='https://www.scielo.br/j/ref/a/v699x98QkP9zG9J9q3s6mCz/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
-    "Oliver, M. (1990). *The Politics of Disablement*. Macmillan.",
-    "Sassaki, R. K. (2010). *Inclusão: construindo uma sociedade para todos* (8ª ed.). WVA.",
-    "Shakespeare, T. (2021). *Disability rights and wrongs revisited* (2nd ed.). Routledge.",
-    "Thomas, C. (2022). *Disability and social theory: Sociological perspectives*. Red Globe Press. (Edição recente de obra que discute o modelo social e a experiência corporificada)",
-    "Wendell, S. (2006). *The rejected body: Feminist philosophical reflections on disability*. Routledge. (Reedição de obra clássica de 1996)"
+    "Gesser M., Böck G. L. K., & Lopes P. H. (Orgs.) (2020). *Estudos da Deficiência: Anticapacitismo e Emancipação Social*, 1.ª Ed., pp. 17-35. Curitiba: CRV. <a href='https://www.researchgate.net/publication/346966229_Estudos_da_deficiencia_anticapacitismo_e_emancipacao_social' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
+    "Organização das Nações Unidas (ONU). (2006). Convenção sobre os Direitos das Pessoas com Deficiência. <a href='https://www.un.org/disabilities/documents/convention/convoptprot-p.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui (Português)</a>.",
   ]
 };
