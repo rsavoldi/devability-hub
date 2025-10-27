@@ -60,7 +60,7 @@ Além do cumprimento estrito das normativas, uma prática avaliativa verdadeiram
 A avaliação psicológica da pessoa com deficiência, quando fundamentada em sólidos princípios éticos e legais, conduzida com competência técnica, sensibilidade cultural e uma postura explicitamente anticapacitista, deixa de ser um mero procedimento classificatório, diagnóstico ou burocrático. Ela se transforma em uma poderosa ferramenta de compreensão, empoderamento, defesa de direitos e transformação social. É uma prática que reafirma o compromisso da Psicologia com a dignidade humana, a justiça social e a construção de uma sociedade verdadeiramente inclusiva para todos. A ética é a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*essência;superfície;aparência] --> da boa prática.
 `,
   estimatedTime: '11-14 mins',
-  coverImage: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxldGhpY3MlMjBsYXclMjBkb2N1bWVudHN8ZW58MHx8fHwxNzIxMTAwODIyfDA&ixlib=rb-4.0.3&q=80&w=1080', // Imagem mais conceitual e atual
+  coverImage: '/images/Dev6.1.png',
   aiHint: 'ética avaliação psicológica deficiência direitos CFP LBI acessibilidade consentimento SATEPSI anticapacitismo', // Adicionado mais termos
   references: [
     "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 

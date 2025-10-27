@@ -70,7 +70,7 @@ Fundamentalmente, qualquer modelo ou combinação de modelos utilizada na avalia
 Compreender criticamente, integrar de forma reflexiva e aplicar eticamente os modelos teóricos da avaliação psicológica, adaptando-os de maneira sensível e criativa ao contexto da deficiência e infundindo-os com uma perspectiva explicitamente anticapacitista e de direitos humanos, permite que o psicólogo realize avaliações mais ricas, contextualizadas, justas, válidas e, acima de tudo, promotoras da dignidade humana, da equidade e dos direitos inalienáveis das pessoas com deficiência. A avaliação se torna, assim, um ato <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*político;técnico;neutro] -->, comprometido com a <!-- INTERACTIVE_FILL_IN_BLANK: [transformação social|manutenção do status quo|objetividade científica] -->.
 `,
   estimatedTime: '11-14 mins',
-  coverImage: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwYnJhaW5zdG9ybWluZyUyMGRpdmVyc2l0eXxlbnwwfHx8fDE3MjEwOTk5NTV8MA&ixlib=rb-4.0.3&q=80&w=1080',
+  coverImage: '/images/Dev6.1.png',
   aiHint: 'modelos avaliação CIF psicometria qualitativo ecológico biopsicossocial anticapacitista Bronfenbrenner deficiência psicologia direitos ética', // Adicionado mais termos
   references: [
     "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 

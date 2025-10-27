@@ -44,7 +44,7 @@ A avaliação de pessoas com deficiência exige <!-- INTERACTIVE_WORD_CHOICE: OP
 A avaliação psicológica e o psicodiagnóstico, especialmente no complexo e sensível campo da deficiência, são processos que exigem do profissional não apenas conhecimento técnico-científico aprofundado e atualizado, mas também uma profunda reflexão ética, uma postura humanista, uma sensibilidade cultural e um compromisso inabalável com a promoção da inclusão, da justiça social e da dignidade humana. O objetivo final nunca é rotular, estigmatizar ou limitar, mas sim <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*compreender para apoiar;classificar para controlar;comparar para julgar] -->, empoderar e promover o desenvolvimento pleno. A avaliação deve ser uma ferramenta para a <!-- INTERACTIVE_FILL_IN_BLANK: [emancipação|opressão|indiferença] --> e o florescimento.
 `,
   estimatedTime: '11-14 mins', 
-  coverImage: 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwYXBlciUyMGFuZCUyMHBlbiUyMGRlc2t8ZW58MHx8fHwxNzIxMDk5NzYxfDA&ixlib=rb-4.0.3&q=80&w=1080',
+  coverImage: '/images/Dev6.1.png',
   aiHint: 'avaliação psicológica psicodiagnóstico deficiência história CFP LBI CIF ética testes SATEPSI neuropsicologia', 
   references: [
     "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 

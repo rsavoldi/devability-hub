@@ -92,7 +92,7 @@ A avaliação de pessoas com deficiência exige <!-- INTERACTIVE_WORD_CHOICE: OP
 O processo de psicodiagnóstico com pessoas com deficiência, conduzido com estas boas práticas e com uma sólida fundamentação ética e técnica, transcende a mera aplicação de testes ou a atribuição de um diagnóstico. Torna-se um ato ético de compreensão e parceria, visando sempre a promoção da dignidade, da autonomia e da inclusão. O objetivo final nunca é rotular, estigmatizar ou limitar, mas sim <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*compreender para apoiar;classificar para controlar;comparar para julgar] -->, empoderar e promover o desenvolvimento pleno. A avaliação deve ser uma ferramenta para a <!-- INTERACTIVE_FILL_IN_BLANK: [emancipação|opressão|indiferença] --> e o florescimento individual e social.
 `,
   estimatedTime: '12-15 mins',
-  coverImage: 'https://images.unsplash.com/photo-1519452575417-564c1401ecc0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwc3ljaG9sb2dpY2FsJTIwYXNzZXNzbWVudCUyMGludGVyYWN0aW9ufGVufDB8fHx8MTcyMTEwMDYzNnww&ixlib=rb-4.0.3&q=80&w=1080',
+  coverImage: '/images/Dev6.1.png',
   aiHint: 'psicodiagnóstico etapas deficiência avaliação boas práticas laudo devolutiva ética CFP anamnese SATEPSI neurodiversidade', // Adicionado mais termos
   references: [
     "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 
