@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback, useRef } from 'react';
@@ -146,6 +147,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [audioCompleted, setAudioCompleted] = useState(false);
   const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
   
   const completedInteractions = useMemo(() => {
@@ -241,21 +243,35 @@ export function LessonView({ lesson }: LessonViewProps) {
         audio.currentTime = startTime;
         setCurrentTime(startTime);
       }
+      if (savedProgress >= 100) {
+        setAudioCompleted(true);
+      }
     };
   
     const updateCurrentTime = () => setCurrentTime(audio.currentTime);
-  
-    audio.addEventListener('loadedmetadata', setAudioData);
-    audio.addEventListener('timeupdate', updateCurrentTime);
-  
-    return () => {
-      audio.removeEventListener('loadedmetadata', setAudioData);
-      audio.removeEventListener('timeupdate', updateCurrentTime);
+
+    const handleAudioEnded = () => {
+      setIsPlaying(false);
+      setAudioCompleted(true);
+      saveAudioProgress(lesson.id, 100);
       if (progressSaveInterval.current) {
         clearInterval(progressSaveInterval.current);
       }
     };
-  }, [lesson.id, userProfile]);
+  
+    audio.addEventListener('loadedmetadata', setAudioData);
+    audio.addEventListener('timeupdate', updateCurrentTime);
+    audio.addEventListener('ended', handleAudioEnded);
+  
+    return () => {
+      audio.removeEventListener('loadedmetadata', setAudioData);
+      audio.removeEventListener('timeupdate', updateCurrentTime);
+      audio.removeEventListener('ended', handleAudioEnded);
+      if (progressSaveInterval.current) {
+        clearInterval(progressSaveInterval.current);
+      }
+    };
+  }, [lesson.id, userProfile, saveAudioProgress]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -265,10 +281,17 @@ export function LessonView({ lesson }: LessonViewProps) {
       audio.pause();
       if (progressSaveInterval.current) clearInterval(progressSaveInterval.current);
     } else {
+      if (audio.ended) { // If audio ended, replay from start
+        audio.currentTime = 0;
+        setCurrentTime(0);
+        setAudioCompleted(false);
+      }
       audio.play();
       progressSaveInterval.current = setInterval(() => {
         const progress = duration > 0 ? (audio.currentTime / duration) * 100 : 0;
-        saveAudioProgress(lesson.id, progress);
+        if (progress < 100) {
+          saveAudioProgress(lesson.id, progress);
+        }
       }, 5000); // Salva a cada 5 segundos
     }
     setIsPlaying(!isPlaying);
@@ -281,10 +304,14 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
+      if (newTime < duration) {
+        setAudioCompleted(false);
+      }
     }
   };
 
   const formatTime = (timeInSeconds: number) => {
+    if (!isFinite(timeInSeconds)) return "0:00";
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -462,7 +489,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
           {lesson.audioSrc && (
             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" />
+              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" onEnded={() => setIsPlaying(false)} />
               <div className="flex items-center gap-4">
                 <Button onClick={togglePlayPause} size="icon" variant="secondary" className="flex-shrink-0">
                   {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
@@ -491,6 +518,12 @@ export function LessonView({ lesson }: LessonViewProps) {
                     {isMuted ? <VolumeX className="h-5 w-5 text-muted-foreground" /> : <Volume2 className="h-5 w-5 text-muted-foreground" />}
                 </Button>
               </div>
+              {audioCompleted && (
+                <div className="mt-2 flex items-center justify-center text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>Áudio concluído!</span>
+                </div>
+              )}
             </div>
           )}
         </CardHeader>
@@ -598,3 +631,4 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+

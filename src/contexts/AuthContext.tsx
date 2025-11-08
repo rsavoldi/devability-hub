@@ -187,35 +187,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const saveInteractionProgress = useCallback((lessonId: string, interactionId: string) => {
-    if (!userProfile) return;
-
     // Optimistic UI update
-    const newProfile = JSON.parse(JSON.stringify(userProfile));
-    const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-    if (!lessonProgress.completedInteractions.includes(interactionId)) {
-      lessonProgress.completedInteractions.push(interactionId);
-      newProfile.lessonProgress[lessonId] = lessonProgress;
-      setUserProfile(newProfile); // Update UI immediately
+    if (userProfile) {
+      const newProfile = JSON.parse(JSON.stringify(userProfile));
+      const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
+      if (!lessonProgress.completedInteractions.includes(interactionId)) {
+        lessonProgress.completedInteractions.push(interactionId);
+        newProfile.lessonProgress[lessonId] = lessonProgress;
+        setUserProfile(newProfile);
+      }
+      
+      // Fire-and-forget server action
+      saveInteractionProgressAction(newProfile, lessonId, interactionId)
+        .then(result => {
+          if (result.success && result.updatedProfile) {
+            setUserProfile(result.updatedProfile); // Sync with definitive state
+          }
+        });
     }
-
-    // Server/background action without blocking
-    handleProgressUpdate(() => saveInteractionProgressAction(newProfile, lessonId, interactionId), true);
-  }, [userProfile, handleProgressUpdate]);
+  }, [userProfile]);
   
   const uncompleteInteraction = useCallback((lessonId: string, interactionId: string) => {
-    if (!userProfile) return;
-
-    // Optimistic UI update
-    const newProfile = JSON.parse(JSON.stringify(userProfile));
-    const lessonProgress = newProfile.lessonProgress[lessonId];
-    if (lessonProgress) {
+     // Optimistic UI update
+    if (userProfile) {
+      const newProfile = JSON.parse(JSON.stringify(userProfile));
+      const lessonProgress = newProfile.lessonProgress[lessonId];
+      if (lessonProgress) {
         lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
         newProfile.lessonProgress[lessonId] = lessonProgress;
-        setUserProfile(newProfile); // Update UI immediately
+        setUserProfile(newProfile);
+      }
+      
+      // Fire-and-forget server action
+      uncompleteInteractionLogic(newProfile, lessonId, interactionId)
+        .then(result => {
+          if (result.success && result.updatedProfile) {
+            setUserProfile(result.updatedProfile); // Sync with definitive state
+          }
+        });
     }
-
-    handleProgressUpdate(() => uncompleteInteractionLogic(newProfile, lessonId, interactionId), true);
-  }, [userProfile, handleProgressUpdate]);
+  }, [userProfile]);
   
   const completeLesson = useCallback(async (lessonId: string) => {
     if (!userProfile || userProfile.completedLessons.includes(lessonId)) return;
@@ -224,28 +235,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
       if (!userProfile) return;
-      await handleProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true);
+      await handleProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true); // Make it silent
   }, [userProfile, handleProgressUpdate]);
   
   const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
     if (!userProfile) return;
     const currentAudioProgress = userProfile.lessonProgress[lessonId]?.audioProgress || 0;
-    if (Math.abs(progress - currentAudioProgress) < 1) return;
+    // Save only if progress changes significantly or is completed, to avoid too many updates
+    if (Math.abs(progress - currentAudioProgress) < 1 && progress < 100) return;
 
+    // Optimistic Update
     const newProfile = JSON.parse(JSON.stringify(userProfile));
     const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
     lessonProgress.audioProgress = progress;
     newProfile.lessonProgress[lessonId] = lessonProgress;
-    
     setUserProfile(newProfile); 
     
-    saveAudioProgressLogic(userProfile, lessonId, progress).then(result => {
+    // Fire and forget server action
+    saveAudioProgressLogic(newProfile, lessonId, progress).then(result => {
         if(result.success && result.updatedProfile) {
-            updateUserProfile(result.updatedProfile, true);
+            setUserProfile(result.updatedProfile); // Sync with definitive state
         }
     });
 
-  }, [userProfile, updateUserProfile]);
+  }, [userProfile]);
 
 
   const completeExercise = useCallback(async (exerciseId: string) => {
@@ -383,3 +396,4 @@ export function useAuth() {
   }
   return context;
 }
+
