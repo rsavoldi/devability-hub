@@ -66,7 +66,6 @@ A avaliação psicológica da pessoa com deficiência, quando fundamentada em s�
   coverImage: '/images/Dev6.1.png',
   aiHint: 'ética avaliação psicológica deficiência direitos CFP LBI acessibilidade consentimento SATEPSI anticapacitismo', // Adicionado mais termos
   references: [
-    "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 
     "Brasil. (2009). Decreto nº 6.949, de 25 de agosto de 2009. Promulga a Convenção Internacional sobre os Direitos das Pessoas com Deficiência. <a href='http://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/decreto/d6949.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Brasil. (2015). Lei nº 13.146, de 6 de julho de 2015. Institui a Lei Brasileira de Inclusão da Pessoa com Deficiência (Estatuto da Pessoa com Deficiência). <a href='https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Campbell, F. K. (2009). *Contours of Ableism: The Production of Disability and Abledness*. Palgrave Macmillan.",
@@ -79,6 +78,5 @@ A avaliação psicológica da pessoa com deficiência, quando fundamentada em s�
     "Gesser M., Böck G. L. K., & Lopes P. H. (Orgs.) (2020). *Estudos da Deficiência: Anticapacitismo e Emancipação Social*, 1.ª Ed., pp. 17-35. Curitiba: CRV. <a href='https://www.researchgate.net/publication/346966229_Estudos_da_deficiencia_anticapacitismo_e_emancipacao_social' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.", 
     "Mota, P. H. D. S., & Bousquat, A. (2021). Deficiência: palavras, modelos e exclusão. *Saúde em Debate, 45*(130), 847-860. <a href='https://www.scielo.br/j/sdeb/a/ZqfX3hVq9bK7R8Z8YwL5ZJg/?lang=pt' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Link</a>",
     "Organização das Nações Unidas (ONU). (2006). Convenção sobre os Direitos das Pessoas com Deficiência. <a href='https://www.un.org/disabilities/documents/convention/convoptprot-p.pdf' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui (Português)</a>.",
-    "Papalia, D. E., & Martorell, G. (2021). Desenvolvimento Humano-14. McGraw Hill Brasil."
   ]
 };

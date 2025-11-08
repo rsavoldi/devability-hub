@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, Fragment, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,14 +16,13 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { ArrowUpCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 
 interface LessonViewProps {
   lesson: Lesson;
 }
 
 const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNode[] => {
-  // Regex para Markdown: negrito-itálico (***), negrito (**), itálico (*), e links [texto](url)
   const markdownRegex = /(\*\*\*.*?\*\*\*|\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -62,10 +60,10 @@ const renderTextWithFormatting = (text: string, baseKey: string): React.ReactNod
           </a>
         );
       } else {
-        parts.push(matchedText); // Fallback caso o regex do link falhe
+        parts.push(matchedText);
       }
     } else {
-      parts.push(matchedText); // Fallback para texto não reconhecido
+      parts.push(matchedText);
     }
     
     lastIndex = markdownRegex.lastIndex;
@@ -132,17 +130,23 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress } = useAuth();
+  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, saveAudioProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
 
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-
-
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
+  
+  // Audio Player State
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
   
   const completedInteractions = useMemo(() => {
     return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
@@ -154,14 +158,14 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
-        await saveInteractionProgress(lesson.id, interactionId);
+        saveInteractionProgress(lesson.id, interactionId);
         lessonUi?.incrementCompleted();
     }
   }, [completedInteractions, saveInteractionProgress, lesson.id, lessonUi]);
 
   const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
     if(completedInteractions.has(interactionId)) {
-        await uncompleteInteraction(lesson.id, interactionId);
+        uncompleteInteraction(lesson.id, interactionId);
         lessonUi?.decrementCompleted();
     }
   }, [completedInteractions, uncompleteInteraction, lesson.id, lessonUi]);
@@ -188,7 +192,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     const totalCount = totalInteractiveElements;
     const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const text = totalCount > 0
-      ? `Interações concluídas: ${completedCount} de ${totalCount}`
+      ? `Interações: ${completedCount}/${totalCount}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
   }, [completedInteractions.size, totalInteractiveElements]);
@@ -224,6 +228,68 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [lesson]);
 
+  // Audio Player Logic
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+  
+    const setAudioData = () => {
+      setDuration(audio.duration);
+      const savedProgress = userProfile?.lessonProgress[lesson.id]?.audioProgress || 0;
+      const startTime = (savedProgress / 100) * audio.duration;
+      if (isFinite(startTime)) {
+        audio.currentTime = startTime;
+        setCurrentTime(startTime);
+      }
+    };
+  
+    const updateCurrentTime = () => setCurrentTime(audio.currentTime);
+  
+    audio.addEventListener('loadedmetadata', setAudioData);
+    audio.addEventListener('timeupdate', updateCurrentTime);
+  
+    return () => {
+      audio.removeEventListener('loadedmetadata', setAudioData);
+      audio.removeEventListener('timeupdate', updateCurrentTime);
+      if (progressSaveInterval.current) {
+        clearInterval(progressSaveInterval.current);
+      }
+    };
+  }, [lesson.id, userProfile]);
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+  
+    if (isPlaying) {
+      audio.pause();
+      if (progressSaveInterval.current) clearInterval(progressSaveInterval.current);
+    } else {
+      audio.play();
+      progressSaveInterval.current = setInterval(() => {
+        const progress = duration > 0 ? (audio.currentTime / duration) * 100 : 0;
+        saveAudioProgress(lesson.id, progress);
+      }, 5000); // Salva a cada 5 segundos
+    }
+    setIsPlaying(!isPlaying);
+  };
+  
+  const handleProgressChange = (e: React.MouseEvent<HTMLDivElement>) => {
+    const progressBar = e.currentTarget;
+    const clickPosition = e.clientX - progressBar.getBoundingClientRect().left;
+    const newTime = (clickPosition / progressBar.offsetWidth) * duration;
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const formatTime = (timeInSeconds: number) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const processedContentElements = useMemo(() => {
     if (lesson?.content) {
       const elements: (string | JSX.Element)[] = [];
@@ -251,7 +317,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
         }
   
-        if (match[2]) { // INTERACTIVE_WORD_CHOICE
+        if (match[2]) {
           const optionsString = match[2];
           if (optionsString) {
             const rawOptions = optionsString.split(';').map(opt => opt.trim()).filter(Boolean);
@@ -280,7 +346,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               );
             }
           }
-        } else if (match[4]) { // INTERACTIVE_FILL_IN_BLANK
+        } else if (match[4]) { 
           const optionsString = match[4];
           if (optionsString) {
             const allOptions = optionsString.split('|').map(opt => opt.trim()).filter(Boolean);
@@ -315,7 +381,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || !allInteractionsCompleted) return;
+    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
     setIsMarkingComplete(true);
     await completeLesson(lesson.id);
     setIsMarkingComplete(false);
@@ -352,12 +418,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
 
   const getButtonEmoji = () => {
-    if (isMarkingComplete || isResetting) return <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span>;
-    if (isLessonAlreadyCompletedByProfile) return <span role="img" aria-label="Concluído">✅</span>;
+    if (isMarkingComplete || isResetting) return <Loader2 className="animate-spin" />;
+    if (isLessonAlreadyCompletedByProfile) return <CheckCircle />;
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
     return <span role="img" aria-label="Finalizar">🏁</span>;
   }
-
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -377,12 +442,11 @@ export function LessonView({ lesson }: LessonViewProps) {
              </div>
           )}
           <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{lesson.title}</CardTitle>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
             <div className="flex items-center">
               <span className="text-lg mr-1" role="img" aria-label="Relógio">⏰</span>
               <span>{lesson.estimatedTime}</span>
             </div>
-            {lesson.type && <span className="capitalize">Tipo: {lesson.type}</span>}
             {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
           </div>
           <div className="mt-4 space-y-2">
@@ -395,6 +459,40 @@ export function LessonView({ lesson }: LessonViewProps) {
             </div>
             <Progress value={progressPercentage} aria-label={`${progressPercentage.toFixed(0)}% de progresso na lição`} />
           </div>
+
+          {lesson.audioSrc && (
+            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" />
+              <div className="flex items-center gap-4">
+                <Button onClick={togglePlayPause} size="icon" variant="secondary" className="flex-shrink-0">
+                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </Button>
+                <div className="flex-grow flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(currentTime)}</span>
+                  <div className="w-full bg-border h-2 rounded-full cursor-pointer" onClick={handleProgressChange}>
+                    <div
+                      className="bg-primary h-full rounded-full"
+                      style={{ width: `${(currentTime / duration) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(duration)}</span>
+                </div>
+                 <Button
+                    onClick={() => {
+                        if(audioRef.current) {
+                            audioRef.current.muted = !isMuted;
+                            setIsMuted(!isMuted);
+                        }
+                    }}
+                    size="icon"
+                    variant="ghost"
+                    className="flex-shrink-0"
+                >
+                    {isMuted ? <VolumeX className="h-5 w-5 text-muted-foreground" /> : <Volume2 className="h-5 w-5 text-muted-foreground" />}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
           {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
@@ -437,7 +535,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
                   <span className="flex items-center justify-center w-full">
-                    <span role="img" aria-label="Seta para Esquerda" className="mr-1 sm:mr-2 shrink-0">⬅️</span>
+                    <ArrowLeft className="mr-1 sm:mr-2" />
                     <span className="hidden sm:inline truncate">Anterior: {truncateTitle(prevLesson.title)}</span>
                     <span className="sm:hidden">Anterior</span>
                   </span>
@@ -445,35 +543,43 @@ export function LessonView({ lesson }: LessonViewProps) {
             </Button>
             ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
-
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex items-center justify-center flex-col sm:flex-row gap-2 my-2 sm:my-0 order-first sm:order-none">
-            <Button
-              variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
-              size="lg"
-              className={cn(
-                "w-full max-w-xs sm:w-auto",
-                isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
-                (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
-              )}
-              onClick={handleMarkAsCompleted}
-              disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
-            >
-                {getButtonEmoji()}
-                {getButtonText()}
-            </Button>
-            {isLessonAlreadyCompletedByProfile && (
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full max-w-xs sm:w-auto"
-                    onClick={handleResetLesson}
-                    disabled={isResetting || isMarkingComplete}
-                >
-                    {isResetting ? <span className="text-xl animate-spin" role="img" aria-label="Processando">⏳</span> : <span role="img" aria-label="Reiniciar">🔄</span>}
-                    Reiniciar Lição
-                </Button>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
+          {lesson.moduleId && (
+              <Button variant="ghost" size="sm" asChild>
+                  <Link href={`/modules/${lesson.moduleId}`} className="flex items-center gap-2">
+                      <Map className="h-4 w-4"/> Voltar ao Módulo
+                  </Link>
+              </Button>
+          )}
+          <Button
+            variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
+            size="lg"
+            className={cn(
+              "w-full max-w-xs sm:w-auto",
+              isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
+              (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
             )}
+            onClick={handleMarkAsCompleted}
+            disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+          >
+              {getButtonEmoji()}
+              {getButtonText()}
+          </Button>
+          {isLessonAlreadyCompletedByProfile && (
+              <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full max-w-xs sm:w-auto"
+                  onClick={handleResetLesson}
+                  disabled={isResetting || isMarkingComplete}
+              >
+                  {isResetting ? <Loader2 className="animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
+                  Reiniciar Lição
+              </Button>
+          )}
         </div>
+
 
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
             {nextLesson ? (
@@ -482,7 +588,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   <span className="flex items-center justify-center w-full">
                     <span className="hidden sm:inline truncate">Próxima: {truncateTitle(nextLesson.title)}</span>
                     <span className="sm:hidden">Próxima</span>
-                    <span role="img" aria-label="Seta para Direita" className="ml-1 sm:ml-2 shrink-0">➡️</span>
+                    <ArrowRight className="ml-1 sm:ml-2" />
                   </span>
                 </Link>
             </Button>
@@ -492,5 +598,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
-    

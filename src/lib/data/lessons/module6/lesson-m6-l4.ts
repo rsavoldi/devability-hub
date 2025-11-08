@@ -32,7 +32,7 @@ A observação do comportamento fornece dados <!-- INTERACTIVE_WORD_CHOICE: OPTI
     #   Registrar os comportamentos de forma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*descritiva;interpretativa;avaliativa] -->, evitando <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*julgamentos de valor;detalhes do ambiente;uso de anotações] -->.
     #   Realizar observações em <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*múltiplos contextos;apenas no consultório;só em situações de crise] --> e momentos, se possível.
 
-**3. Testes Psicológicos Padronizados: Uso Consciente, Crítico e Adaptado no Contexto da Deficiência**
+**3. Testes Psicológicos Padronizados**
 
 O uso de testes padronizados com pessoas com deficiência é um tema <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*complexo;simples;proibido] -->. O uso acrítico é <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*perigoso;seguro;recomendado] -->.
 

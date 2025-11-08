@@ -111,7 +111,6 @@ export async function completeLessonLogic(
 
   profileToUpdate.completedLessons = [...new Set([...profileToUpdate.completedLessons, lessonId])];
   
-  // Set progress to 100%
   const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
   lessonProgress.completed = true;
   profileToUpdate.lessonProgress = { ...profileToUpdate.lessonProgress, [lessonId]: lessonProgress };
@@ -120,8 +119,17 @@ export async function completeLessonLogic(
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForLesson;
   
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'lesson', lessonId);
-  profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
-  profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  if (achievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
+    profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  }
+  
+  const pointsAchievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'points');
+   if (pointsAchievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...pointsAchievementCheck.newAchievements])];
+    profileToUpdate.points += pointsAchievementCheck.newPointsFromAchievements;
+    achievementCheck.unlockedDetails.push(...pointsAchievementCheck.unlockedDetails);
+  }
 
   const moduleCompletionResult = await checkModuleCompletionAndUpdate(profileToUpdate, lesson.moduleId);
   if(moduleCompletionResult.success && moduleCompletionResult.updatedProfile) {
@@ -174,8 +182,17 @@ export async function completeExerciseLogic(
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForExercise;
 
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'exercise', exerciseId);
-  profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
-  profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  if (achievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
+    profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  }
+  
+  const pointsAchievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'points');
+  if (pointsAchievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...pointsAchievementCheck.newAchievements])];
+    profileToUpdate.points += pointsAchievementCheck.newPointsFromAchievements;
+    achievementCheck.unlockedDetails.push(...pointsAchievementCheck.unlockedDetails);
+  }
 
   const moduleCompletionResult = await checkModuleCompletionAndUpdate(profileToUpdate, exercise.moduleId);
   if(moduleCompletionResult.success && moduleCompletionResult.updatedProfile) {
@@ -221,17 +238,23 @@ export async function completeModuleLogic(
   if (profileToUpdate.completedModules.includes(moduleId)) {
     return { success: true, message: "Módulo já estava concluído.", updatedProfile: profileToUpdate, unlockedAchievementsDetails: [], pointsAdded: 0 };
   }
-
-  // A verificação se todas as lições/exercícios estão completos deve acontecer *antes* de chamar esta função.
-  // Esta função agora assume que a condição de conclusão foi satisfeita.
   
   profileToUpdate.completedModules = [...new Set([...profileToUpdate.completedModules, moduleId])];
   const pointsForModule = 50;
   profileToUpdate.points = (profileToUpdate.points || 0) + pointsForModule;
 
   const achievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'module', moduleId);
-  profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
-  profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  if (achievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...achievementCheck.newAchievements])];
+    profileToUpdate.points += achievementCheck.newPointsFromAchievements;
+  }
+  
+  const pointsAchievementCheck = await checkAndUnlockAchievementsLogic(profileToUpdate, 'points');
+   if (pointsAchievementCheck.newAchievements.length > 0) {
+    profileToUpdate.unlockedAchievements = [...new Set([...profileToUpdate.unlockedAchievements, ...pointsAchievementCheck.newAchievements])];
+    profileToUpdate.points += pointsAchievementCheck.newPointsFromAchievements;
+    achievementCheck.unlockedDetails.push(...pointsAchievementCheck.unlockedDetails);
+  }
   
   return {
     success: true,
@@ -241,3 +264,125 @@ export async function completeModuleLogic(
     pointsAdded: pointsForModule + achievementCheck.newPointsFromAchievements,
   };
 }
+
+export async function saveInteractionProgress(
+  currentProfile: UserProfile | null,
+  lessonId: string,
+  interactionId: string
+): Promise<UpdateResult> {
+  if (!currentProfile) {
+    return { success: false, message: "Perfil não encontrado." };
+  }
+
+  const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+  const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+  
+  if (!lessonProgress.completedInteractions.includes(interactionId)) {
+    lessonProgress.completedInteractions.push(interactionId);
+    profileToUpdate.lessonProgress[lessonId] = lessonProgress;
+  }
+
+  return {
+    success: true,
+    message: "Progresso da interação salvo.",
+    updatedProfile: profileToUpdate,
+  };
+}
+
+
+export async function uncompleteInteractionLogic(
+  currentProfile: UserProfile | null,
+  lessonId: string,
+  interactionId: string
+): Promise<UpdateResult> {
+    if (!currentProfile) {
+        return { success: false, message: "Perfil não encontrado." };
+    }
+
+    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    const lessonProgress = profileToUpdate.lessonProgress[lessonId];
+
+    if (lessonProgress) {
+        const initialInteractionCount = lessonProgress.completedInteractions.length;
+        lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
+        
+        // Se a lição estava marcada como concluída e uma interação foi desfeita,
+        // a lição não está mais 100% completa.
+        const lesson = mockLessons.find(l => l.id === lessonId);
+        const hadAllInteractions = lesson && initialInteractionCount === (lesson.content.match(/INTERACTIVE/g) || []).length;
+
+        if(profileToUpdate.completedLessons.includes(lessonId) && hadAllInteractions && lessonProgress.completedInteractions.length < initialInteractionCount) {
+           profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
+           lessonProgress.completed = false;
+           // Opcional: deduzir pontos se for a regra de negócio
+        }
+
+        profileToUpdate.lessonProgress[lessonId] = lessonProgress;
+    }
+
+    return {
+        success: true,
+        message: "Interação desmarcada.",
+        updatedProfile: profileToUpdate,
+    };
+}
+
+
+export async function resetLessonProgressLogic(
+    currentProfile: UserProfile | null,
+    lessonId: string
+): Promise<UpdateResult> {
+    if (!currentProfile) {
+        return { success: false, message: "Perfil não encontrado." };
+    }
+
+    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    
+    // Zera o progresso da lição específica
+    if (profileToUpdate.lessonProgress[lessonId]) {
+        profileToUpdate.lessonProgress[lessonId] = {
+            completed: false,
+            completedInteractions: [],
+            audioProgress: 0,
+        };
+    }
+
+    // Remove a lição da lista de concluídas
+    const initialCompletedCount = profileToUpdate.completedLessons.length;
+    profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
+
+    // Se a lição fazia parte de um módulo completo, desmarca o módulo
+    const lesson = mockLessons.find(l => l.id === lessonId);
+    if (lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId) && profileToUpdate.completedLessons.length < initialCompletedCount) {
+        profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
+    }
+    
+    // Nota: A lógica de deduzir pontos é complexa e pode ser punitiva. 
+    // Por enquanto, não vamos deduzir pontos ao reiniciar uma lição.
+
+    return {
+        success: true,
+        message: "Progresso da lição reiniciado.",
+        updatedProfile: profileToUpdate,
+    };
+}
+
+export async function saveAudioProgressLogic(currentProfile: UserProfile | null, lessonId: string, progress: number): Promise<UpdateResult> {
+    if (!currentProfile) {
+        return { success: false, message: "Perfil não encontrado." };
+    }
+    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    
+    const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+    lessonProgress.audioProgress = progress;
+    profileToUpdate.lessonProgress[lessonId] = lessonProgress;
+
+    return {
+        success: true,
+        message: "Progresso do áudio salvo.",
+        updatedProfile: profileToUpdate,
+    };
+}
+
+// Dummy export to satisfy the import if it's not implemented
+// export const uncompleteInteractionLogic = async (profile: UserProfile | null, lessonId: string, interactionId: string): Promise<any> => ({ success: true, updatedProfile: profile });

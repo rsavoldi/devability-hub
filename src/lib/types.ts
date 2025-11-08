@@ -1,4 +1,3 @@
-
 import type { LucideIcon } from "lucide-react";
 
 export interface RoadmapStep {
@@ -26,6 +25,7 @@ export interface Module {
 export interface LessonProgress {
   completed: boolean;
   completedInteractions: string[];
+  audioProgress?: number; // 0-100 percentage
 }
 
 export interface Lesson {
@@ -36,6 +36,7 @@ export interface Lesson {
   content: string;
   estimatedTime: string;
   coverImage?: string;
+  audioSrc?: string; // Caminho para o arquivo de áudio
   aiHint?: string;
   emoji?: string;
   references?: string[];

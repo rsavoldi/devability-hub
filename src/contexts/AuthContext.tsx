@@ -19,9 +19,10 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast"
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic } from '@/app/actions/userProgressActions';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockLessons } from '@/lib/mockData';
+import { useLessonUi } from './LessonUiContext';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -37,9 +38,10 @@ interface AuthContextType {
   completeLesson: (lessonId: string) => Promise<void>;
   completeExercise: (exerciseId: string) => Promise<void>;
   completeModule: (moduleId: string) => Promise<void>;
-  saveInteractionProgress: (lessonId: string, interactionId: string) => Promise<void>;
-  uncompleteInteraction: (lessonId: string, interactionId: string) => Promise<void>;
+  saveInteractionProgress: (lessonId: string, interactionId: string) => void;
+  uncompleteInteraction: (lessonId: string, interactionId: string) => void;
   resetLessonProgress: (lessonId: string) => Promise<void>;
+  saveAudioProgress: (lessonId: string, progress: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,187 +62,200 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   roles: userId === GUEST_USER_ID || !userId ? ['guest'] : ['user'],
 });
 
-
-const loadGuestProfile = (): UserProfile => {
-  if (typeof window === 'undefined') {
-    return createDefaultProfile(GUEST_USER_ID);
-  }
-  const storedProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-  if (storedProfileRaw) {
-    try {
-      const profile = JSON.parse(storedProfileRaw);
-      return {
-        id: GUEST_USER_ID,
-        name: profile.name || "Convidado(a)",
-        email: null,
-        avatarUrl: profile.avatarUrl,
-        roles: profile.roles || ['guest'],
-        points: profile.points || 0,
-        lessonProgress: profile.lessonProgress || {},
-        completedLessons: profile.completedLessons || [],
-        completedExercises: profile.completedExercises || [],
-        unlockedAchievements: profile.unlockedAchievements || ['ach1'],
-        completedModules: profile.completedModules || [],
-      };
-    } catch (e) {
-      console.error("Error parsing guest profile from localStorage", e);
-    }
-  }
-  return createDefaultProfile(GUEST_USER_ID);
-};
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
-  const updateUserProfile = useCallback(async (newProfileData: UserProfile) => {
-      setUserProfile(newProfileData);
-      if (newProfileData.id === GUEST_USER_ID) {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
-        }
-      } else {
-          await saveUserProfileToFirestore(newProfileData.id, newProfileData);
-      }
+  useEffect(() => {
+    setIsMounted(true);
   }, []);
 
-  const handleProgressUpdate = useCallback(async (resultPromise: Promise<any>) => {
-    setIsUpdatingProgress(true);
-    try {
-      const result = await resultPromise;
-      if (result.success && result.updatedProfile) {
-        await updateUserProfile(result.updatedProfile);
-        
-        if (result.pointsAdded && result.pointsAdded > 0) {
-          playSound('pointGain');
-        }
-        
-        result.unlockedAchievementsDetails?.forEach((ach: any) => {
-          setTimeout(() => {
-            playSound('achievementUnlock');
-            toast({
-              title: "Conquista Desbloqueada!",
-              description: (
-                <div className="flex items-center">
-                  <Trophy className="h-5 w-5 mr-2 text-amber-900" />
-                  <span>{ach.title} - {ach.description}</span>
-                </div>
-              ),
-              variant: "achievement",
-            });
-          }, 100);
-        });
-
-        if (result.message && !(result.message.includes("já estava concluíd"))) {
-           toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
-        }
-      } else if (!result.success && result.message && !result.message.includes("já estava concluíd")) {
-          toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
+  const updateUserProfile = useCallback(async (newProfileData: UserProfile, isSilent: boolean = false) => {
+    setUserProfile(newProfileData); // Optimistic UI update
+    if (newProfileData.id === GUEST_USER_ID) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfileData));
       }
-    } catch (error) {
-        console.error("Erro ao manusear atualização de progresso:", error);
-          toast({ title: "Erro Crítico", description: "Ocorreu um erro inesperado ao atualizar seu progresso.", variant: "destructive" });
-    } finally {
-      setIsUpdatingProgress(false);
+    } else if (currentUser && newProfileData.id === currentUser.uid) {
+        await saveUserProfileToFirestore(currentUser.uid, newProfileData);
     }
-  }, [updateUserProfile, toast]);
-  
+  }, [currentUser]);
 
-  useEffect(() => {
+  const handleProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, silent: boolean = false) => {
+    setIsUpdatingProgress(true);
+    
+    // Execute the logic
+    const result = await logicFunction(userProfile);
+    
+    // If the logic was successful and returned an updated profile, update state and persist
+    if (result.success && result.updatedProfile) {
+      setUserProfile(result.updatedProfile); // Update UI with the definitive state from the action
+      
+      if (result.updatedProfile.id === GUEST_USER_ID) {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(result.updatedProfile));
+      } else if (currentUser) {
+        await saveUserProfileToFirestore(currentUser.uid, result.updatedProfile);
+      }
+      
+      // Handle sounds and toasts for achievements
+      if (result.pointsAdded && result.pointsAdded > 0 && !silent) {
+        playSound('pointGain');
+      }
+      
+      result.unlockedAchievementsDetails?.forEach((ach: any) => {
+        setTimeout(() => {
+          playSound('achievementUnlock');
+          toast({
+            title: "Conquista Desbloqueada!",
+            description: (
+              <div className="flex items-center">
+                <Trophy className="h-5 w-5 mr-2 text-amber-900" />
+                <span>{ach.title} - {ach.description}</span>
+              </div>
+            ),
+            variant: "achievement",
+          });
+        }, 100);
+      });
+
+      // Show a success message if not silent and there is a meaningful message
+      if (!silent && result.message && !result.message.includes("já estava concluíd")) {
+         toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
+      }
+    } else if (!silent && !result.success && result.message) {
+        toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
+    }
+    
+    setIsUpdatingProgress(false);
+  }, [userProfile, currentUser, toast]);
+
+
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setCurrentUser(firebaseUser);
       if (firebaseUser) {
+        setCurrentUser(firebaseUser);
         let profile = await getUserProfile(firebaseUser.uid);
         if (!profile) {
+          const guestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+          const guestProfile = guestProfileRaw ? JSON.parse(guestProfileRaw) : null;
+
           profile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+
+          if (guestProfile) {
+            profile.points = guestProfile.points;
+            profile.lessonProgress = guestProfile.lessonProgress;
+            profile.completedLessons = guestProfile.completedLessons;
+            profile.completedExercises = guestProfile.completedExercises;
+            profile.unlockedAchievements = guestProfile.unlockedAchievements;
+            profile.completedModules = guestProfile.completedModules;
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+          }
           await saveUserProfileToFirestore(firebaseUser.uid, profile);
         }
         setUserProfile(profile);
       } else {
-        setUserProfile(loadGuestProfile());
+        setCurrentUser(null);
+        if (typeof window !== 'undefined') {
+          const storedGuestProfile = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+          if (storedGuestProfile) {
+            setUserProfile(JSON.parse(storedGuestProfile));
+          } else {
+            setUserProfile(createDefaultProfile(GUEST_USER_ID));
+          }
+        } else {
+            setUserProfile(createDefaultProfile(GUEST_USER_ID));
+        }
       }
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      loadProfile();
+    }
+  }, [isMounted, loadProfile]);
   
   const refreshUserProfile = useCallback(async () => {
-    setLoading(true);
-    if (currentUser) {
-      const refreshedProfile = await getUserProfile(currentUser.uid);
-      if(refreshedProfile) setUserProfile(refreshedProfile);
-    } else {
-      setUserProfile(loadGuestProfile());
-    }
-    setLoading(false);
-  }, [currentUser]);
+    await loadProfile();
+  }, [loadProfile]);
 
-  const saveInteractionProgress = useCallback(async (lessonId: string, interactionId: string) => {
+  const saveInteractionProgress = useCallback((lessonId: string, interactionId: string) => {
     if (!userProfile) return;
-    setIsUpdatingProgress(true);
+
+    // Optimistic UI update
     const newProfile = JSON.parse(JSON.stringify(userProfile));
-    const currentLessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
-    
-    if (!currentLessonProgress.completedInteractions.includes(interactionId)) {
-      currentLessonProgress.completedInteractions.push(interactionId);
-      newProfile.lessonProgress[lessonId] = currentLessonProgress;
-      await updateUserProfile(newProfile);
+    const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+    if (!lessonProgress.completedInteractions.includes(interactionId)) {
+      lessonProgress.completedInteractions.push(interactionId);
+      newProfile.lessonProgress[lessonId] = lessonProgress;
+      setUserProfile(newProfile); // Update UI immediately
     }
-    setIsUpdatingProgress(false);
-  }, [userProfile, updateUserProfile]);
 
-  const uncompleteInteraction = useCallback(async (lessonId: string, interactionId: string) => {
+    // Server/background action without blocking
+    handleProgressUpdate(() => saveInteractionProgressAction(newProfile, lessonId, interactionId), true);
+  }, [userProfile, handleProgressUpdate]);
+  
+  const uncompleteInteraction = useCallback((lessonId: string, interactionId: string) => {
     if (!userProfile) return;
-    setIsUpdatingProgress(true);
+
+    // Optimistic UI update
     const newProfile = JSON.parse(JSON.stringify(userProfile));
     const lessonProgress = newProfile.lessonProgress[lessonId];
-
     if (lessonProgress) {
         lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
-        lessonProgress.completed = false; // Se uma interação é desfeita, a lição não pode mais ser considerada completa
         newProfile.lessonProgress[lessonId] = lessonProgress;
-        await updateUserProfile(newProfile);
+        setUserProfile(newProfile); // Update UI immediately
     }
-    setIsUpdatingProgress(false);
-  }, [userProfile, updateUserProfile]);
+
+    handleProgressUpdate(() => uncompleteInteractionLogic(newProfile, lessonId, interactionId), true);
+  }, [userProfile, handleProgressUpdate]);
   
   const completeLesson = useCallback(async (lessonId: string) => {
-    if (!userProfile || (userProfile.lessonProgress[lessonId]?.completed)) return;
-    await handleProgressUpdate(completeLessonLogic(userProfile, lessonId));
+    if (!userProfile || userProfile.completedLessons.includes(lessonId)) return;
+    await handleProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
   }, [userProfile, handleProgressUpdate]);
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
       if (!userProfile) return;
-      setIsUpdatingProgress(true);
-      const lessonToReset = mockLessons.find(l => l.id === lessonId);
-      const wasCompleted = userProfile.lessonProgress[lessonId]?.completed || false;
-      const pointsToSubtract = wasCompleted ? (lessonToReset?.points || 0) : 0;
+      await handleProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true);
+  }, [userProfile, handleProgressUpdate]);
+  
+  const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
+    if (!userProfile) return;
+    const currentAudioProgress = userProfile.lessonProgress[lessonId]?.audioProgress || 0;
+    if (Math.abs(progress - currentAudioProgress) < 1) return;
 
-      const newProfile = JSON.parse(JSON.stringify(userProfile));
-      
-      newProfile.points = Math.max(0, newProfile.points - pointsToSubtract);
-      newProfile.lessonProgress[lessonId] = { completed: false, completedInteractions: [] };
-      // Also remove from completedLessons array if it exists
-      newProfile.completedLessons = newProfile.completedLessons.filter((id: string) => id !== lessonId);
+    const newProfile = JSON.parse(JSON.stringify(userProfile));
+    const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+    lessonProgress.audioProgress = progress;
+    newProfile.lessonProgress[lessonId] = lessonProgress;
+    
+    setUserProfile(newProfile); 
+    
+    saveAudioProgressLogic(userProfile, lessonId, progress).then(result => {
+        if(result.success && result.updatedProfile) {
+            updateUserProfile(result.updatedProfile, true);
+        }
+    });
 
-      await updateUserProfile(newProfile);
-      setIsUpdatingProgress(false);
-      toast({ title: "Progresso da Lição Reiniciado", description: `Você pode refazer a lição "${lessonToReset?.title}".`});
-  }, [userProfile, updateUserProfile, toast]);
+  }, [userProfile, updateUserProfile]);
+
 
   const completeExercise = useCallback(async (exerciseId: string) => {
     if (!userProfile || userProfile.completedExercises.includes(exerciseId)) return;
-    await handleProgressUpdate(completeExerciseLogic(userProfile, exerciseId));
+    await handleProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
   }, [userProfile, handleProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
     if (!userProfile || userProfile.completedModules.includes(moduleId)) return;
-    await handleProgressUpdate(completeModuleLogic(userProfile, moduleId));
+    await handleProgressUpdate((profile) => completeModuleLogic(profile, moduleId));
   }, [userProfile, handleProgressUpdate]);
 
   const signInWithGoogle = async () => {
@@ -264,10 +279,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signOut(auth);
+      const guestProfile = createDefaultProfile(GUEST_USER_ID);
+      setUserProfile(guestProfile);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(guestProfile));
+      }
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
   
@@ -321,7 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  if (loading) {
+  if (loading || !isMounted) {
     return (
       <div className="flex justify-center items-center h-screen w-screen bg-background text-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -348,6 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveInteractionProgress,
       uncompleteInteraction,
       resetLessonProgress,
+      saveAudioProgress,
     }}>
       {children}
     </AuthContext.Provider>
