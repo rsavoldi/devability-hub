@@ -177,11 +177,13 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lessonUi && lesson.id) {
         const completedIds = userProfile?.lessonProgress[lesson.id]?.completedInteractions || [];
         const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
-        lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedIds);
+        lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, completedIds);
     }
-
+    
+    // The cleanup function should only run when the component unmounts
+    // to avoid infinite loops.
     return () => {
-      lessonUi?.resetLesson();
+      // Intentionally left empty to break the loop. The context now handles its own reset.
     };
   }, [lesson, userProfile?.lessonProgress, lessonUi, totalInteractiveElements]);
 
@@ -405,7 +407,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       await resetLessonProgress(lesson.id);
       if (lessonUi) {
           const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
-          lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, []);
+          lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, []);
       }
       setIsResetting(false);
   };
