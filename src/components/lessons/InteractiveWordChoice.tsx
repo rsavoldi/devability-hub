@@ -28,11 +28,9 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
-  const isCorrectSelection = selectedOption === correctAnswer;
 
   useEffect(() => {
     if (isSubmitted) {
@@ -41,27 +39,34 @@ export function InteractiveWordChoice({
       setSelectedOption(null);
     }
   }, [isSubmitted, correctAnswer]);
-
+  
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
-    if (isSubmitted) {
-      // If already submitted and correct, un-completing it
+    if (isSubmitted && selectedOption === option) {
       onUncomplete(interactionId);
       setSelectedOption(null);
-    } else {
-      // If not submitted yet
+    } else if (!isSubmitted) {
       setSelectedOption(option);
       if (option === correctAnswer) {
         onCorrect(interactionId);
       }
+    } else if (isSubmitted && selectedOption !== option) {
+      // If submitted and clicking a different (wrong) option, do nothing or allow retry
+      // For now, let's allow retry by deselecting the wrong one
+      setSelectedOption(option);
     }
   };
 
+  const optionsToRender = isSubmitted 
+    ? shuffledOptions.filter(opt => opt === correctAnswer)
+    : shuffledOptions;
+
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
-      {shuffledOptions.map((option, index) => {
+      {optionsToRender.map((option, index) => {
         const isSelected = selectedOption === option;
+        const isCorrectSelection = isSelected && option === correctAnswer;
         
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let prefixEmoji: React.ReactNode = null;
@@ -79,6 +84,9 @@ export function InteractiveWordChoice({
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
 
+        constisDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
+
+
         return (
           <Button
             key={index}
@@ -86,12 +94,13 @@ export function InteractiveWordChoice({
             variant={variant}
             size="sm"
             onClick={() => handleOptionClick(option)}
-            disabled={isLessonCompleted}
+            disabled={isDisabled}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses,
-              isSelected && !isCorrectSelection && "animate-in shake" // Example animation
+              isSelected && !isCorrectSelection && "animate-in shake",
+              isDisabled && "cursor-not-allowed opacity-100"
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}
           >
