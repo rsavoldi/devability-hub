@@ -195,27 +195,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleServerProgressUpdate]);
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
-    await handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true);
+    await handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
   
   const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
-    setUserProfile(currentProfile => {
-      if (!currentProfile) return null;
-
-      const newProfile = JSON.parse(JSON.stringify(currentProfile));
-      const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-      
-      const currentProgress = lessonProgress.audioProgress || 0;
-      if (Math.abs(progress - currentProgress) < 5 && progress < 100) return currentProfile;
-
-      lessonProgress.audioProgress = progress;
-      newProfile.lessonProgress[lessonId] = lessonProgress;
-
-      saveAudioProgressLogic(newProfile, lessonId, progress);
-      
-      return newProfile;
-    });
-  }, []);
+      // Optimistically update the UI to feel instant
+      setUserProfile(currentProfile => {
+        if (!currentProfile) return null;
+        const newProfile = JSON.parse(JSON.stringify(currentProfile));
+        const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+        lessonProgress.audioProgress = progress;
+        newProfile.lessonProgress[lessonId] = lessonProgress;
+        return newProfile;
+      });
+      // Then, call the server action in the background
+      handleServerProgressUpdate((profile) => saveAudioProgressLogic(profile, lessonId, progress), true);
+  }, [handleServerProgressUpdate]);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
     await handleServerProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
@@ -273,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await saveUserProfileToFirestore(activeUserId, defaultProfile);
       }
       
+      setIsUpdatingProgress(false);
       window.location.reload(); 
     }
   }, [currentUser]);
