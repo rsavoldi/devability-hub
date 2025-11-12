@@ -6,7 +6,7 @@ import { mockRoadmapData, mockExercises as allMockExercises, mockLessons as allM
 import type { Module, Lesson, Exercise, RoadmapStep } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ExternalLink, Loader2, Map } from 'lucide-react';
 import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -101,12 +101,12 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
       lessonsOnlyProgress: lessonsProgressPercentage,
       allItemsCompleted,
     };
-  }, [module, userProfile, getLessonProgress]);
+  }, [module, userProfile?.lessonProgress, userProfile?.completedLessons, userProfile?.completedExercises, getLessonProgress]);
 
   const moduleIsCompletedByProfile = useMemo(() => {
     if (!userProfile || !module) return false;
     return userProfile.completedModules.includes(module.id);
-  }, [userProfile, module]);
+  }, [userProfile?.completedModules, module]);
 
   const handleMarkModuleAsCompleted = async () => {
     if (moduleIsCompletedByProfile || isUpdatingProgress || !allItemsCompleted || !module) return;
@@ -230,5 +230,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     </div>
   );
 }
+
 
 
