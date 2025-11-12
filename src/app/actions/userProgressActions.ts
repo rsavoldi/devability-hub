@@ -301,7 +301,6 @@ export async function uncompleteInteractionLogic(
     if (lessonProgress) {
         lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
         
-        // If the lesson was marked as complete, un-complete it and also the module if necessary
         if (profileToUpdate.completedLessons.includes(lessonId)) {
            profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
            lessonProgress.completed = false;

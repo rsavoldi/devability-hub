@@ -183,48 +183,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const saveInteractionProgress = useCallback((lessonId: string, interactionId: string) => {
-      setUserProfile(currentProfile => {
-        if (!currentProfile) return null;
-        
-        // Create a deep copy to avoid state mutation issues.
-        const newProfile = JSON.parse(JSON.stringify(currentProfile));
-
-        const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-        if (!lessonProgress.completedInteractions.includes(interactionId)) {
-          lessonProgress.completedInteractions.push(interactionId);
-          newProfile.lessonProgress[lessonId] = lessonProgress;
-          
-          // Fire and forget server action for persistence with the NEW profile state
-          saveInteractionProgressAction(newProfile, lessonId, interactionId);
-        }
-        
-        // Return the new state for immediate UI update.
-        return newProfile;
-      });
-  }, []);
+    handleServerProgressUpdate((profile) => saveInteractionProgressAction(profile, lessonId, interactionId), true);
+  }, [handleServerProgressUpdate]);
   
   const uncompleteInteraction = useCallback((lessonId: string, interactionId: string) => {
-    setUserProfile(currentProfile => {
-      if (!currentProfile) return null;
-      
-      const newProfile = JSON.parse(JSON.stringify(currentProfile));
-      const lessonProgress = newProfile.lessonProgress[lessonId];
-      
-      if (lessonProgress && lessonProgress.completedInteractions.includes(interactionId)) {
-          lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
-          newProfile.lessonProgress[lessonId] = lessonProgress;
-
-          // Fire and forget server action for persistence
-          uncompleteInteractionLogic(newProfile, lessonId, interactionId);
-      }
-      
-      return newProfile;
-    });
-  }, []);
+    handleServerProgressUpdate((profile) => uncompleteInteractionLogic(profile, lessonId, interactionId), true);
+  }, [handleServerProgressUpdate]);
   
   const completeLesson = useCallback(async (lessonId: string) => {
-    // This action has broader implications (points, achievements, module completion)
-    // so it uses the full server update cycle.
     await handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
 
@@ -239,14 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const newProfile = JSON.parse(JSON.stringify(currentProfile));
       const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
       
-      // Save only if progress is significant or it's completion
       const currentProgress = lessonProgress.audioProgress || 0;
       if (Math.abs(progress - currentProgress) < 5 && progress < 100) return currentProfile;
 
       lessonProgress.audioProgress = progress;
       newProfile.lessonProgress[lessonId] = lessonProgress;
 
-      // Fire and forget server action
       saveAudioProgressLogic(newProfile, lessonId, progress);
       
       return newProfile;
@@ -309,7 +273,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await saveUserProfileToFirestore(activeUserId, defaultProfile);
       }
       
-      // Força um recarregamento da página para garantir que todos os componentes (especialmente Server Components) recebam os dados zerados.
       window.location.reload(); 
     }
   }, [currentUser]);
