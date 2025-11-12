@@ -69,8 +69,6 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     
     const totalInteractions = countInteractions(lessonContent);
     if (totalInteractions === 0) {
-      // If a lesson has no interactions, it's completed when marked as such.
-      // For progress calculation, we can consider it 100% if completed, 0% otherwise.
       return userProfile.completedLessons.includes(lessonId) ? 100 : 0;
     }
     
@@ -90,12 +88,11 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     const lessonsProgressPercentage = totalLessons > 0 ? Math.round((completedLessonsCount / totalLessons) * 100) : 0;
   
     const completedExercisesCount = module.exercises.filter(e => userProfile.completedExercises.includes(e.id)).length;
-    const exercisesProgressPercentage = totalExercises > 0 ? Math.round((completedExercisesCount / totalExercises) * 100) : 0;
-  
+    
     const totalItems = totalLessons + totalExercises;
-    const progressPercentage = totalItems > 0
-      ? Math.round(((completedLessonsCount + completedExercisesCount) / totalItems) * 100)
-      : 0;
+    const completedItems = completedLessonsCount + completedExercisesCount;
+
+    const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   
     const allItemsCompleted = progressPercentage === 100;
   
@@ -233,4 +230,5 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
     </div>
   );
 }
+
 

@@ -38,26 +38,28 @@ export async function checkAndUnlockAchievementsLogic(
   let pointsFromAchievements = 0;
   const unlockedDetails: Array<Pick<Achievement, 'id' | 'title' | 'description' | 'emoji' | 'pointsAwarded'>> = [];
 
-  const completedLessonIds = profile.completedLessons || [];
+  const completedLessonIds = new Set(profile.completedLessons || []);
+  const completedExerciseIds = new Set(profile.completedExercises || []);
+  const completedModuleIds = new Set(profile.completedModules || []);
 
   mockAchievements.forEach(achievement => {
     if (!profile.unlockedAchievements.includes(achievement.id)) {
       let conditionMet = false;
       switch (achievement.id) {
-        case 'ach3':
-          conditionMet = actionType === 'lesson' && completedLessonIds.length >= 1;
+        case 'ach_lesson5':
+          conditionMet = actionType === 'lesson' && completedLessonIds.size >= 5;
           break;
         case 'ach_exerc10':
-          conditionMet = actionType === 'exercise' && profile.completedExercises.length >= 10;
-          break;
-        case 'ach_lesson5':
-          conditionMet = actionType === 'lesson' && completedLessonIds.length >= 5;
+          conditionMet = actionType === 'exercise' && completedExerciseIds.size >= 10;
           break;
         case 'ach_mod1':
-          conditionMet = actionType === 'module' && profile.completedModules.length >= 1;
+          conditionMet = actionType === 'module' && completedModuleIds.size >= 1;
           break;
         case 'ach_points100':
-          conditionMet = profile.points >= 100;
+          conditionMet = (actionType === 'points' || actionType === 'lesson' || actionType === 'exercise' || actionType === 'module') && profile.points >= 100;
+          break;
+        case 'ach3':
+          conditionMet = actionType === 'lesson' && completedLessonIds.size >= 1;
           break;
       }
 
@@ -274,7 +276,9 @@ export async function saveInteractionProgress(
     return { success: false, message: "Perfil não encontrado." };
   }
 
+  // Deep copy to avoid direct mutation of the original state object
   const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+  
   const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
   
   if (!lessonProgress.completedInteractions.includes(interactionId)) {
@@ -282,6 +286,7 @@ export async function saveInteractionProgress(
     profileToUpdate.lessonProgress[lessonId] = lessonProgress;
   }
 
+  // Return the updated profile so the client can sync state if needed, though it's fire-and-forget
   return {
     success: true,
     message: "Progresso da interação salvo.",
@@ -306,15 +311,17 @@ export async function uncompleteInteractionLogic(
         const initialInteractionCount = lessonProgress.completedInteractions.length;
         lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
         
-        // Se a lição estava marcada como concluída e uma interação foi desfeita,
-        // a lição não está mais 100% completa.
-        const lesson = mockLessons.find(l => l.id === lessonId);
-        const hadAllInteractions = lesson && initialInteractionCount === (lesson.content.match(/INTERACTIVE/g) || []).length;
-
-        if(profileToUpdate.completedLessons.includes(lessonId) && hadAllInteractions && lessonProgress.completedInteractions.length < initialInteractionCount) {
+        // If the lesson was marked as complete and an interaction was undone,
+        // the lesson is no longer 100% complete.
+        if (profileToUpdate.completedLessons.includes(lessonId)) {
            profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
            lessonProgress.completed = false;
-           // Opcional: deduzir pontos se for a regra de negócio
+           // Optional: Deduct points if that's the business rule. For now, we won't.
+        }
+
+        const lesson = mockLessons.find(l => l.id === lessonId);
+        if (lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId)) {
+            profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
         }
 
         profileToUpdate.lessonProgress[lessonId] = lessonProgress;
@@ -338,7 +345,7 @@ export async function resetLessonProgressLogic(
 
     const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
     
-    // Zera o progresso da lição específica
+    // Reset specific lesson progress
     if (profileToUpdate.lessonProgress[lessonId]) {
         profileToUpdate.lessonProgress[lessonId] = {
             completed: false,
@@ -347,18 +354,20 @@ export async function resetLessonProgressLogic(
         };
     }
 
-    // Remove a lição da lista de concluídas
-    const initialCompletedCount = profileToUpdate.completedLessons.length;
-    profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
+    // Remove lesson from completed list
+    const wasLessonCompleted = profileToUpdate.completedLessons.includes(lessonId);
+    if (wasLessonCompleted) {
+        profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
+    }
 
-    // Se a lição fazia parte de um módulo completo, desmarca o módulo
+    // If the lesson was part of a completed module, un-complete the module as well
     const lesson = mockLessons.find(l => l.id === lessonId);
-    if (lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId) && profileToUpdate.completedLessons.length < initialCompletedCount) {
+    if (wasLessonCompleted && lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId)) {
         profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
     }
     
-    // Nota: A lógica de deduzir pontos é complexa e pode ser punitiva. 
-    // Por enquanto, não vamos deduzir pontos ao reiniciar uma lição.
+    // Note: Deducting points is complex and can be punitive. 
+    // We will not deduct points for resetting a lesson for now.
 
     return {
         success: true,
@@ -383,6 +392,3 @@ export async function saveAudioProgressLogic(currentProfile: UserProfile | null,
         updatedProfile: profileToUpdate,
     };
 }
-
-// Dummy export to satisfy the import if it's not implemented
-// export const uncompleteInteractionLogic = async (profile: UserProfile | null, lessonId: string, interactionId: string): Promise<any> => ({ success: true, updatedProfile: profile });

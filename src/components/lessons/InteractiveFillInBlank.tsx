@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type JSX } from 'react';
+import { useState, useEffect, useMemo, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -37,7 +37,6 @@ export function InteractiveFillInBlank({
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
-  // Initialize shuffled options only once when the component mounts
   const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
@@ -68,13 +67,10 @@ export function InteractiveFillInBlank({
   const handleTriggerClick = () => {
     if (isLessonCompleted) return;
 
-    if (isSubmitted || (filledAnswer && isCorrect === false)) {
+    if (isSubmitted) {
       setFilledAnswer(null);
       setIsCorrect(null);
-      if (isSubmitted) {
-        onUncomplete(interactionId);
-      }
-      setIsPopoverOpen(true);
+      onUncomplete(interactionId);
     } else {
       setIsPopoverOpen(o => !o);
     }
@@ -96,13 +92,14 @@ export function InteractiveFillInBlank({
     borderColorClass = "border-green-600 dark:border-green-700";
     backgroundClass = "bg-green-100 dark:bg-green-900/30";
     cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
-    chevronIcon = isLessonCompleted ? null : chevronIcon;
+    chevronIcon = isLessonCompleted ? null : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   } else if (filledAnswer && isCorrect === false) {
     prefixEmoji = '❌';
     mainText = filledAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 dark:border-red-700";
     backgroundClass = "bg-red-100 dark:bg-red-900/30";
+    chevronIcon = <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   } else if (filledAnswer && isCorrect === null) {
      mainText = filledAnswer;
      prefixEmoji = "";

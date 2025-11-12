@@ -141,13 +141,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
-  // Audio Player State
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
-  const [audioCompleted, setAudioCompleted] = useState(false);
   const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
   
   const completedInteractions = useMemo(() => {
@@ -157,6 +155,10 @@ export function LessonView({ lesson }: LessonViewProps) {
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
     return userProfile?.lessonProgress[lesson.id]?.completed || false;
   }, [userProfile, lesson.id]);
+
+  const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile, lesson.id]);
+  const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
+
 
   const handleInteractionCorrect = useCallback(async (interactionId: string) => {
     if (!completedInteractions.has(interactionId)) {
@@ -230,21 +232,21 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [lesson]);
 
-  // Audio Player Logic
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
   
     const setAudioData = () => {
       setDuration(audio.duration);
-      const savedProgress = userProfile?.lessonProgress[lesson.id]?.audioProgress || 0;
-      const startTime = (savedProgress / 100) * audio.duration;
-      if (isFinite(startTime)) {
-        audio.currentTime = startTime;
-        setCurrentTime(startTime);
-      }
-      if (savedProgress >= 100) {
-        setAudioCompleted(true);
+      if (audioProgress > 0 && audioProgress < 100) {
+        const startTime = (audioProgress / 100) * audio.duration;
+        if (isFinite(startTime)) {
+            audio.currentTime = startTime;
+            setCurrentTime(startTime);
+        }
+      } else {
+        setCurrentTime(0);
+        audio.currentTime = 0;
       }
     };
   
@@ -252,7 +254,6 @@ export function LessonView({ lesson }: LessonViewProps) {
 
     const handleAudioEnded = () => {
       setIsPlaying(false);
-      setAudioCompleted(true);
       saveAudioProgress(lesson.id, 100);
       if (progressSaveInterval.current) {
         clearInterval(progressSaveInterval.current);
@@ -271,7 +272,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         clearInterval(progressSaveInterval.current);
       }
     };
-  }, [lesson.id, userProfile, saveAudioProgress]);
+  }, [lesson.id, saveAudioProgress, audioProgress]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -281,10 +282,10 @@ export function LessonView({ lesson }: LessonViewProps) {
       audio.pause();
       if (progressSaveInterval.current) clearInterval(progressSaveInterval.current);
     } else {
-      if (audio.ended) { // If audio ended, replay from start
+      if (audio.ended || audioProgress >= 100) {
         audio.currentTime = 0;
         setCurrentTime(0);
-        setAudioCompleted(false);
+        saveAudioProgress(lesson.id, 0); 
       }
       audio.play();
       progressSaveInterval.current = setInterval(() => {
@@ -292,7 +293,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         if (progress < 100) {
           saveAudioProgress(lesson.id, progress);
         }
-      }, 5000); // Salva a cada 5 segundos
+      }, 5000);
     }
     setIsPlaying(!isPlaying);
   };
@@ -304,9 +305,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      if (newTime < duration) {
-        setAudioCompleted(false);
-      }
+      saveAudioProgress(lesson.id, (newTime / duration) * 100);
     }
   };
 
@@ -489,7 +488,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
           {lesson.audioSrc && (
             <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" onEnded={() => setIsPlaying(false)} />
+              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" />
               <div className="flex items-center gap-4">
                 <Button onClick={togglePlayPause} size="icon" variant="secondary" className="flex-shrink-0">
                   {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
@@ -499,7 +498,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   <div className="w-full bg-border h-2 rounded-full cursor-pointer" onClick={handleProgressChange}>
                     <div
                       className="bg-primary h-full rounded-full"
-                      style={{ width: `${(currentTime / duration) * 100}%` }}
+                      style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : audioProgress}%` }}
                     />
                   </div>
                   <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(duration)}</span>
@@ -631,4 +630,5 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
+
 

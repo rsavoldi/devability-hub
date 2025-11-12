@@ -28,81 +28,35 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [isCorrectSelection, setIsCorrectSelection] = useState<boolean | null>(null);
   
-  // Initialize shuffled options only once when the component mounts
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
+  const isCorrectSelection = selectedOption === correctAnswer;
 
   useEffect(() => {
     if (isSubmitted) {
       setSelectedOption(correctAnswer);
-      setIsCorrectSelection(true);
     } else {
       setSelectedOption(null);
-      setIsCorrectSelection(null);
     }
   }, [isSubmitted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
-    const isCurrentlySelected = selectedOption === option;
-
-    if (isCurrentlySelected) {
+    if (isSubmitted) {
+      // If already submitted and correct, un-completing it
+      onUncomplete(interactionId);
       setSelectedOption(null);
-      setIsCorrectSelection(null);
-      if (isSubmitted) {
-        onUncomplete(interactionId);
+    } else {
+      // If not submitted yet
+      setSelectedOption(option);
+      if (option === correctAnswer) {
+        onCorrect(interactionId);
       }
-      return;
-    }
-    
-    setSelectedOption(option);
-    const isCorrect = option === correctAnswer;
-    setIsCorrectSelection(isCorrect);
-    
-    if (isCorrect) {
-      onCorrect(interactionId);
     }
   };
-
-  if (isSubmitted) {
-    // Only show the correct answer button when submitted
-    const remainingOptions = shuffledOptions.filter(opt => isCorrectSelection ? opt === correctAnswer : true);
-
-    return (
-        <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
-          {remainingOptions.map((option, index) => (
-            <Button
-                key={index}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleOptionClick(option)}
-                disabled={isLessonCompleted}
-                className={cn(
-                  "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
-                  "inline-flex items-center gap-1",
-
-                  "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200", 
-                  
-                  !isLessonCompleted && 
-                  "hover:bg-green-100 dark:hover:bg-green-900/30           hover:text-green-800 dark:hover:text-green-200",
-                  
-                  isLessonCompleted ?
-                  "cursor-default" : "cursor-pointer",
-                  
-                )}
-            >
-              <span className="shrink-0 -ml-0.5 mr-0.5">✅</span>
-              <span>{option}</span>
-            </Button>
-          ))}
-        </span>
-    );
-  }
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
@@ -113,12 +67,14 @@ export function InteractiveWordChoice({
         let prefixEmoji: React.ReactNode = null;
         let additionalClasses = "";
         
-        if (isSelected && isCorrectSelection === false) {
+        if (isSelected && isCorrectSelection) {
+           variant = "default";
+           prefixEmoji = '✅';
+           additionalClasses = "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
+        } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
           prefixEmoji = '❌';
           additionalClasses = "bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300";
-        } else if (isSelected) {
-           additionalClasses = "bg-primary/10 border-primary text-primary dark:bg-primary/20 dark:text-primary-foreground/80 ring-2 ring-primary";
         } else {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
@@ -135,7 +91,7 @@ export function InteractiveWordChoice({
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses,
-              isSelected && "ring-2 ring-ring"
+              isSelected && !isCorrectSelection && "animate-in shake" // Example animation
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}
           >
