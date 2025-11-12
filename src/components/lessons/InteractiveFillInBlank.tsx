@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type JSX } from 'react';
+import { useState, type JSX, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -37,13 +37,25 @@ export function InteractiveFillInBlank({
   const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
   const [filledAnswer, setFilledAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
-  
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  
   const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
+  // Sincroniza o estado interno se o estado global mudar (ex: ao reiniciar a lição)
+  useEffect(() => {
+    if (isInteractionCompleted) {
+      setIsSubmitted(true);
+      setFilledAnswer(correctAnswer);
+      setIsCorrect(true);
+    } else {
+      setIsSubmitted(false);
+      setFilledAnswer(null);
+      setIsCorrect(null);
+    }
+  }, [isInteractionCompleted, correctAnswer]);
+
+
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted || isSubmitted) return;
+    if (isLessonCompleted || (isSubmitted && isCorrect)) return;
     
     setFilledAnswer(option);
     const currentIsCorrect = option === correctAnswer;
@@ -60,6 +72,7 @@ export function InteractiveFillInBlank({
     if (isLessonCompleted) return;
 
     if (isSubmitted) {
+      // Permite desmarcar a resposta correta para tentar novamente
       setIsSubmitted(false);
       setFilledAnswer(null);
       setIsCorrect(null);
@@ -68,7 +81,7 @@ export function InteractiveFillInBlank({
       setIsPopoverOpen(o => !o);
     }
   };
-
+  
   let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-4 w-4 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   let textColorClass = "text-primary dark:text-primary-foreground/80";
   let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
@@ -76,6 +89,7 @@ export function InteractiveFillInBlank({
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
+  let variant: "outline" | "default" | "secondary" | "destructive" | "ghost" | "link" | null | undefined = "outline";
 
   if (isSubmitted && isCorrect) {
     prefixEmoji = "✅";
@@ -96,17 +110,7 @@ export function InteractiveFillInBlank({
      mainText = filledAnswer;
      prefixEmoji = "";
   }
-
-  const triggerContent = (
-    <span className="flex items-center justify-between w-full">
-      <span className="flex items-center overflow-hidden gap-1">
-        {prefixEmoji && <span className="shrink-0">{prefixEmoji}</span>}
-        <span className="truncate">{mainText}</span>
-      </span>
-      {chevronIcon}
-    </span>
-  );
-
+  
   const isDisabled = isLessonCompleted;
 
   return (
@@ -129,17 +133,21 @@ export function InteractiveFillInBlank({
             aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
-            {triggerContent}
+             <span className="flex items-center justify-between w-full">
+              <span className="flex items-center overflow-hidden gap-1">
+                {prefixEmoji && <span className="shrink-0">{prefixEmoji}</span>}
+                <span className="truncate">{mainText}</span>
+              </span>
+              {chevronIcon}
+            </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
           className={cn("p-1.5 border-border shadow-lg flex flex-col space-y-1 w-auto min-w-[var(--radix-popover-trigger-width)]")}
           side="bottom"
           align="start"
-          hidden={isSubmitted || isDisabled}
-          onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
+        {shuffledDisplayOptions.map((opt, index) => (
           <Button
             key={index}
             type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -28,66 +28,72 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   
-  // O estado inicial é determinado uma vez, com base no progresso salvo.
-  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
-  const [selectedOption, setSelectedOption] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
-  
-  // O embaralhamento também acontece apenas uma vez.
+  const getInitialState = () => ({
+    isSubmitted: isInteractionCompleted || false,
+    selectedOption: isInteractionCompleted ? correctAnswer : null,
+    isCorrect: isInteractionCompleted ? true : null,
+  });
+
+  const [state, setState] = useState(getInitialState);
   const [shuffledOptions] = useState(() => shuffleArray(options));
+
+  useEffect(() => {
+    // Sincroniza o estado se a propriedade global mudar (ex: ao reiniciar lição)
+    setState(getInitialState());
+  }, [isInteractionCompleted, correctAnswer]);
+
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
-    if (isSubmitted && option === correctAnswer) {
+    if (state.isSubmitted && option === correctAnswer) {
       // Lógica de desmarcar
-      setIsSubmitted(false);
-      setSelectedOption(null);
-      setIsCorrect(null);
-      onUncomplete(interactionId); // Notifica o sistema em segundo plano
-    } else if (!isSubmitted) {
+      setState({ isSubmitted: false, selectedOption: null, isCorrect: null });
+      onUncomplete(interactionId);
+    } else if (!state.isSubmitted) {
       // Lógica de primeira seleção
-      setSelectedOption(option);
       const currentIsCorrect = option === correctAnswer;
-      setIsCorrect(currentIsCorrect);
-
+      setState({ selectedOption: option, isCorrect: currentIsCorrect, isSubmitted: currentIsCorrect });
+      
       if (currentIsCorrect) {
-        setIsSubmitted(true); // Atualiza visualmente IMEDIATAMENTE
-        onCorrect(interactionId); // Notifica o sistema em segundo plano
+        onCorrect(interactionId);
       }
-    } else if (isSubmitted && !isCorrect && selectedOption === option) {
-        // Permite desmarcar uma resposta errada para tentar outra
-        setSelectedOption(null);
-        setIsCorrect(null);
+    } else if (state.isSubmitted && !state.isCorrect && state.selectedOption === option) {
+      // Permite desmarcar uma resposta errada para tentar outra
+      setState(prevState => ({ ...prevState, selectedOption: null, isCorrect: null }));
     }
   };
 
-  const optionsToRender = isSubmitted ? [correctAnswer] : shuffledOptions;
+  const optionsToRender = state.isSubmitted ? [correctAnswer] : shuffledOptions;
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
       {optionsToRender.map((option, index) => {
-        const isSelected = selectedOption === option;
+        const isSelected = state.selectedOption === option;
         let prefixEmoji: React.ReactNode = null;
+        let variant: "outline" | "default" | "secondary" | "destructive" | "ghost" | "link" | null | undefined = "outline";
         let additionalClasses = "";
 
-        if (isSelected && isCorrect) {
+        if (isSelected && state.isCorrect) {
            prefixEmoji = '✅';
+           variant = "default";
            additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
-        } else if (isSelected && isCorrect === false) {
+        } else if (isSelected && !state.isCorrect) {
           prefixEmoji = '❌';
+          variant = "destructive";
           additionalClasses = "bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300 animate-in shake";
-        } else if (!isSubmitted) {
+        } else if (!state.isSubmitted) {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
 
-        const isDisabled = isLessonCompleted || (isSubmitted && option !== correctAnswer);
+        const isCorrectSelection = state.isCorrect && isSelected;
+        const isDisabled = isLessonCompleted || (state.isSubmitted && !isCorrectSelection);
         
         return (
           <Button
             key={index}
             type="button"
-            variant="outline"
+            variant={variant}
             size="sm"
             onClick={() => handleOptionClick(option)}
             disabled={isDisabled}

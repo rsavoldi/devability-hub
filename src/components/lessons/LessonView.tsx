@@ -158,17 +158,6 @@ export function LessonView({ lesson }: LessonViewProps) {
   const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile?.lessonProgress, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
-
-  const handleInteractionCorrect = useCallback((interactionId: string) => {
-    if (lessonUi) lessonUi.setInteractionCompleted(interactionId, true);
-    saveInteractionProgress(lesson.id, interactionId);
-  }, [saveInteractionProgress, lesson.id, lessonUi]);
-
-  const handleInteractionUncomplete = useCallback((interactionId: string) => {
-    if (lessonUi) lessonUi.setInteractionCompleted(interactionId, false);
-    uncompleteInteraction(lesson.id, interactionId);
-  }, [uncompleteInteraction, lesson.id, lessonUi]);
-  
   const totalInteractiveElements = useMemo(() => {
     return countInteractions(lesson.content);
   }, [lesson.content]);
@@ -179,30 +168,34 @@ export function LessonView({ lesson }: LessonViewProps) {
         const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
         lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, completedIds);
     }
-    
-    // The cleanup function should only run when the component unmounts
-    // to avoid infinite loops.
-    return () => {
-      // Intentionally left empty to break the loop. The context now handles its own reset.
-    };
   }, [lesson, userProfile?.lessonProgress, lessonUi, totalInteractiveElements]);
 
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
-    if (!lessonUi) return { progressPercentage: 0, interactionsProgressText: "N/A"};
-    const { completedInteractions, totalInteractions } = lessonUi;
-    const percentage = totalInteractions > 0 ? (completedInteractions / totalInteractions) * 100 : 0;
-    const text = totalInteractions > 0
-      ? `Interações: ${completedInteractions}/${totalInteractions}`
+    const completedCount = completedInteractions.size;
+    const total = totalInteractiveElements;
+    const percentage = total > 0 ? (completedCount / total) * 100 : 0;
+    const text = total > 0
+      ? `Interações: ${completedCount}/${total}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [lessonUi]);
+  }, [completedInteractions, totalInteractiveElements]);
+
 
   const allInteractionsCompleted = useMemo(() => {
-    if (!lessonUi) return false;
-    return lessonUi.totalInteractions > 0 && lessonUi.completedInteractions >= lessonUi.totalInteractions;
-  }, [lessonUi]);
+    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
+  }, [totalInteractiveElements, completedInteractions]);
   
+
+  const handleInteractionCorrect = useCallback((interactionId: string) => {
+    saveInteractionProgress(lesson.id, interactionId);
+  }, [saveInteractionProgress, lesson.id]);
+
+  const handleInteractionUncomplete = useCallback((interactionId: string) => {
+    uncompleteInteraction(lesson.id, interactionId);
+  }, [uncompleteInteraction, lesson.id]);
+
+
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -224,8 +217,11 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
-        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
-        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
+        const currentModuleLessons = allMockLessons.filter(l => l.id.startsWith(lesson.id.substring(0, lesson.id.indexOf('-l'))));
+        const currentLessonIndexInModule = currentModuleLessons.findIndex(l => l.id === lesson.id);
+
+        setPrevLesson(currentLessonIndexInModule > 0 ? currentModuleLessons[currentLessonIndexInModule - 1] : null);
+        setNextLesson(currentLessonIndexInModule < currentModuleLessons.length - 1 ? currentModuleLessons[currentLessonIndexInModule + 1] : null);
       }
     }
   }, [lesson]);
@@ -405,10 +401,6 @@ export function LessonView({ lesson }: LessonViewProps) {
   const handleResetLesson = async () => {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
-      if (lessonUi) {
-          const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
-          lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, []);
-      }
       setIsResetting(false);
   };
 
@@ -441,6 +433,14 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
     return <span role="img" aria-label="Finalizar">🏁</span>;
   }
+  
+  const lessonModuleId = useMemo(() => {
+    const foundLesson = allMockLessons.find(l => l.id === lesson.id);
+    // As lições agora estão em `allMockLessons` com o `moduleId` já atribuído.
+    const parentModule = allMockLessons.find(l => l.id === lesson.id);
+    return parentModule?.moduleId || null;
+  }, [lesson.id]);
+
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -569,9 +569,9 @@ export function LessonView({ lesson }: LessonViewProps) {
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
-          {lesson.moduleId && (
+          {lessonModuleId && (
               <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/modules/${lesson.moduleId}`} className="flex items-center gap-2">
+                  <Link href={`/modules/${lessonModuleId}`} className="flex items-center gap-2">
                       <Map className="h-4 w-4"/> Voltar ao Módulo
                   </Link>
               </Button>
