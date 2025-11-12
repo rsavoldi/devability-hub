@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from "lucide-react";
 
 export interface RoadmapStep {
@@ -30,6 +31,7 @@ export interface LessonProgress {
 
 export interface Lesson {
   id: string;
+  moduleId?: string;
   title: string;
   order?: number;
   type: 'text' | 'video' | 'interactive' | 'quiz';

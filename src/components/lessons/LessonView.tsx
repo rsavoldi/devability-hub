@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback, useRef } from 'react';
@@ -130,7 +131,7 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, completeLesson, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, saveAudioProgress } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson: completeLessonAction, saveAudioProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
 
@@ -140,16 +141,16 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
+  const [localCompletedInteractions, setLocalCompletedInteractions] = useState<Set<string>>(
+    () => new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || [])
+  );
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
-  
-  const completedInteractions = useMemo(() => {
-    return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
-  }, [userProfile?.lessonProgress, lesson.id]);
   
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
     return userProfile?.completedLessons?.includes(lesson.id) || false;
@@ -158,43 +159,43 @@ export function LessonView({ lesson }: LessonViewProps) {
   const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile?.lessonProgress, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
-  const totalInteractiveElements = useMemo(() => {
-    return countInteractions(lesson.content);
-  }, [lesson.content]);
+  const totalInteractiveElements = useMemo(() => countInteractions(lesson.content), [lesson.content]);
+
+  const allInteractionsCompleted = useMemo(() => {
+    return totalInteractiveElements > 0 && localCompletedInteractions.size >= totalInteractiveElements;
+  }, [totalInteractiveElements, localCompletedInteractions]);
 
   useEffect(() => {
-    if (lessonUi && lesson.id) {
-        const completedIds = userProfile?.lessonProgress[lesson.id]?.completedInteractions || [];
+    if (lessonUi) {
         const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
-        lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, completedIds);
+        lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, Array.from(localCompletedInteractions));
     }
-  }, [lesson, userProfile?.lessonProgress, lessonUi, totalInteractiveElements]);
+  }, [lesson.id, lesson.title, totalInteractiveElements, localCompletedInteractions, lessonUi]);
 
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
-    const completedCount = completedInteractions.size;
+    const completedCount = localCompletedInteractions.size;
     const total = totalInteractiveElements;
     const percentage = total > 0 ? (completedCount / total) * 100 : 0;
     const text = total > 0
       ? `Interações: ${completedCount}/${total}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [completedInteractions, totalInteractiveElements]);
-
-
-  const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
-  }, [totalInteractiveElements, completedInteractions]);
-  
+  }, [localCompletedInteractions, totalInteractiveElements]);
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
+    setLocalCompletedInteractions(prev => new Set(prev).add(interactionId));
     saveInteractionProgress(lesson.id, interactionId);
   }, [saveInteractionProgress, lesson.id]);
 
   const handleInteractionUncomplete = useCallback((interactionId: string) => {
+    setLocalCompletedInteractions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(interactionId);
+      return newSet;
+    });
     uncompleteInteraction(lesson.id, interactionId);
   }, [uncompleteInteraction, lesson.id]);
-
 
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -217,7 +218,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
-        const currentModuleLessons = allMockLessons.filter(l => l.id.startsWith(lesson.id.substring(0, lesson.id.indexOf('-l'))));
+        const currentModuleLessons = allMockLessons.filter(l => l.moduleId === lesson.moduleId);
         const currentLessonIndexInModule = currentModuleLessons.findIndex(l => l.id === lesson.id);
 
         setPrevLesson(currentLessonIndexInModule > 0 ? currentModuleLessons[currentLessonIndexInModule - 1] : null);
@@ -352,7 +353,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswer}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isInteractionCompleted={localCompletedInteractions.has(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -373,7 +374,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswerFillIn}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isInteractionCompleted={localCompletedInteractions.has(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -388,19 +389,20 @@ export function LessonView({ lesson }: LessonViewProps) {
       }
     }
     return elements;
-  }, [lesson, completedInteractions, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile]);
+  }, [lesson, localCompletedInteractions, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile]);
   
 
   const handleMarkAsCompleted = async () => {
     if (isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
     setIsMarkingComplete(true);
-    await completeLesson(lesson.id);
+    completeLessonAction(lesson.id);
     setIsMarkingComplete(false);
   };
   
   const handleResetLesson = async () => {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
+      setLocalCompletedInteractions(new Set());
       setIsResetting(false);
   };
 
@@ -434,12 +436,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     return <span role="img" aria-label="Finalizar">🏁</span>;
   }
   
-  const lessonModuleId = useMemo(() => {
-    const foundLesson = allMockLessons.find(l => l.id === lesson.id);
-    // As lições agora estão em `allMockLessons` com o `moduleId` já atribuído.
-    const parentModule = allMockLessons.find(l => l.id === lesson.id);
-    return parentModule?.moduleId || null;
-  }, [lesson.id]);
+  const lessonModuleId = lesson.moduleId;
 
 
   return (

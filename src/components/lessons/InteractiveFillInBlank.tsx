@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type JSX, useEffect } from 'react';
@@ -19,7 +20,7 @@ interface InteractiveFillInBlankProps {
   interactionId: string;
   onCorrect: (interactionId: string) => void;
   onUncomplete: (interactionId: string) => void;
-  isInteractionCompleted?: boolean;
+  isInteractionCompleted: boolean;
   isLessonCompleted?: boolean;
 }
 
@@ -34,36 +35,20 @@ export function InteractiveFillInBlank({
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
   
-  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  const [filledAnswer, setFilledAnswer] = useState<string | null>(() => isInteractionCompleted ? correctAnswer : null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(() => isInteractionCompleted ? true : null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
-  // Sincroniza o estado interno se o estado global mudar (ex: ao reiniciar a lição)
-  useEffect(() => {
-    if (isInteractionCompleted) {
-      setIsSubmitted(true);
-      setFilledAnswer(correctAnswer);
-      setIsCorrect(true);
-    } else {
-      setIsSubmitted(false);
-      setFilledAnswer(null);
-      setIsCorrect(null);
-    }
-  }, [isInteractionCompleted, correctAnswer]);
-
-
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted || (isSubmitted && isCorrect)) return;
+    if (isLessonCompleted || (isCorrect)) return;
     
-    setFilledAnswer(option);
     const currentIsCorrect = option === correctAnswer;
     setIsCorrect(currentIsCorrect);
+    setFilledAnswer(option);
     setIsPopoverOpen(false);
 
     if (currentIsCorrect) {
-      setIsSubmitted(true);
       onCorrect(interactionId);
     }
   };
@@ -71,9 +56,8 @@ export function InteractiveFillInBlank({
   const handleTriggerClick = () => {
     if (isLessonCompleted) return;
 
-    if (isSubmitted) {
-      // Permite desmarcar a resposta correta para tentar novamente
-      setIsSubmitted(false);
+    if (isInteractionCompleted) {
+      // Logic to un-complete
       setFilledAnswer(null);
       setIsCorrect(null);
       onUncomplete(interactionId);
@@ -89,9 +73,8 @@ export function InteractiveFillInBlank({
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
-  let variant: "outline" | "default" | "secondary" | "destructive" | "ghost" | "link" | null | undefined = "outline";
 
-  if (isSubmitted && isCorrect) {
+  if (isInteractionCompleted && isCorrect) {
     prefixEmoji = "✅";
     mainText = correctAnswer;
     textColorClass = "text-green-800 dark:text-green-200";
@@ -114,7 +97,7 @@ export function InteractiveFillInBlank({
   const isDisabled = isLessonCompleted;
 
   return (
-    <Popover open={isPopoverOpen && !isSubmitted && !isDisabled} onOpenChange={(openState) => { if (!isSubmitted && !isDisabled) setIsPopoverOpen(openState);}}>
+    <Popover open={isPopoverOpen && !isInteractionCompleted && !isDisabled} onOpenChange={(openState) => { if (!isInteractionCompleted && !isDisabled) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isDisabled}>
         <button
             type="button"
@@ -126,11 +109,11 @@ export function InteractiveFillInBlank({
               cursorClass,
               backgroundClass,
               "border",
-              !isSubmitted && !filledAnswer && "border-dashed",
-              !isSubmitted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
+              !isInteractionCompleted && !filledAnswer && "border-dashed",
+              !isInteractionCompleted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
-            aria-expanded={isPopoverOpen && !isSubmitted}
+            aria-expanded={isPopoverOpen && !isInteractionCompleted}
             aria-haspopup="listbox"
         >
              <span className="flex items-center justify-between w-full">

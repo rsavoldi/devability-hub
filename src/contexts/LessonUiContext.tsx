@@ -1,3 +1,4 @@
+
 'use client';
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
@@ -22,14 +23,20 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   const [completedInteractionsSet, setCompletedInteractionsSet] = useState<Set<string>>(new Set());
 
   const setLessonData = useCallback((id: string, title: string, number: string, total: number, completedIds: string[]) => {
-    // Atualiza diretamente os dados da lição atual.
-    // A lógica de reset foi removida para evitar a perda de estado entre navegações.
-    setLessonId(id);
-    setLessonTitle(title);
-    setLessonNumber(number);
-    setTotalInteractions(total);
-    setCompletedInteractionsSet(new Set(completedIds));
-  }, []);
+    // Only update if the lesson ID is different, to avoid unnecessary re-renders.
+    if (id !== lessonId) {
+      setLessonId(id);
+      setLessonTitle(title);
+      setLessonNumber(number);
+      setTotalInteractions(total);
+      setCompletedInteractionsSet(new Set(completedIds));
+    } else {
+      // If it's the same lesson, just update the completed interactions if they've changed.
+      if (completedIds.length !== completedInteractionsSet.size) {
+        setCompletedInteractionsSet(new Set(completedIds));
+      }
+    }
+  }, [lessonId, completedInteractionsSet.size]);
   
   const setInteractionCompleted = useCallback((interactionId: string, completed: boolean) => {
     setCompletedInteractionsSet(prevSet => {
@@ -53,11 +60,10 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
       lessonTitle,
       lessonNumber,
       totalInteractions,
-      completedInteractions: completedInteractionsSet.size, // Derivado do Set
+      completedInteractions: completedInteractionsSet.size, // Derived from Set
       setLessonData,
       setInteractionCompleted,
       isInteractionCompleted,
-      resetLesson: () => {} // Função vazia para não quebrar chamadas antigas, mas não faz nada
     }}>
       {children}
     </LessonUiContext.Provider>
@@ -66,9 +72,8 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
 
 export const useLessonUi = () => {
   const context = useContext(LessonUiContext);
-  // Não redefinimos mais o estado no desmontar, então o retorno pode ser nulo
-  // if (context === undefined) {
-  //   throw new Error('useLessonUi must be used within a LessonUiProvider');
-  // }
+  if (context === undefined) {
+    throw new Error('useLessonUi must be used within a LessonUiProvider');
+  }
   return context;
 };

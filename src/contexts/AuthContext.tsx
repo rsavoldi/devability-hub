@@ -1,3 +1,4 @@
+
 // src/contexts/AuthContext.tsx
 "use client";
 
@@ -32,12 +33,12 @@ interface AuthContextType {
   clearCurrentUserProgress: () => void;
   registerWithEmail: (email: string, password: string, name: string) => Promise<FirebaseUser | null>;
   signInWithEmail: (email: string, password: string) => Promise<FirebaseUser | null>;
-  completeLesson: (lessonId: string) => Promise<void>;
-  completeExercise: (exerciseId: string) => Promise<void>;
-  completeModule: (moduleId: string) => Promise<void>;
+  completeLesson: (lessonId: string) => void;
+  completeExercise: (exerciseId: string) => void;
+  completeModule: (moduleId: string) => void;
   saveInteractionProgress: (lessonId: string, interactionId: string) => void;
   uncompleteInteraction: (lessonId: string, interactionId: string) => void;
-  resetLessonProgress: (lessonId: string) => Promise<void>;
+  resetLessonProgress: (lessonId: string) => void;
   saveAudioProgress: (lessonId: string, progress: number) => void;
 }
 
@@ -77,21 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsUpdatingProgress(true);
     
     try {
-      // The logic function now receives the current profile and returns the updated one
       const result = await logicFunction(userProfile);
       
       if (result.success && result.updatedProfile) {
-        // Update UI with the definitive state from the action's result
         setUserProfile(result.updatedProfile);
         
-        // Persist the updated profile
         if (result.updatedProfile.id === GUEST_USER_ID) {
           localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(result.updatedProfile));
         } else if (currentUser) {
           await saveUserProfileToFirestore(currentUser.uid, result.updatedProfile);
         }
         
-        // Handle sounds and toasts for achievements if not a silent update
         if (!silent) {
           if (result.pointsAdded > 0) {
             playSound('pointGain');
@@ -109,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ),
                 variant: "achievement",
               });
-            }, 100 * (index + 1)); // Stagger toasts
+            }, 100 * (index + 1));
           });
 
           if (result.message && !result.message.includes("já estava concluíd")) {
@@ -190,34 +187,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     handleServerProgressUpdate((profile) => uncompleteInteractionLogic(profile, lessonId, interactionId), true);
   }, [handleServerProgressUpdate]);
   
-  const completeLesson = useCallback(async (lessonId: string) => {
-    await handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
+  const completeLesson = useCallback((lessonId: string) => {
+    handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
 
-  const resetLessonProgress = useCallback(async (lessonId: string) => {
-    await handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId));
+  const resetLessonProgress = useCallback((lessonId: string) => {
+    handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
   
   const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
-      // Optimistically update the UI to feel instant
-      setUserProfile(currentProfile => {
-        if (!currentProfile) return null;
-        const newProfile = JSON.parse(JSON.stringify(currentProfile));
-        const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-        lessonProgress.audioProgress = progress;
-        newProfile.lessonProgress[lessonId] = lessonProgress;
-        return newProfile;
-      });
-      // Then, call the server action in the background
       handleServerProgressUpdate((profile) => saveAudioProgressLogic(profile, lessonId, progress), true);
   }, [handleServerProgressUpdate]);
 
-  const completeExercise = useCallback(async (exerciseId: string) => {
-    await handleServerProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
+  const completeExercise = useCallback((exerciseId: string) => {
+    handleServerProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
   }, [handleServerProgressUpdate]);
 
-  const completeModule = useCallback(async (moduleId: string) => {
-    await handleServerProgressUpdate((profile) => completeModuleLogic(profile, moduleId));
+  const completeModule = useCallback((moduleId: string) => {
+    handleServerProgressUpdate((profile) => completeModuleLogic(profile, moduleId));
   }, [handleServerProgressUpdate]);
 
   const signInWithGoogle = async () => {
