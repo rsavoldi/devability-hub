@@ -10,7 +10,6 @@ interface LessonUiState {
   isInteractionCompleted: (interactionId: string) => boolean;
   setLessonData: (id: string, title: string, number: string, total: number, completedIds: string[]) => void;
   setInteractionCompleted: (interactionId: string, completed: boolean) => void;
-  resetLesson: () => void;
 }
 
 const LessonUiContext = createContext<LessonUiState | undefined>(undefined);
@@ -22,32 +21,15 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   const [totalInteractions, setTotalInteractions] = useState(0);
   const [completedInteractionsSet, setCompletedInteractionsSet] = useState<Set<string>>(new Set());
 
-  const resetLesson = useCallback(() => {
-    setLessonId(null);
-    setLessonTitle(null);
-    setLessonNumber(null);
-    setTotalInteractions(0);
-    setCompletedInteractionsSet(new Set());
-  }, []);
-
   const setLessonData = useCallback((id: string, title: string, number: string, total: number, completedIds: string[]) => {
-    // Only reset and update if it's a new lesson, to prevent loops.
-    if (id !== lessonId) {
-      resetLesson(); // Reset first to clear old state
-      setLessonId(id);
-      setLessonTitle(title);
-      setLessonNumber(number);
-      setTotalInteractions(total);
-      setCompletedInteractionsSet(new Set(completedIds));
-    } else {
-      // If it's the same lesson, just ensure the completed interactions are up to date.
-      // This handles cases where the user navigates back and forth.
-      const newSet = new Set(completedIds);
-      if (newSet.size !== completedInteractionsSet.size) {
-         setCompletedInteractionsSet(newSet);
-      }
-    }
-  }, [lessonId, resetLesson, completedInteractionsSet.size]);
+    // Atualiza diretamente os dados da lição atual.
+    // A lógica de reset foi removida para evitar a perda de estado entre navegações.
+    setLessonId(id);
+    setLessonTitle(title);
+    setLessonNumber(number);
+    setTotalInteractions(total);
+    setCompletedInteractionsSet(new Set(completedIds));
+  }, []);
   
   const setInteractionCompleted = useCallback((interactionId: string, completed: boolean) => {
     setCompletedInteractionsSet(prevSet => {
@@ -75,7 +57,7 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
       setLessonData,
       setInteractionCompleted,
       isInteractionCompleted,
-      resetLesson
+      resetLesson: () => {} // Função vazia para não quebrar chamadas antigas, mas não faz nada
     }}>
       {children}
     </LessonUiContext.Provider>
@@ -84,5 +66,9 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
 
 export const useLessonUi = () => {
   const context = useContext(LessonUiContext);
+  // Não redefinimos mais o estado no desmontar, então o retorno pode ser nulo
+  // if (context === undefined) {
+  //   throw new Error('useLessonUi must be used within a LessonUiProvider');
+  // }
   return context;
 };
