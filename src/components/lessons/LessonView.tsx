@@ -149,13 +149,13 @@ export function LessonView({ lesson }: LessonViewProps) {
   
   const completedInteractions = useMemo(() => {
     return new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || []);
-  }, [userProfile, lesson.id]);
+  }, [userProfile?.lessonProgress, lesson.id]);
   
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
     return userProfile?.completedLessons?.includes(lesson.id) || false;
-  }, [userProfile, lesson.id]);
+  }, [userProfile?.completedLessons, lesson.id]);
 
-  const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile, lesson.id]);
+  const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile?.lessonProgress, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
 
@@ -164,7 +164,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     saveInteractionProgress(lesson.id, interactionId);
   }, [saveInteractionProgress, lesson.id, lessonUi]);
 
-  const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
+  const handleInteractionUncomplete = useCallback((interactionId: string) => {
     if (lessonUi) lessonUi.setInteractionCompleted(interactionId, false);
     uncompleteInteraction(lesson.id, interactionId);
   }, [uncompleteInteraction, lesson.id, lessonUi]);
@@ -174,8 +174,8 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [lesson.content]);
 
   useEffect(() => {
-    if (lessonUi && userProfile && lesson.id) {
-        const completedIds = userProfile.lessonProgress[lesson.id]?.completedInteractions || [];
+    if (lessonUi && lesson.id) {
+        const completedIds = userProfile?.lessonProgress[lesson.id]?.completedInteractions || [];
         const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
         lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedIds);
     }
@@ -183,7 +183,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     return () => {
       lessonUi?.resetLesson();
     };
-  }, [lesson, userProfile, lessonUi, totalInteractiveElements]);
+  }, [lesson, userProfile?.lessonProgress, lessonUi, totalInteractiveElements]);
 
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
@@ -241,8 +241,8 @@ export function LessonView({ lesson }: LessonViewProps) {
             setCurrentTime(startTime);
         }
       } else {
-        setCurrentTime(0);
-        audio.currentTime = 0;
+        setCurrentTime(audioProgress >= 100 ? audio.duration : 0);
+        audio.currentTime = audioProgress >= 100 ? audio.duration : 0;
       }
     };
   
@@ -313,28 +313,21 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
 
   const processedContentElements = useMemo(() => {
-    if (lesson?.content && lessonUi) {
-      const elements: (string | JSX.Element)[] = [];
+    const elements: (string | JSX.Element)[] = [];
+    if (lesson?.content) {
       let lastIndex = 0;
       let interactionCounter = 0;
-  
       const wordChoiceRegexSource = "INTERACTIVE_WORD_CHOICE:\\s*OPTIONS=\\[(.*?)\\]";
       const fillBlankRegexSource = "INTERACTIVE_FILL_IN_BLANK:\\s*\\[(.*?)\\]";
       const combinedRegex = new RegExp(
-        `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`,
-        "g"
+        `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`, "g"
       );
-
       const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
       const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
   
       let match;
-      combinedRegex.lastIndex = 0;
-  
       while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
-        const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter}`;
-        interactionCounter++;
-  
+        const interactionId = `lesson-${lesson.id}-interaction-${interactionCounter++}`;
         if (match.index > lastIndex) {
           elements.push(contentWithoutGeneralComments.substring(lastIndex, match.index));
         }
@@ -351,7 +344,6 @@ export function LessonView({ lesson }: LessonViewProps) {
               }
               return opt;
             });
-  
             if (parsedOptions.length > 0 && correctAnswer) {
               elements.push(
                 <InteractiveWordChoice
@@ -362,7 +354,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswer}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={lessonUi.isInteractionCompleted(interactionId)}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -383,7 +375,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswerFillIn}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={lessonUi.isInteractionCompleted(interactionId)}
+                  isInteractionCompleted={completedInteractions.has(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -396,10 +388,9 @@ export function LessonView({ lesson }: LessonViewProps) {
       if (lastIndex < contentWithoutGeneralComments.length) {
         elements.push(contentWithoutGeneralComments.substring(lastIndex));
       }
-      return elements;
     }
-    return [];
-  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile, lessonUi]);
+    return elements;
+  }, [lesson, completedInteractions, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile]);
   
 
   const handleMarkAsCompleted = async () => {
@@ -413,7 +404,8 @@ export function LessonView({ lesson }: LessonViewProps) {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
       if (lessonUi) {
-          lessonUi.setLessonData(lesson.title, lesson.id.replace('m', '').replace('-l', '.'), totalInteractiveElements, []);
+          const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
+          lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, []);
       }
       setIsResetting(false);
   };

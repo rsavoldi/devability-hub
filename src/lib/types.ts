@@ -40,9 +40,7 @@ export interface Lesson {
   aiHint?: string;
   emoji?: string;
   references?: string[];
-  moduleId?: string;
-  moduleTitle?: string;
-  trilhaId?: string;
+  moduleId?: string; // Mantido para contexto inicial, mas não adicionado dinamicamente
   points?: number; 
 }
 

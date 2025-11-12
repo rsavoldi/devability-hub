@@ -33,32 +33,17 @@ export function InteractiveFillInBlank({
   isInteractionCompleted,
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  
+  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
+  const [filledAnswer, setFilledAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
-  // Apenas embaralha as opções uma vez na montagem do componente.
   const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
-  // O estado 'isSubmitted' agora é puramente local para controle visual imediato.
-  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
-
-  // Sincroniza o estado local se o estado global (vindo do AuthContext) mudar.
-  // Isso é importante para quando a página é carregada pela primeira vez.
-  useEffect(() => {
-    const submitted = isInteractionCompleted || false;
-    setIsSubmitted(submitted);
-    if (submitted) {
-      setFilledAnswer(correctAnswer);
-      setIsCorrect(true);
-    } else {
-      setFilledAnswer(null);
-      setIsCorrect(null);
-    }
-  }, [isInteractionCompleted, correctAnswer]);
-
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted) return;
+    if (isLessonCompleted || isSubmitted) return;
     
     setFilledAnswer(option);
     const currentIsCorrect = option === correctAnswer;
@@ -66,8 +51,8 @@ export function InteractiveFillInBlank({
     setIsPopoverOpen(false);
 
     if (currentIsCorrect) {
-      setIsSubmitted(true); // Atualiza visualmente IMEDIATAMENTE
-      onCorrect(interactionId); // Notifica o backend em segundo plano
+      setIsSubmitted(true);
+      onCorrect(interactionId);
     }
   };
 
@@ -75,13 +60,11 @@ export function InteractiveFillInBlank({
     if (isLessonCompleted) return;
 
     if (isSubmitted) {
-      // Lógica de desmarcar
       setIsSubmitted(false);
       setFilledAnswer(null);
       setIsCorrect(null);
-      onUncomplete(interactionId); // Notifica o backend em segundo plano
+      onUncomplete(interactionId);
     } else {
-      // Abre o popover se não estiver submetido
       setIsPopoverOpen(o => !o);
     }
   };
@@ -93,7 +76,6 @@ export function InteractiveFillInBlank({
   let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
-
 
   if (isSubmitted && isCorrect) {
     prefixEmoji = "✅";
@@ -139,8 +121,8 @@ export function InteractiveFillInBlank({
               textColorClass,
               cursorClass,
               backgroundClass,
-              "border", // Always show border
-              !isSubmitted && !filledAnswer && "border-dashed", // Dashed only when pristine
+              "border",
+              !isSubmitted && !filledAnswer && "border-dashed",
               !isSubmitted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
