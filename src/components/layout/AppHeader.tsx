@@ -49,7 +49,6 @@ export function AppHeader() {
   const handleClearProgress = () => {
     if (confirm("Tem certeza que deseja limpar seu progresso local? Esta ação não pode ser desfeita.")) {
       clearCurrentUserProgress();
-      router.push('/');
     }
   };
 

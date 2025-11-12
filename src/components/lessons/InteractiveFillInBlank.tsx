@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type JSX } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -59,7 +59,7 @@ export function InteractiveFillInBlank({
     setIsCorrect(currentIsCorrect);
     setIsPopoverOpen(false);
 
-    if (currentIsCorrect) {
+    if (currentIsCorrect && !isSubmitted) {
       onCorrect(interactionId);
     }
   };
@@ -127,7 +127,8 @@ export function InteractiveFillInBlank({
               textColorClass,
               cursorClass,
               backgroundClass,
-              (isSubmitted || filledAnswer) ? "border" : "border border-dashed",
+              "border", // Always show border
+              !isSubmitted && !filledAnswer && "border-dashed", // Dashed only when pristine
               !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}

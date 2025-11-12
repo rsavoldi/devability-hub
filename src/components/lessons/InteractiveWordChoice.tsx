@@ -28,7 +28,6 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
@@ -44,16 +43,17 @@ export function InteractiveWordChoice({
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
     
+    // Se a interação já está completa e o usuário clica nela novamente
     if (isSubmitted && selectedOption === option) {
-      onUncomplete(interactionId);
-      setSelectedOption(null);
+      onUncomplete(interactionId); // Notifica o contexto para desmarcar
+      setSelectedOption(null); // Atualiza o estado local imediatamente
     } 
-    else if (option !== correctAnswer) {
-      setSelectedOption(option);
-    }
-    else if (option === correctAnswer && !isSubmitted) {
-      setSelectedOption(option);
-      onCorrect(interactionId);
+    // Se o usuário clica em uma opção (e a interação não está completa)
+    else if (!isSubmitted) {
+      setSelectedOption(option); // Define a opção selecionada para feedback visual
+      if (option === correctAnswer) {
+        onCorrect(interactionId); // Se for a correta, notifica o contexto
+      }
     }
   };
 
@@ -73,6 +73,8 @@ export function InteractiveWordChoice({
         
         if (isSelected && isCorrectSelection) {
            prefixEmoji = '✅';
+           // Garante a borda visível quando correto
+           variant = 'outline'; 
            additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
         } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
@@ -80,6 +82,15 @@ export function InteractiveWordChoice({
           additionalClasses = "bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300";
         } else {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
+        }
+
+        // Permite desmarcar uma resposta errada clicando nela novamente
+        const handleReclickWrongAnswer = () => {
+            if (isSelected && !isCorrectSelection) {
+                setSelectedOption(null);
+            } else {
+                handleOptionClick(option)
+            }
         }
 
         const isDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
@@ -90,7 +101,7 @@ export function InteractiveWordChoice({
             type="button"
             variant={variant}
             size="sm"
-            onClick={() => handleOptionClick(option)}
+            onClick={handleReclickWrongAnswer}
             disabled={isDisabled}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",

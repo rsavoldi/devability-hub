@@ -77,10 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsUpdatingProgress(true);
     
     try {
+      // The logic function now receives the current profile and returns the updated one
       const result = await logicFunction(userProfile);
       
       if (result.success && result.updatedProfile) {
-        // Update UI with the definitive state from the action
+        // Update UI with the definitive state from the action's result
         setUserProfile(result.updatedProfile);
         
         // Persist the updated profile
@@ -111,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, 100 * (index + 1)); // Stagger toasts
           });
 
-          // Show a success message if not silent and there is a meaningful message
           if (result.message && !result.message.includes("já estava concluíd")) {
              toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
           }
@@ -183,76 +183,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const saveInteractionProgress = useCallback((lessonId: string, interactionId: string) => {
-    if (!userProfile) return;
+      setUserProfile(currentProfile => {
+        if (!currentProfile) return null;
+        
+        // Create a deep copy to avoid state mutation issues.
+        const newProfile = JSON.parse(JSON.stringify(currentProfile));
 
-    // Optimistic UI update
-    const newProfile = { ...userProfile };
-    const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-    if (!lessonProgress.completedInteractions.includes(interactionId)) {
-      lessonProgress.completedInteractions = [...lessonProgress.completedInteractions, interactionId];
-      newProfile.lessonProgress = { ...newProfile.lessonProgress, [lessonId]: lessonProgress };
-      setUserProfile(newProfile); // Update UI immediately
-    }
-    
-    // Fire-and-forget server action for persistence, now with the updated profile
-    saveInteractionProgressAction(newProfile, lessonId, interactionId);
-
-  }, [userProfile]);
+        const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+        if (!lessonProgress.completedInteractions.includes(interactionId)) {
+          lessonProgress.completedInteractions.push(interactionId);
+          newProfile.lessonProgress[lessonId] = lessonProgress;
+          
+          // Fire and forget server action for persistence with the NEW profile state
+          saveInteractionProgressAction(newProfile, lessonId, interactionId);
+        }
+        
+        // Return the new state for immediate UI update.
+        return newProfile;
+      });
+  }, []);
   
   const uncompleteInteraction = useCallback((lessonId: string, interactionId: string) => {
-    if (!userProfile) return;
+    setUserProfile(currentProfile => {
+      if (!currentProfile) return null;
+      
+      const newProfile = JSON.parse(JSON.stringify(currentProfile));
+      const lessonProgress = newProfile.lessonProgress[lessonId];
+      
+      if (lessonProgress && lessonProgress.completedInteractions.includes(interactionId)) {
+          lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
+          newProfile.lessonProgress[lessonId] = lessonProgress;
 
-    // Optimistic UI update
-    const newProfile = { ...userProfile };
-    const lessonProgress = newProfile.lessonProgress[lessonId];
-    if (lessonProgress && lessonProgress.completedInteractions.includes(interactionId)) {
-        lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter(id => id !== interactionId);
-        newProfile.lessonProgress = { ...newProfile.lessonProgress, [lessonId]: lessonProgress };
-        setUserProfile(newProfile); // Update UI immediately
-    }
-
-    // Fire-and-forget server action for persistence
-    uncompleteInteractionLogic(newProfile, lessonId, interactionId);
-
-  }, [userProfile]);
+          // Fire and forget server action for persistence
+          uncompleteInteractionLogic(newProfile, lessonId, interactionId);
+      }
+      
+      return newProfile;
+    });
+  }, []);
   
   const completeLesson = useCallback(async (lessonId: string) => {
-    if (!userProfile || userProfile.completedLessons.includes(lessonId)) return;
+    // This action has broader implications (points, achievements, module completion)
+    // so it uses the full server update cycle.
     await handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
-  }, [userProfile, handleServerProgressUpdate]);
+  }, [handleServerProgressUpdate]);
 
   const resetLessonProgress = useCallback(async (lessonId: string) => {
-    // This is a significant state change, so we will use the full server update cycle
-    await handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true); // silent
+    await handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId), true);
   }, [handleServerProgressUpdate]);
   
   const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
-    if (!userProfile) return;
+    setUserProfile(currentProfile => {
+      if (!currentProfile) return null;
 
-    const currentProgress = userProfile.lessonProgress[lessonId]?.audioProgress || 0;
-    // Save only if progress is significant to avoid too many updates, but always save completion.
-    if (Math.abs(progress - currentProgress) < 5 && progress < 100) return;
+      const newProfile = JSON.parse(JSON.stringify(currentProfile));
+      const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
+      
+      // Save only if progress is significant or it's completion
+      const currentProgress = lessonProgress.audioProgress || 0;
+      if (Math.abs(progress - currentProgress) < 5 && progress < 100) return currentProfile;
 
-    // Optimistic UI update
-    const newProfile = { ...userProfile };
-    const lessonProgress = newProfile.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
-    lessonProgress.audioProgress = progress;
-    newProfile.lessonProgress = { ...newProfile.lessonProgress, [lessonId]: lessonProgress };
-    setUserProfile(newProfile);
+      lessonProgress.audioProgress = progress;
+      newProfile.lessonProgress[lessonId] = lessonProgress;
 
-    // Fire-and-forget server action
-    saveAudioProgressLogic(newProfile, lessonId, progress);
-  }, [userProfile]);
+      // Fire and forget server action
+      saveAudioProgressLogic(newProfile, lessonId, progress);
+      
+      return newProfile;
+    });
+  }, []);
 
   const completeExercise = useCallback(async (exerciseId: string) => {
-    if (!userProfile || userProfile.completedExercises.includes(exerciseId)) return;
     await handleServerProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
-  }, [userProfile, handleServerProgressUpdate]);
+  }, [handleServerProgressUpdate]);
 
   const completeModule = useCallback(async (moduleId: string) => {
-    if (!userProfile || userProfile.completedModules.includes(moduleId)) return;
     await handleServerProgressUpdate((profile) => completeModuleLogic(profile, moduleId));
-  }, [userProfile, handleServerProgressUpdate]);
+  }, [handleServerProgressUpdate]);
 
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -294,18 +301,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const activeUserId = currentUser?.uid || GUEST_USER_ID;
       const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
       
-      // Update state immediately for instant UI feedback
       setUserProfile(defaultProfile);
       
-      // Persist the change
       if (activeUserId === GUEST_USER_ID) {
         localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(defaultProfile));
       } else {
         await saveUserProfileToFirestore(activeUserId, defaultProfile);
       }
       
-      setIsUpdatingProgress(false);
-      toast({ title: "Progresso Limpo", description: "Seu progresso foi reiniciado." });
+      // Força um recarregamento da página para garantir que todos os componentes (especialmente Server Components) recebam os dados zerados.
+      window.location.reload(); 
     }
   }, [currentUser]);
 

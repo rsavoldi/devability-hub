@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo, Fragment, useCallback, useRef } from 'react';
@@ -153,26 +152,22 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile, lesson.id]);
   
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    return userProfile?.lessonProgress[lesson.id]?.completed || false;
+    return userProfile?.completedLessons?.includes(lesson.id) || false;
   }, [userProfile, lesson.id]);
 
   const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
 
-  const handleInteractionCorrect = useCallback(async (interactionId: string) => {
-    if (!completedInteractions.has(interactionId)) {
-        saveInteractionProgress(lesson.id, interactionId);
-        lessonUi?.incrementCompleted();
-    }
-  }, [completedInteractions, saveInteractionProgress, lesson.id, lessonUi]);
+  const handleInteractionCorrect = useCallback((interactionId: string) => {
+    saveInteractionProgress(lesson.id, interactionId);
+    lessonUi?.incrementCompleted();
+  }, [saveInteractionProgress, lesson.id, lessonUi]);
 
   const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
-    if(completedInteractions.has(interactionId)) {
-        uncompleteInteraction(lesson.id, interactionId);
-        lessonUi?.decrementCompleted();
-    }
-  }, [completedInteractions, uncompleteInteraction, lesson.id, lessonUi]);
+    uncompleteInteraction(lesson.id, interactionId);
+    lessonUi?.decrementCompleted();
+  }, [uncompleteInteraction, lesson.id, lessonUi]);
   
   const totalInteractiveElements = useMemo(() => {
     return countInteractions(lesson.content);
@@ -416,7 +411,9 @@ export function LessonView({ lesson }: LessonViewProps) {
   const handleResetLesson = async () => {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
-      lessonUi?.resetLesson(); 
+      if (lessonUi) {
+          lessonUi.setLessonData(lesson.title, lesson.id.replace('m', '').replace('-l', '.'), totalInteractiveElements, 0);
+      }
       setIsResetting(false);
   };
 
@@ -630,5 +627,3 @@ export function LessonView({ lesson }: LessonViewProps) {
     </div>
   );
 }
-
-

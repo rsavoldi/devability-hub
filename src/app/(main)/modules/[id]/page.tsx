@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useEffect, useState, useMemo, useCallback } from 'react';
@@ -65,15 +64,23 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
   const getLessonProgress = useCallback((lessonId: string, lessonContent: string): number => {
     if (!userProfile) return 0;
     const progress = userProfile.lessonProgress[lessonId];
+    
+    // If completed is explicitly true, it's 100%
     if (progress?.completed) return 100;
     
-    const totalInteractions = countInteractions(lessonContent);
-    if (totalInteractions === 0) {
-      return userProfile.completedLessons.includes(lessonId) ? 100 : 0;
+    // If lesson has been started (progress object exists)
+    if (progress) {
+      const totalInteractions = countInteractions(lessonContent);
+      if (totalInteractions === 0) {
+        // A lesson with no interactions is completed if it's in the completedLessons array
+        return userProfile.completedLessons.includes(lessonId) ? 100 : 0;
+      }
+      const completedCount = progress.completedInteractions?.length || 0;
+      return Math.round((completedCount / totalInteractions) * 100);
     }
     
-    const completedCount = progress?.completedInteractions.length || 0;
-    return Math.round((completedCount / totalInteractions) * 100);
+    // If no progress object, it's 0%
+    return 0;
   }, [userProfile]);
 
   const { moduleProgress, lessonsOnlyProgress, allItemsCompleted } = useMemo(() => {
@@ -94,7 +101,7 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
 
     const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   
-    const allItemsCompleted = progressPercentage === 100;
+    const allItemsCompleted = totalItems > 0 && progressPercentage === 100;
   
     return {
       moduleProgress: progressPercentage,
@@ -215,9 +222,10 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
           )}
         </CardContent>
         <CardFooter className="p-6 bg-muted/30">
+          <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-4">
              <Button
                 size="lg"
-                className="w-full"
+                className="w-full sm:w-auto flex-1 sm:flex-initial max-w-xs"
                 onClick={handleMarkModuleAsCompleted}
                 disabled={moduleIsCompletedByProfile || !allItemsCompleted || isUpdatingProgress}
                 variant={moduleIsCompletedByProfile ? "default" : (allItemsCompleted ? "secondary" : "outline")}
@@ -225,11 +233,14 @@ export default function ModulePage({ params: paramsPromise }: ModulePageProps) {
                 {isUpdatingProgress ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CheckCircle className="mr-2 h-5 w-5"/>}
                 {buttonText}
              </Button>
+             {moduleIsCompletedByProfile && (
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  Você já concluiu este módulo!
+                </p>
+             )}
+          </div>
         </CardFooter>
       </Card>
     </div>
   );
 }
-
-
-

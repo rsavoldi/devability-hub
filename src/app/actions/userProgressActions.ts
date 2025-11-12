@@ -13,7 +13,7 @@ interface UpdateResult {
 }
 
 function createDefaultProfileIfNeeded(currentProfile: UserProfile | null, userId: string): UserProfile {
-  if (currentProfile) return { ...currentProfile };
+  if (currentProfile) return JSON.parse(JSON.stringify(currentProfile)); // Return a deep copy
   return {
     id: userId,
     name: userId === "guest_user" ? "Convidado(a)" : "Usuário Anônimo",
@@ -80,7 +80,7 @@ async function checkModuleCompletionAndUpdate(profile: UserProfile, moduleId: st
     return { success: false, message: "Módulo para verificação não encontrado." };
   }
 
-  const allLessonsDone = moduleToUpdate.lessons.every(l => profile.completedLessons.includes(l.id));
+  const allLessonsDone = (moduleToUpdate.lessons || []).every(l => profile.completedLessons.includes(l.id));
   const exercisesForModule = mockExercises.filter(ex => ex.moduleId === moduleToUpdate.id);
   const allExercisesDone = exercisesForModule.every(e => profile.completedExercises.includes(e.id));
 
@@ -113,7 +113,7 @@ export async function completeLessonLogic(
 
   profileToUpdate.completedLessons = [...new Set([...profileToUpdate.completedLessons, lessonId])];
   
-  const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [] };
+  const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
   lessonProgress.completed = true;
   profileToUpdate.lessonProgress = { ...profileToUpdate.lessonProgress, [lessonId]: lessonProgress };
   
@@ -272,12 +272,7 @@ export async function saveInteractionProgress(
   lessonId: string,
   interactionId: string
 ): Promise<UpdateResult> {
-  if (!currentProfile) {
-    return { success: false, message: "Perfil não encontrado." };
-  }
-
-  // Deep copy to avoid direct mutation of the original state object
-  const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+  const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
   
   const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
   
@@ -286,7 +281,6 @@ export async function saveInteractionProgress(
     profileToUpdate.lessonProgress[lessonId] = lessonProgress;
   }
 
-  // Return the updated profile so the client can sync state if needed, though it's fire-and-forget
   return {
     success: true,
     message: "Progresso da interação salvo.",
@@ -300,26 +294,19 @@ export async function uncompleteInteractionLogic(
   lessonId: string,
   interactionId: string
 ): Promise<UpdateResult> {
-    if (!currentProfile) {
-        return { success: false, message: "Perfil não encontrado." };
-    }
-
-    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
     const lessonProgress = profileToUpdate.lessonProgress[lessonId];
+    const lesson = mockLessons.find(l => l.id === lessonId);
 
     if (lessonProgress) {
-        const initialInteractionCount = lessonProgress.completedInteractions.length;
         lessonProgress.completedInteractions = lessonProgress.completedInteractions.filter((id: string) => id !== interactionId);
         
-        // If the lesson was marked as complete and an interaction was undone,
-        // the lesson is no longer 100% complete.
+        // If the lesson was marked as complete, un-complete it and also the module if necessary
         if (profileToUpdate.completedLessons.includes(lessonId)) {
            profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
            lessonProgress.completed = false;
-           // Optional: Deduct points if that's the business rule. For now, we won't.
         }
 
-        const lesson = mockLessons.find(l => l.id === lessonId);
         if (lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId)) {
             profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
         }
@@ -339,11 +326,7 @@ export async function resetLessonProgressLogic(
     currentProfile: UserProfile | null,
     lessonId: string
 ): Promise<UpdateResult> {
-    if (!currentProfile) {
-        return { success: false, message: "Perfil não encontrado." };
-    }
-
-    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
     
     // Reset specific lesson progress
     if (profileToUpdate.lessonProgress[lessonId]) {
@@ -366,9 +349,6 @@ export async function resetLessonProgressLogic(
         profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
     }
     
-    // Note: Deducting points is complex and can be punitive. 
-    // We will not deduct points for resetting a lesson for now.
-
     return {
         success: true,
         message: "Progresso da lição reiniciado.",
@@ -377,10 +357,7 @@ export async function resetLessonProgressLogic(
 }
 
 export async function saveAudioProgressLogic(currentProfile: UserProfile | null, lessonId: string, progress: number): Promise<UpdateResult> {
-    if (!currentProfile) {
-        return { success: false, message: "Perfil não encontrado." };
-    }
-    const profileToUpdate = JSON.parse(JSON.stringify(currentProfile));
+    const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
     
     const lessonProgress = profileToUpdate.lessonProgress[lessonId] || { completed: false, completedInteractions: [], audioProgress: 0 };
     lessonProgress.audioProgress = progress;
