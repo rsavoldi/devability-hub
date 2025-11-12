@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -28,6 +28,8 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  
+  // A ordem só é embaralhada uma vez, quando o componente é montado.
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
@@ -43,18 +45,19 @@ export function InteractiveWordChoice({
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
 
+    // Se o usuário clicar na resposta certa já selecionada, permite desmarcar.
     if (isSubmitted && selectedOption === option) {
       onUncomplete(interactionId);
       setSelectedOption(null);
-    } else if (!isSubmitted) {
+    } 
+    // Se o usuário clicar numa opção errada (estando ou não já submetido)
+    else if (option !== correctAnswer) {
       setSelectedOption(option);
-      if (option === correctAnswer) {
-        onCorrect(interactionId);
-      }
-    } else if (isSubmitted && selectedOption !== option) {
-      // If submitted and clicking a different (wrong) option, do nothing or allow retry
-      // For now, let's allow retry by deselecting the wrong one
+    }
+    // Se o usuário clicar na resposta certa e ainda não estiver submetido
+    else if (option === correctAnswer && !isSubmitted) {
       setSelectedOption(option);
+      onCorrect(interactionId);
     }
   };
 
@@ -84,8 +87,7 @@ export function InteractiveWordChoice({
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
 
-        constisDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
-
+        const isDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
 
         return (
           <Button
