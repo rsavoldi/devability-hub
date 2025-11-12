@@ -29,7 +29,6 @@ export function InteractiveWordChoice({
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   
-  // A ordem só é embaralhada uma vez, quando o componente é montado.
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
   const isSubmitted = isInteractionCompleted || false;
@@ -44,17 +43,14 @@ export function InteractiveWordChoice({
   
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
-
-    // Se o usuário clicar na resposta certa já selecionada, permite desmarcar.
+    
     if (isSubmitted && selectedOption === option) {
       onUncomplete(interactionId);
       setSelectedOption(null);
     } 
-    // Se o usuário clicar numa opção errada (estando ou não já submetido)
     else if (option !== correctAnswer) {
       setSelectedOption(option);
     }
-    // Se o usuário clicar na resposta certa e ainda não estiver submetido
     else if (option === correctAnswer && !isSubmitted) {
       setSelectedOption(option);
       onCorrect(interactionId);
@@ -72,13 +68,11 @@ export function InteractiveWordChoice({
         const isCorrectSelection = isSelected && option === correctAnswer;
         
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
-        let prefixEmoji: React.ReactNode = null;
         let additionalClasses = "";
         
         if (isSelected && isCorrectSelection) {
-           variant = "default";
            prefixEmoji = '✅';
-           additionalClasses = "border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
+           additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
         } else if (isSelected && !isCorrectSelection) {
           variant = "destructive";
           prefixEmoji = '❌';
@@ -88,6 +82,13 @@ export function InteractiveWordChoice({
         }
 
         const isDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
+        let prefixEmoji: React.ReactNode = null;
+
+        if (isSelected && isCorrectSelection) {
+          prefixEmoji = '✅';
+        } else if (isSelected && !isCorrectSelection) {
+          prefixEmoji = '❌';
+        }
 
         return (
           <Button

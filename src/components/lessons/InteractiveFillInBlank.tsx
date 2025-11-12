@@ -127,7 +127,7 @@ export function InteractiveFillInBlank({
               textColorClass,
               cursorClass,
               backgroundClass,
-              isSubmitted ? "border" : "border border-dashed",
+              (isSubmitted || filledAnswer) ? "border" : "border border-dashed",
               !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
