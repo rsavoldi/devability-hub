@@ -24,76 +24,87 @@ export function InteractiveWordChoice({
   interactionId,
   onCorrect,
   onUncomplete,
-  isInteractionCompleted,
-  isLessonCompleted
+isInteractionCompleted, // Prop vinda do AuthContext
+isLessonCompleted
 }: InteractiveWordChoiceProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  
+  // Apenas embaralha as opções uma vez na montagem do componente.
   const [shuffledOptions] = useState(() => shuffleArray(options));
 
-  const isSubmitted = isInteractionCompleted || false;
+  // O estado 'isSubmitted' agora é puramente local para controle visual imediato.
+  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
 
+  // Sincroniza o estado local se o estado global (vindo do AuthContext) mudar.
+  // Isso é importante para quando a página é carregada pela primeira vez.
   useEffect(() => {
-    if (isSubmitted) {
+    const submitted = isInteractionCompleted || false;
+    setIsSubmitted(submitted);
+    if (submitted) {
       setSelectedOption(correctAnswer);
+      setIsCorrect(true);
     } else {
       setSelectedOption(null);
+      setIsCorrect(null);
     }
-  }, [isSubmitted, correctAnswer]);
-  
+  }, [isInteractionCompleted, correctAnswer]);
+
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
-    
-    // Se a interação já está completa e o usuário clica nela novamente
-    if (isSubmitted && selectedOption === option) {
-      onUncomplete(interactionId); // Notifica o contexto para desmarcar
-      setSelectedOption(null); // Atualiza o estado local imediatamente
-    } 
-    // Se o usuário clica em uma opção (e a interação não está completa)
-    else if (!isSubmitted) {
-      setSelectedOption(option); // Define a opção selecionada para feedback visual
-      if (option === correctAnswer) {
-        onCorrect(interactionId); // Se for a correta, notifica o contexto
+
+    if (isSubmitted && option === correctAnswer) {
+      // Lógica de desmarcar
+      setIsSubmitted(false);
+      setSelectedOption(null);
+      setIsCorrect(null);
+      onUncomplete(interactionId); // Notifica o backend em segundo plano
+    } else if (!isSubmitted) {
+      // Lógica de primeira seleção
+      setSelectedOption(option);
+      const currentIsCorrect = option === correctAnswer;
+      setIsCorrect(currentIsCorrect);
+
+      if (currentIsCorrect) {
+        setIsSubmitted(true); // Atualiza visualmente IMEDIATAMENTE
+        onCorrect(interactionId); // Notifica o backend em segundo plano
       }
     }
   };
 
-  const optionsToRender = isSubmitted 
-    ? shuffledOptions.filter(opt => opt === correctAnswer)
-    : shuffledOptions;
+  const handleReclickWrongAnswer = (option: string) => {
+    if (selectedOption === option && isCorrect === false) {
+      setSelectedOption(null);
+      setIsCorrect(null);
+    } else {
+      handleOptionClick(option);
+    }
+  };
+
+  const optionsToRender = isSubmitted ? [correctAnswer] : shuffledOptions;
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
       {optionsToRender.map((option, index) => {
         const isSelected = selectedOption === option;
-        const isCorrectSelection = isSelected && option === correctAnswer;
         
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let additionalClasses = "";
         let prefixEmoji: React.ReactNode = null;
         
-        if (isSelected && isCorrectSelection) {
+        if (isSelected && isCorrect) { // Apenas se isCorrect for true (após o clique)
            prefixEmoji = '✅';
-           // Garante a borda visível quando correto
-           variant = 'outline'; 
+           variant = 'outline';
            additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
-        } else if (isSelected && !isCorrectSelection) {
+        } else if (isSelected && isCorrect === false) {
           variant = "destructive";
           prefixEmoji = '❌';
           additionalClasses = "bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300";
-        } else {
+        } else if (!isSubmitted) {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
 
-        // Permite desmarcar uma resposta errada clicando nela novamente
-        const handleReclickWrongAnswer = () => {
-            if (isSelected && !isCorrectSelection) {
-                setSelectedOption(null);
-            } else {
-                handleOptionClick(option)
-            }
-        }
-
-        const isDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
+        const isDisabled = isLessonCompleted || (isSubmitted && option !== correctAnswer);
         
         return (
           <Button
@@ -101,13 +112,13 @@ export function InteractiveWordChoice({
             type="button"
             variant={variant}
             size="sm"
-            onClick={handleReclickWrongAnswer}
+            onClick={() => handleReclickWrongAnswer(option)}
             disabled={isDisabled}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses,
-              isSelected && !isCorrectSelection && "animate-in shake",
+              isSelected && !isCorrect && "animate-in shake",
               isDisabled && "cursor-not-allowed opacity-100"
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}

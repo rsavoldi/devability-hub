@@ -6,9 +6,9 @@ interface LessonUiState {
   lessonNumber: string | null;
   totalInteractions: number;
   completedInteractions: number;
-  setLessonData: (title: string, number: string, total: number, completed: number) => void;
-  incrementCompleted: () => void;
-  decrementCompleted: () => void;
+  isInteractionCompleted: (interactionId: string) => boolean;
+  setLessonData: (title: string, number: string, total: number, completedIds: string[]) => void;
+  setInteractionCompleted: (interactionId: string, completed: boolean) => void;
   resetLesson: () => void;
 }
 
@@ -18,28 +18,36 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonNumber, setLessonNumber] = useState<string | null>(null);
   const [totalInteractions, setTotalInteractions] = useState(0);
-  const [completedInteractions, setCompletedInteractions] = useState(0);
+  const [completedInteractionsSet, setCompletedInteractionsSet] = useState<Set<string>>(new Set());
 
-  const setLessonData = useCallback((title: string, number: string, total: number, completed: number) => {
+  const setLessonData = useCallback((title: string, number: string, total: number, completedIds: string[]) => {
     setLessonTitle(title);
     setLessonNumber(number);
     setTotalInteractions(total);
-    setCompletedInteractions(completed);
+    setCompletedInteractionsSet(new Set(completedIds));
   }, []);
   
-  const incrementCompleted = useCallback(() => {
-    setCompletedInteractions(c => c + 1);
+  const setInteractionCompleted = useCallback((interactionId: string, completed: boolean) => {
+    setCompletedInteractionsSet(prevSet => {
+      const newSet = new Set(prevSet);
+      if (completed) {
+        newSet.add(interactionId);
+      } else {
+        newSet.delete(interactionId);
+      }
+      return newSet;
+    });
   }, []);
 
-  const decrementCompleted = useCallback(() => {
-    setCompletedInteractions(c => Math.max(0, c - 1));
-  }, []);
+  const isInteractionCompleted = useCallback((interactionId: string) => {
+    return completedInteractionsSet.has(interactionId);
+  }, [completedInteractionsSet]);
   
   const resetLesson = useCallback(() => {
     setLessonTitle(null);
     setLessonNumber(null);
     setTotalInteractions(0);
-    setCompletedInteractions(0);
+    setCompletedInteractionsSet(new Set());
   }, []);
 
   return (
@@ -47,10 +55,10 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
       lessonTitle,
       lessonNumber,
       totalInteractions,
-      completedInteractions,
+      completedInteractions: completedInteractionsSet.size, // Derivado do Set
       setLessonData,
-      incrementCompleted,
-      decrementCompleted,
+      setInteractionCompleted,
+      isInteractionCompleted,
       resetLesson
     }}>
       {children}
@@ -60,5 +68,6 @@ export const LessonUiProvider = ({ children }: { children: ReactNode }) => {
 
 export const useLessonUi = () => {
   const context = useContext(LessonUiContext);
+  // Não lançamos mais erro aqui, pode ser nulo se não estiver em uma LessonView
   return context;
 };

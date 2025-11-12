@@ -160,13 +160,13 @@ export function LessonView({ lesson }: LessonViewProps) {
 
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
+    if (lessonUi) lessonUi.setInteractionCompleted(interactionId, true);
     saveInteractionProgress(lesson.id, interactionId);
-    lessonUi?.incrementCompleted();
   }, [saveInteractionProgress, lesson.id, lessonUi]);
 
   const handleInteractionUncomplete = useCallback(async(interactionId: string) => {
+    if (lessonUi) lessonUi.setInteractionCompleted(interactionId, false);
     uncompleteInteraction(lesson.id, interactionId);
-    lessonUi?.decrementCompleted();
   }, [uncompleteInteraction, lesson.id, lessonUi]);
   
   const totalInteractiveElements = useMemo(() => {
@@ -175,9 +175,9 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   useEffect(() => {
     if (lessonUi && userProfile && lesson.id) {
-      const completedCount = userProfile.lessonProgress[lesson.id]?.completedInteractions.length || 0;
-      const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
-      lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedCount);
+        const completedIds = userProfile.lessonProgress[lesson.id]?.completedInteractions || [];
+        const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
+        lessonUi.setLessonData(lesson.title, lessonNumber, totalInteractiveElements, completedIds);
     }
 
     return () => {
@@ -187,18 +187,19 @@ export function LessonView({ lesson }: LessonViewProps) {
 
 
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
-    const completedCount = completedInteractions.size;
-    const totalCount = totalInteractiveElements;
-    const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-    const text = totalCount > 0
-      ? `Interações: ${completedCount}/${totalCount}`
+    if (!lessonUi) return { progressPercentage: 0, interactionsProgressText: "N/A"};
+    const { completedInteractions, totalInteractions } = lessonUi;
+    const percentage = totalInteractions > 0 ? (completedInteractions / totalInteractions) * 100 : 0;
+    const text = totalInteractions > 0
+      ? `Interações: ${completedInteractions}/${totalInteractions}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [completedInteractions.size, totalInteractiveElements]);
+  }, [lessonUi]);
 
   const allInteractionsCompleted = useMemo(() => {
-    return totalInteractiveElements > 0 && completedInteractions.size >= totalInteractiveElements;
-  }, [totalInteractiveElements, completedInteractions]);
+    if (!lessonUi) return false;
+    return lessonUi.totalInteractions > 0 && lessonUi.completedInteractions >= lessonUi.totalInteractions;
+  }, [lessonUi]);
   
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -312,7 +313,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   };
 
   const processedContentElements = useMemo(() => {
-    if (lesson?.content) {
+    if (lesson?.content && lessonUi) {
       const elements: (string | JSX.Element)[] = [];
       let lastIndex = 0;
       let interactionCounter = 0;
@@ -361,7 +362,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswer}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isInteractionCompleted={lessonUi.isInteractionCompleted(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -382,7 +383,7 @@ export function LessonView({ lesson }: LessonViewProps) {
                   correctAnswer={correctAnswerFillIn}
                   onCorrect={handleInteractionCorrect}
                   onUncomplete={handleInteractionUncomplete}
-                  isInteractionCompleted={completedInteractions.has(interactionId)}
+                  isInteractionCompleted={lessonUi.isInteractionCompleted(interactionId)}
                   isLessonCompleted={isLessonAlreadyCompletedByProfile}
                 />
               );
@@ -398,7 +399,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       return elements;
     }
     return [];
-  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, completedInteractions, isLessonAlreadyCompletedByProfile]);
+  }, [lesson.id, lesson.content, handleInteractionCorrect, handleInteractionUncomplete, isLessonAlreadyCompletedByProfile, lessonUi]);
   
 
   const handleMarkAsCompleted = async () => {
@@ -412,7 +413,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       setIsResetting(true);
       await resetLessonProgress(lesson.id);
       if (lessonUi) {
-          lessonUi.setLessonData(lesson.title, lesson.id.replace('m', '').replace('-l', '.'), totalInteractiveElements, 0);
+          lessonUi.setLessonData(lesson.title, lesson.id.replace('m', '').replace('-l', '.'), totalInteractiveElements, []);
       }
       setIsResetting(false);
   };

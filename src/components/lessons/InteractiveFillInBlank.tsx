@@ -37,19 +37,25 @@ export function InteractiveFillInBlank({
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
+  // Apenas embaralha as opções uma vez na montagem do componente.
   const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
 
-  const isSubmitted = isInteractionCompleted || false;
+  // O estado 'isSubmitted' agora é puramente local para controle visual imediato.
+  const [isSubmitted, setIsSubmitted] = useState(isInteractionCompleted || false);
 
+  // Sincroniza o estado local se o estado global (vindo do AuthContext) mudar.
+  // Isso é importante para quando a página é carregada pela primeira vez.
   useEffect(() => {
-    if (isSubmitted) {
+    const submitted = isInteractionCompleted || false;
+    setIsSubmitted(submitted);
+    if (submitted) {
       setFilledAnswer(correctAnswer);
       setIsCorrect(true);
     } else {
       setFilledAnswer(null);
       setIsCorrect(null);
     }
-  }, [isSubmitted, correctAnswer]);
+  }, [isInteractionCompleted, correctAnswer]);
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
@@ -59,8 +65,9 @@ export function InteractiveFillInBlank({
     setIsCorrect(currentIsCorrect);
     setIsPopoverOpen(false);
 
-    if (currentIsCorrect && !isSubmitted) {
-      onCorrect(interactionId);
+    if (currentIsCorrect) {
+      setIsSubmitted(true); // Atualiza visualmente IMEDIATAMENTE
+      onCorrect(interactionId); // Notifica o backend em segundo plano
     }
   };
 
@@ -68,10 +75,13 @@ export function InteractiveFillInBlank({
     if (isLessonCompleted) return;
 
     if (isSubmitted) {
+      // Lógica de desmarcar
+      setIsSubmitted(false);
       setFilledAnswer(null);
       setIsCorrect(null);
-      onUncomplete(interactionId);
+      onUncomplete(interactionId); // Notifica o backend em segundo plano
     } else {
+      // Abre o popover se não estiver submetido
       setIsPopoverOpen(o => !o);
     }
   };
@@ -85,7 +95,7 @@ export function InteractiveFillInBlank({
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
 
 
-  if (isSubmitted) {
+  if (isSubmitted && isCorrect) {
     prefixEmoji = "✅";
     mainText = correctAnswer;
     textColorClass = "text-green-800 dark:text-green-200";
@@ -115,9 +125,11 @@ export function InteractiveFillInBlank({
     </span>
   );
 
+  const isDisabled = isLessonCompleted;
+
   return (
-    <Popover open={isPopoverOpen && !isSubmitted && !isLessonCompleted} onOpenChange={(openState) => { if (!isSubmitted && !isLessonCompleted) setIsPopoverOpen(openState);}}>
-      <PopoverTrigger asChild disabled={isLessonCompleted}>
+    <Popover open={isPopoverOpen && !isSubmitted && !isDisabled} onOpenChange={(openState) => { if (!isSubmitted && !isDisabled) setIsPopoverOpen(openState);}}>
+      <PopoverTrigger asChild disabled={isDisabled}>
         <button
             type="button"
             onClick={handleTriggerClick}
@@ -129,7 +141,7 @@ export function InteractiveFillInBlank({
               backgroundClass,
               "border", // Always show border
               !isSubmitted && !filledAnswer && "border-dashed", // Dashed only when pristine
-              !isSubmitted && !isLessonCompleted && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
+              !isSubmitted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
             aria-expanded={isPopoverOpen && !isSubmitted}
@@ -142,7 +154,7 @@ export function InteractiveFillInBlank({
           className={cn("p-1.5 border-border shadow-lg flex flex-col space-y-1 w-auto min-w-[var(--radix-popover-trigger-width)]")}
           side="bottom"
           align="start"
-          hidden={isSubmitted || isLessonCompleted}
+          hidden={isSubmitted || isDisabled}
           onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {!isSubmitted && shuffledDisplayOptions.map((opt, index) => (
