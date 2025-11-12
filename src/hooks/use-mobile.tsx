@@ -1,19 +1,28 @@
-import * as React from "react"
+// src/hooks/use-mobile.tsx
+"use client";
 
-const MOBILE_BREAKPOINT = 768
+import { useState, useEffect } from "react";
+
+const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = useState(false); // Default to false on the server
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+  useEffect(() => {
+    // This function runs only on the client side
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
 
-  return !!isMobile
+    // Check on mount (after hydration)
+    checkScreenSize();
+
+    // Add event listener to check on resize
+    window.addEventListener("resize", checkScreenSize);
+
+    // Cleanup function to remove the event listener
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []); // Empty dependency array ensures this effect runs only once on mount
+
+  return isMobile;
 }
