@@ -69,6 +69,7 @@ export function InteractiveWordChoice({
         
         let variant: "default" | "outline" | "secondary" | "destructive" | "link" | "ghost" = "outline";
         let additionalClasses = "";
+        let prefixEmoji: React.ReactNode = null;
         
         if (isSelected && isCorrectSelection) {
            prefixEmoji = '✅';
@@ -82,14 +83,7 @@ export function InteractiveWordChoice({
         }
 
         const isDisabled = isLessonCompleted || (isSubmitted && !isCorrectSelection);
-        let prefixEmoji: React.ReactNode = null;
-
-        if (isSelected && isCorrectSelection) {
-          prefixEmoji = '✅';
-        } else if (isSelected && !isCorrectSelection) {
-          prefixEmoji = '❌';
-        }
-
+        
         return (
           <Button
             key={index}
