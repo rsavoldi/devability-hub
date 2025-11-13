@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo, Fragment, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import type { Lesson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,8 +17,14 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -132,7 +138,7 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, isUpdatingProgress } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, isUpdatingProgress, saveManualBackup } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
@@ -149,10 +155,16 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const handleManualSave = () => {
+    saveManualBackup(lesson.id);
+  };
   
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
-    return userProfile?.completedLessons?.includes(lesson.id) || false;
-  }, [userProfile?.completedLessons, lesson.id]);
+    if (!userProfile || !lesson) return false;
+    const progress = userProfile.lessonProgress[lesson.id];
+    return progress?.completed || userProfile.completedLessons.includes(lesson.id) || false;
+  }, [userProfile?.lessonProgress, userProfile?.completedLessons, lesson.id]);
 
   useEffect(() => {
     if (userProfile && lesson.id) {
@@ -430,185 +442,212 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <Card className="overflow-hidden shadow-xl">
-        <CardHeader>
-          {lesson.coverImage && (
-             <div className="relative aspect-video mb-6 rounded-lg overflow-hidden max-h-[300px]">
-               <Image
-                src={lesson.coverImage}
-                alt={lesson.title || "Imagem da lição"}
-                fill
-                style={{objectFit:"cover"}}
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                data-ai-hint={lesson.aiHint || "visualização dados estatisticos"}
-                priority
-              />
-             </div>
-          )}
-          <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{lesson.title}</CardTitle>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
-            <div className="flex items-center">
-              <span className="text-lg mr-1" role="img" aria-label="Relógio">⏰</span>
-              <span>{lesson.estimatedTime}</span>
-            </div>
-            {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between items-center text-sm text-primary">
+      <TooltipProvider>
+        <Card className="overflow-hidden shadow-xl">
+          <CardHeader>
+            {lesson.coverImage && (
+              <div className="relative aspect-video mb-6 rounded-lg overflow-hidden max-h-[300px]">
+                <Image
+                  src={lesson.coverImage}
+                  alt={lesson.title || "Imagem da lição"}
+                  fill
+                  style={{objectFit:"cover"}}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  data-ai-hint={lesson.aiHint || "visualização dados estatisticos"}
+                  priority
+                />
+              </div>
+            )}
+            <CardTitle className="text-3xl font-bold tracking-tight md:text-4xl">{lesson.title}</CardTitle>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
               <div className="flex items-center">
-                  <span className="text-lg mr-1.5 shrink-0" role="img" aria-label="Informação">ℹ️</span>
-                  <span>{interactionsProgressText}</span>
+                <span className="text-lg mr-1" role="img" aria-label="Relógio">⏰</span>
+                <span>{lesson.estimatedTime}</span>
               </div>
-              <span>{progressPercentage.toFixed(0)}%</span>
+              {lesson.points && <span className="font-semibold text-primary">+{lesson.points}pts</span>}
             </div>
-            <Progress value={progressPercentage} aria-label={`${progressPercentage.toFixed(0)}% de progresso na lição`} />
-          </div>
-
-          {lesson.audioSrc && (
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <audio ref={audioRef} src={lesson.audioSrc} className="hidden" />
-              <div className="flex items-center gap-4">
-                <Button onClick={togglePlayPause} size="icon" variant="secondary" className="flex-shrink-0">
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                </Button>
-                <div className="flex-grow flex items-center gap-2">
-                  <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(currentTime)}</span>
-                  <div className="w-full bg-border h-2 rounded-full cursor-pointer" onClick={handleProgressChange}>
-                    <div
-                      className="bg-primary h-full rounded-full"
-                      style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : audioProgress}%` }}
-                    />
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between items-center text-sm text-primary">
+                  <div className="flex items-center">
+                      <span className="text-lg mr-1.5 shrink-0" role="img" aria-label="Informação">ℹ️</span>
+                      <span>{interactionsProgressText}</span>
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(duration)}</span>
-                </div>
-                 <Button
-                    onClick={() => {
-                        if(audioRef.current) {
-                            audioRef.current.muted = !isMuted;
-                            setIsMuted(!isMuted);
-                        }
-                    }}
-                    size="icon"
-                    variant="ghost"
-                    className="flex-shrink-0"
-                >
-                    {isMuted ? <VolumeX className="h-5 w-5 text-muted-foreground" /> : <Volume2 className="h-5 w-5 text-muted-foreground" />}
-                </Button>
+                  <span>{progressPercentage.toFixed(0)}%</span>
               </div>
-              {audioCompleted && (
-                <div className="mt-2 flex items-center justify-center text-sm text-green-600 dark:text-green-400">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Áudio concluído!</span>
-                </div>
-              )}
+              <Progress value={progressPercentage} aria-label={`${progressPercentage.toFixed(0)}% de progresso na lição`} />
             </div>
-          )}
-        </CardHeader>
-        <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
-          {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
-        </CardContent>
-          {lesson.references && lesson.references.length > 0 && (
-            <>
-              <div className="px-6 pb-6">
-                  <Separator className="my-6" />
-                  <div className="not-prose">
-                      <h3 className="text-xl font-semibold mb-4 text-foreground">Referências</h3>
-                      <ul className="list-none p-0 space-y-2">
-                      {lesson.references.map((ref, index) => (
-                          <li
-                          key={`ref-${index}`}
-                          className="text-sm text-muted-foreground"
-                          dangerouslySetInnerHTML={{ __html: parseMarkdownForHTML(ref) }}
-                          />
-                      ))}
-                      </ul>
-                  </div>
-              </div>
-            </>
-          )}
-      </Card>
-      
-      {showBackToTop && (
-        <Button
-          onClick={handleScrollToTop}
-          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full p-0 shadow-lg animate-in fade-in zoom-in-90"
-          aria-label="Voltar ao topo"
-          variant="secondary"
-        >
-          <ArrowUpCircle className="h-8 w-8" />
-        </Button>
-      )}
 
-      <CardFooter className="mt-8 flex flex-col sm:flex-row flex-wrap justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
-        <div className="flex justify-start w-full sm:w-auto sm:flex-1">
-            {prevLesson ? (
-            <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
-                <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
-                  <span className="flex items-center justify-center w-full">
-                    <ArrowLeft className="mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline truncate">Anterior: {truncateTitle(prevLesson.title)}</span>
-                    <span className="sm:hidden">Anterior</span>
-                  </span>
-                </Link>
-            </Button>
-            ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
-        </div>
+            {lesson.audioSrc && (
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <audio ref={audioRef} src={lesson.audioSrc} className="hidden" />
+                <div className="flex items-center gap-4">
+                  <Button onClick={togglePlayPause} size="icon" variant="secondary" className="flex-shrink-0">
+                    {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  </Button>
+                  <div className="flex-grow flex items-center gap-2">
+                    <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(currentTime)}</span>
+                    <div className="w-full bg-border h-2 rounded-full cursor-pointer" onClick={handleProgressChange}>
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : audioProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono text-muted-foreground w-10 text-center">{formatTime(duration)}</span>
+                  </div>
+                  <Button
+                      onClick={() => {
+                          if(audioRef.current) {
+                              audioRef.current.muted = !isMuted;
+                              setIsMuted(!isMuted);
+                          }
+                      }}
+                      size="icon"
+                      variant="ghost"
+                      className="flex-shrink-0"
+                  >
+                      {isMuted ? <VolumeX className="h-5 w-5 text-muted-foreground" /> : <Volume2 className="h-5 w-5 text-muted-foreground" />}
+                  </Button>
+                </div>
+                {audioCompleted && (
+                  <div className="mt-2 flex items-center justify-center text-sm text-green-600 dark:text-green-400">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <span>Áudio concluído!</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="prose prose-lg dark:prose-invert max-w-none p-6">
+            {renderContentWithParagraphs(processedContentElements, `lesson-${lesson.id}`)}
+          </CardContent>
+            {lesson.references && lesson.references.length > 0 && (
+              <>
+                <div className="px-6 pb-6">
+                    <Separator className="my-6" />
+                    <div className="not-prose">
+                        <h3 className="text-xl font-semibold mb-4 text-foreground">Referências</h3>
+                        <ul className="list-none p-0 space-y-2">
+                        {lesson.references.map((ref, index) => (
+                            <li
+                            key={`ref-${index}`}
+                            className="text-sm text-muted-foreground"
+                            dangerouslySetInnerHTML={{ __html: parseMarkdownForHTML(ref) }}
+                            />
+                        ))}
+                        </ul>
+                    </div>
+                </div>
+              </>
+            )}
+        </Card>
         
-        <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
-          {lessonModuleId && (
-              <Button variant="ghost" size="sm" asChild className="w-full sm:w-auto">
-                  <Link href={`/modules/${lessonModuleId}`} className="flex items-center gap-2">
-                      <Map className="h-4 w-4"/> Voltar ao Módulo
+        {showBackToTop && (
+          <Button
+            onClick={handleScrollToTop}
+            className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full p-0 shadow-lg animate-in fade-in zoom-in-90"
+            aria-label="Voltar ao topo"
+            variant="secondary"
+          >
+            <ArrowUpCircle className="h-8 w-8" />
+          </Button>
+        )}
+
+      <CardFooter className="mt-8 flex flex-wrap justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
+          <div className="flex justify-start w-full sm:w-auto sm:flex-1">
+              {prevLesson ? (
+              <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
+                  <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
+                    <span className="flex items-center justify-center w-full">
+                      <ArrowLeft className="mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline truncate">Anterior</span>
+                      <span className="sm:hidden">Anterior</span>
+                    </span>
                   </Link>
               </Button>
-          )}
-          {isLessonAlreadyCompletedByProfile ? (
-            <Button
-              variant="destructive" size="lg"
-              className="w-full sm:w-auto"
-              onClick={handleUncompleteLesson}
-              disabled={isUpdatingProgress}
-            >
-              {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <XCircle />}
-              Desmarcar Conclusão
-            </Button>
-          ) : (
-             <Button
-                variant="secondary" size="lg"
+              ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
+          </div>
+          
+          <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
+            {lessonModuleId && (
+                <Button variant="ghost" size="sm" asChild className="w-full sm:w-auto">
+                    <Link href={`/modules/${lessonModuleId}`} className="flex items-center gap-2">
+                        <Map className="h-4 w-4"/> Voltar ao Módulo
+                    </Link>
+                </Button>
+            )}
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleManualSave}
+                      disabled={isUpdatingProgress}
+                      aria-label="Salvar progresso manualmente"
+                  >
+                      <Save className="h-5 w-5" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                  <p>Salvar Progresso Manualmente</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            {isLessonAlreadyCompletedByProfile ? (
+              <Button
+                variant="destructive" size="lg"
                 className="w-full sm:w-auto"
-                onClick={handleMarkAsCompleted}
-                disabled={isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)}
-             >
-                {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <CheckCircle/>}
-                {(!allInteractionsCompleted && totalInteractiveElements > 0) ? "Complete as Interações" : "Marcar como Concluída"}
-             </Button>
-          )}
-          <Button
-              variant="outline" size="sm"
-              className="w-full sm:w-auto"
-              onClick={handleResetLesson}
-              disabled={isUpdatingProgress}
-          >
-              {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-              Reiniciar Lição
-          </Button>
-        </div>
+                onClick={handleUncompleteLesson}
+                disabled={isUpdatingProgress}
+              >
+                {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <XCircle />}
+                Desmarcar Conclusão
+              </Button>
+            ) : (
+              <Button
+                  variant="secondary" size="lg"
+                  className="w-full sm:w-auto"
+                  onClick={handleMarkAsCompleted}
+                  disabled={isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+              >
+                  {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <CheckCircle/>}
+                  {(!allInteractionsCompleted && totalInteractiveElements > 0) ? "Complete as Interações" : "Marcar como Concluída"}
+              </Button>
+            )}
+            
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="outline" size="icon"
+                        onClick={handleResetLesson}
+                        disabled={isUpdatingProgress}
+                        aria-label="Reiniciar progresso da lição"
+                    >
+                        {isUpdatingProgress ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5"/>}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Reiniciar Progresso da Lição</p>
+                </TooltipContent>
+            </Tooltip>
+          </div>
 
 
-        <div className="flex justify-end w-full sm:w-auto sm:flex-1">
-            {nextLesson ? (
-            <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
-                <Link href={`/lessons/${nextLesson.id}`} title={`Próxima: ${nextLesson.title}`}>
-                  <span className="flex items-center justify-center w-full">
-                    <span className="hidden sm:inline truncate">Próxima: {truncateTitle(nextLesson.title)}</span>
-                    <span className="sm:hidden">Próxima</span>
-                    <ArrowRight className="ml-1 sm:ml-2" />
-                  </span>
-                </Link>
-            </Button>
-            ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
-        </div>
+          <div className="flex justify-end w-full sm:w-auto sm:flex-1">
+              {nextLesson ? (
+              <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
+                  <Link href={`/lessons/${nextLesson.id}`} title={`Próxima: ${nextLesson.title}`}>
+                    <span className="flex items-center justify-center w-full">
+                      <span className="hidden sm:inline truncate">Próxima</span>
+                      <span className="sm:hidden">Próxima</span>
+                      <ArrowRight className="ml-1 sm:ml-2" />
+                    </span>
+                  </Link>
+              </Button>
+              ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
+          </div>
       </CardFooter>
+      </TooltipProvider>
     </div>
   );
 }

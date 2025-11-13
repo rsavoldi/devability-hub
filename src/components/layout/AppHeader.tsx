@@ -42,14 +42,10 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress, saveManualBackup } = useAuth();
+  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
-
-  const handleManualSave = () => {
-    saveManualBackup();
-  };
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
@@ -190,17 +186,6 @@ export function AppHeader() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Salvar Progresso Manualmente" onClick={handleManualSave}>
-                   <span className="text-xl" role="img" aria-label="Salvar">💾</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Salvar Progresso Manualmente</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -300,7 +285,7 @@ export function AppHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ))}
-                 <RestoreProgressDialog>
+                 <RestoreProgressDialog lessonId={lessonUi?.lessonId}>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                         <span className="flex items-center w-full">
                           <span className="mr-2 text-lg leading-none">📥</span>
