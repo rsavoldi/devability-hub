@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { mockLessons } from '@/lib/mockData';
-import { countInteractions } from '@/lib/utils';
+import { countInteractions } from '@/lib/interaction-counter';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
 import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle } from 'lucide-react';
@@ -400,12 +400,12 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const handleMarkAsCompleted = async () => {
     if (isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
-    await completeLesson(lesson.id, 'complete');
+    await completeLesson(lesson.id);
   };
   
   const handleUncompleteLesson = async () => {
     if (isUpdatingProgress) return;
-    await completeLesson(lesson.id, 'uncomplete');
+    await uncompleteInteraction(lesson.id, 'lesson');
   };
 
   const handleResetLesson = async () => {

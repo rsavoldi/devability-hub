@@ -22,7 +22,7 @@ import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockLessons } from '@/lib/mockData';
-import { countInteractions } from '@/lib/utils';
+import { countInteractions } from '@/lib/interaction-counter';
 import { Button } from '@/components/ui/button';
 
 interface AuthContextType {
@@ -77,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleServerProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, silent: boolean = false, lessonIdForAutosave?: string) => {
     if (activeUpdatePromise) {
-      // Se uma atualização já estiver em andamento, ignore a nova para evitar corridas
       return;
     }
     if (!userProfile) return;
@@ -91,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await promise;
   
       if (promise !== activeUpdatePromise) {
-        // Se uma nova atualização foi iniciada enquanto esta estava em andamento, descarte este resultado
         return;
       }
       
@@ -156,49 +154,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setConnectionError(null);
 
     const connectionTimeout = setTimeout(() => {
-        if (loading) { // Apenas se ainda estiver carregando
-            const lastUserProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE);
-            if(lastUserProfileRaw) {
-                setUserProfile(JSON.parse(lastUserProfileRaw));
-            } else {
-                 const guestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-                 if (guestProfileRaw) {
-                    setUserProfile(JSON.parse(guestProfileRaw));
-                 }
-            }
-            setConnectionError("Você está offline. Por favor, conecte-se à internet para continuar.");
+        if (loading) { 
+            setConnectionError("Você está sem conexão com a internet. Por favor, conecte-se para continuar.");
             setLoading(false);
         }
-    }, 10000); // 10 segundos
+    }, 10000); 
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        clearTimeout(connectionTimeout); // Cancela o timeout se a conexão for bem-sucedida
+        clearTimeout(connectionTimeout); 
 
         if (firebaseUser) {
-            setCurrentUser(firebaseUser);
-            let firestoreProfile = await getUserProfile(firebaseUser.uid);
-            if (!firestoreProfile) {
-                firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
-                await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
+            try {
+                setCurrentUser(firebaseUser);
+                let firestoreProfile = await getUserProfile(firebaseUser.uid);
+                if (!firestoreProfile) {
+                    firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+                    await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
+                }
+                setUserProfile(firestoreProfile);
+                localStorage.setItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE, JSON.stringify(firestoreProfile));
+                 setConnectionError(null);
+            } catch (e) {
+                console.error("Failed to load user profile from Firestore:", e);
+                setConnectionError("Erro ao carregar seu perfil. Por favor, tente recarregar a página.");
             }
-            setUserProfile(firestoreProfile);
-            localStorage.setItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE, JSON.stringify(firestoreProfile));
         } else {
             setCurrentUser(null);
             const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
             const guestProfile = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : createDefaultProfile(GUEST_USER_ID);
             setUserProfile(guestProfile);
             localStorage.removeItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE);
+             setConnectionError(null);
         }
         setLoading(false);
-        setConnectionError(null);
     });
 
     return () => {
         clearTimeout(connectionTimeout);
         unsubscribe();
     };
-}, [loading]); // Adicionei 'loading' como dependência
+}, [loading]);
 
 
   useEffect(() => {

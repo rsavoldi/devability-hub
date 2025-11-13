@@ -1,5 +1,6 @@
 
 import type { RoadmapStep, Lesson, Exercise, DictionaryTerm, Achievement, UserProfile, Module, ExerciseOption } from './types';
+import { countInteractions } from './interaction-counter';
 
 // Importações dos arquivos de dados modulares
 import { mockUserProfile as userProfileData } from './data/userProfile';

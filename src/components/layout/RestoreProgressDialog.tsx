@@ -18,7 +18,7 @@ import { Loader2, Server, Save } from 'lucide-react';
 import type { SaveSlot, UserProfile } from '@/lib/types';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
-import { countInteractions } from '@/lib/utils';
+import { countInteractions } from '@/lib/interaction-counter';
 import { mockLessons } from '@/lib/mockData';
 
 interface RestoreProgressDialogProps {
