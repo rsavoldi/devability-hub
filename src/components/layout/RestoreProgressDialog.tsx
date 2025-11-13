@@ -35,28 +35,29 @@ function formatTimestamp(timestamp: number): string {
 }
 
 function getProgressSummary(profile: UserProfile | null, lessonId: string | null) {
-  if (!profile) return { interactions: '0/0', audio: '0%', points: 0, exercises: 0 };
+    if (!profile) return { interactions: '0/0', audio: '0%', points: 0, exercises: 0 };
+    
+    let lessonInteractions = '0/0';
+    let audioProgress = '0%';
   
-  let lessonInteractions = 'N/A';
-  let audioProgress = 'N/A';
-
-  if (lessonId) {
-    const lesson = mockLessons.find(l => l.id === lessonId);
-    if (lesson) {
-        const total = countInteractions(lesson.content);
-        const completed = profile.lessonProgress[lessonId]?.completedInteractions?.length || 0;
-        lessonInteractions = `${completed}/${total}`;
-        audioProgress = `${Math.round(profile.lessonProgress[lessonId]?.audioProgress || 0)}%`;
+    if (lessonId) {
+      const lesson = mockLessons.find(l => l.id === lessonId);
+      if (lesson) {
+          const total = countInteractions(lesson.content);
+          const completed = profile.lessonProgress[lessonId]?.completedInteractions?.length || 0;
+          lessonInteractions = `${completed}/${total}`;
+          audioProgress = `${Math.round(profile.lessonProgress[lessonId]?.audioProgress || 0)}%`;
+      }
     }
+  
+    return {
+      interactions: lessonInteractions,
+      audio: audioProgress,
+      points: profile.points || 0,
+      exercises: profile.completedExercises?.length || 0,
+    };
   }
-
-  return {
-    interactions: lessonInteractions,
-    audio: audioProgress,
-    points: profile.points || 0,
-    exercises: profile.completedExercises?.length || 0,
-  };
-}
+  
 
 export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -88,6 +89,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
   const autoSummary = getProgressSummary(autosaveSlot?.profile ?? null, lessonId);
   const manualSummary = getProgressSummary(manualSaveSlot?.profile ?? null, lessonId);
 
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -115,6 +117,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                     <p><strong>Pontos Totais:</strong> {autoSummary.points}</p>
                     <p><strong>Interações na Lição:</strong> {autoSummary.interactions}</p>
                     <p><strong>Progresso do Áudio:</strong> {autoSummary.audio}</p>
+                    <p><strong>Exercícios Concluídos:</strong> {autoSummary.exercises}</p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento automático encontrado para esta lição.</p>
@@ -145,6 +148,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                         <p><strong>Pontos Totais:</strong> {manualSummary.points}</p>
                         <p><strong>Interações na Lição:</strong> {manualSummary.interactions}</p>
                         <p><strong>Progresso do Áudio:</strong> {manualSummary.audio}</p>
+                        <p><strong>Exercícios Concluídos:</strong> {manualSummary.exercises}</p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento manual encontrado para esta lição.</p>

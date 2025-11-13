@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Download } from "lucide-react";
+import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Download, Save } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,16 +42,26 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress } = useAuth();
+  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress, saveManualBackup } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
 
-  const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
-
   const handleClearProgress = () => {
     if (confirm("Tem certeza que deseja limpar seu progresso local? Esta ação não pode ser desfeita.")) {
       clearCurrentUserProgress();
+    }
+  };
+
+  const handleManualSave = () => {
+    if (lessonUi && lessonUi.lessonId) {
+      saveManualBackup(lessonUi.lessonId);
+    } else {
+      toast({
+        title: "Nenhuma Lição Ativa",
+        description: "Você precisa estar em uma lição para salvar o progresso manualmente.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -181,6 +191,17 @@ export function AppHeader() {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Chatbot</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={handleManualSave} aria-label="Salvar Progresso Manualmente">
+                  <span className="text-xl" role="img" aria-label="Salvar">💾</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Salvar Progresso</p>
               </TooltipContent>
             </Tooltip>
 

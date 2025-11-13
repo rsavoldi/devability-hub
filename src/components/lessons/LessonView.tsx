@@ -13,11 +13,11 @@ import { Separator } from '../ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { mockLessons as allMockLessons } from '@/lib/mockData';
+import { mockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Tooltip,
@@ -138,7 +138,7 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, isUpdatingProgress, saveManualBackup } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
@@ -155,16 +155,12 @@ export function LessonView({ lesson }: LessonViewProps) {
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const progressSaveInterval = useRef<NodeJS.Timeout | null>(null);
-
-  const handleManualSave = () => {
-    saveManualBackup(lesson.id);
-  };
   
   const isLessonAlreadyCompletedByProfile = useMemo(() => {
     if (!userProfile || !lesson) return false;
     const progress = userProfile.lessonProgress[lesson.id];
     return progress?.completed || userProfile.completedLessons.includes(lesson.id) || false;
-  }, [userProfile?.lessonProgress, userProfile?.completedLessons, lesson.id]);
+  }, [userProfile, lesson.id]);
 
   useEffect(() => {
     if (userProfile && lesson.id) {
@@ -173,7 +169,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
   }, [userProfile, lesson.id]);
 
-  const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile?.lessonProgress, lesson.id]);
+  const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
   const totalInteractiveElements = useMemo(() => countInteractions(lesson.content), [lesson.content]);
@@ -201,22 +197,24 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [localCompletedInteractions.size, totalInteractiveElements]);
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
+    if (isUpdatingProgress) return;
     setLocalCompletedInteractions(prev => {
         const newSet = new Set(prev);
         newSet.add(interactionId);
         return newSet;
     });
     saveInteractionProgress(lesson.id, interactionId);
-  }, [saveInteractionProgress, lesson.id]);
+  }, [saveInteractionProgress, lesson.id, isUpdatingProgress]);
 
   const handleInteractionUncomplete = useCallback((interactionId: string) => {
+    if (isUpdatingProgress) return;
     setLocalCompletedInteractions(prev => {
       const newSet = new Set(prev);
       newSet.delete(interactionId);
       return newSet;
     });
     uncompleteInteraction(lesson.id, interactionId);
-  }, [uncompleteInteraction, lesson.id]);
+  }, [uncompleteInteraction, lesson.id, isUpdatingProgress]);
 
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -235,11 +233,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, []);
 
   useEffect(() => {
-    if (lesson && allMockLessons && allMockLessons.length > 0) {
-      const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
+    if (lesson && mockLessons && mockLessons.length > 0) {
+      const currentIndex = mockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
-        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
-        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
+        setPrevLesson(currentIndex > 0 ? mockLessons[currentIndex - 1] : null);
+        setNextLesson(currentIndex < mockLessons.length - 1 ? mockLessons[currentIndex + 1] : null);
       }
     }
   }, [lesson]);
@@ -299,11 +297,6 @@ export function LessonView({ lesson }: LessonViewProps) {
         setCurrentTime(0);
       }
       audio.play();
-      progressSaveInterval.current = setInterval(() => {
-        const progress = duration > 0 ? (audio.currentTime / duration) * 100 : 0;
-        if (progress < 100) {
-        }
-      }, 5000);
     }
     setIsPlaying(!isPlaying);
   };
@@ -417,8 +410,9 @@ export function LessonView({ lesson }: LessonViewProps) {
 
   const handleResetLesson = async () => {
       if (isUpdatingProgress) return;
-      await resetLessonProgress(lesson.id);
-      setLocalCompletedInteractions(new Set());
+      if(confirm("Tem certeza que deseja reiniciar o progresso desta lição? Todas as suas interações serão perdidas.")){
+        await resetLessonProgress(lesson.id);
+      }
   };
 
   if (authLoading || !lesson) {
@@ -429,13 +423,6 @@ export function LessonView({ lesson }: LessonViewProps) {
       </div>
     );
   }
-
-  const truncateTitle = (title: string, maxLength: number = 20) => {
-    if (title.length > maxLength) {
-      return title.substring(0, maxLength) + "...";
-    }
-    return title;
-  };
   
   const lessonModuleId = lesson.moduleId;
 
@@ -552,7 +539,7 @@ export function LessonView({ lesson }: LessonViewProps) {
           </Button>
         )}
 
-      <CardFooter className="mt-8 flex flex-wrap justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
+        <CardFooter className="mt-8 flex flex-wrap items-center justify-between gap-4 p-6 bg-muted/30 rounded-lg">
           <div className="flex justify-start w-full sm:w-auto sm:flex-1">
               {prevLesson ? (
               <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
@@ -575,23 +562,6 @@ export function LessonView({ lesson }: LessonViewProps) {
                     </Link>
                 </Button>
             )}
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                  <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleManualSave}
-                      disabled={isUpdatingProgress}
-                      aria-label="Salvar progresso manualmente"
-                  >
-                      <Save className="h-5 w-5" />
-                  </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                  <p>Salvar Progresso Manualmente</p>
-              </TooltipContent>
-            </Tooltip>
             
             {isLessonAlreadyCompletedByProfile ? (
               <Button
@@ -632,7 +602,6 @@ export function LessonView({ lesson }: LessonViewProps) {
             </Tooltip>
           </div>
 
-
           <div className="flex justify-end w-full sm:w-auto sm:flex-1">
               {nextLesson ? (
               <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
@@ -646,7 +615,7 @@ export function LessonView({ lesson }: LessonViewProps) {
               </Button>
               ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
           </div>
-      </CardFooter>
+        </CardFooter>
       </TooltipProvider>
     </div>
   );
