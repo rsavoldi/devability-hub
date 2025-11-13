@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import type { UserProfile, SaveSlot } from '@/lib/types';
+import type { UserProfile, SaveSlot, LessonProgress } from '@/lib/types';
 import { Loader2, Download } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { auth } from '@/lib/firebase';
@@ -18,17 +18,28 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
+import { 
+  completeLessonLogic, 
+  completeExerciseLogic, 
+  completeModuleLogic, 
+  saveInteractionProgress as saveInteractionProgressAction, 
+  uncompleteInteractionLogic, 
+  resetLessonProgressLogic, 
+  saveAudioProgressLogic 
+} from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
 import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 import { FirestorePermissionError } from '@/lib/errors/error-emitter';
 import { useLessonUi } from './LessonUiContext';
 
+// Tipo para o estado de autenticação
+type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+
 interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: UserProfile | null;
-  loading: boolean;
+  authStatus: AuthStatus;
   isUpdatingProgress: boolean;
   isRestoring: boolean;
   refreshUserProfile: () => Promise<void>;
@@ -69,7 +80,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const { toast } = useToast();
@@ -93,19 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await logicFunction(userProfile);
 
         if (result.success && result.updatedProfile) {
-            let finalProfile = result.updatedProfile;
-            
-            const autosaveSlot: SaveSlot = {
+            let finalProfile: UserProfile = {
+              ...result.updatedProfile,
+              autosave: { // SEMPRE ATUALIZA O AUTOSAVE
                 timestamp: Date.now(),
                 lessonId: lessonUi?.lessonId || undefined,
                 lessonTitle: lessonUi?.lessonTitle || undefined,
-                lessonProgress: finalProfile.lessonProgress
+                lessonProgress: result.updatedProfile.lessonProgress
+              }
             };
-
-            finalProfile = { ...finalProfile, autosave: autosaveSlot };
-
+            
             if (options.isManualBackup) {
-                finalProfile = { ...finalProfile, manualsave: { ...autosaveSlot } };
+                finalProfile = { ...finalProfile, manualsave: { ...finalProfile.autosave } };
             }
 
             setUserProfile(finalProfile);
@@ -152,31 +162,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
       setConnectionError(null);
       try {
         if (firebaseUser) {
           setCurrentUser(firebaseUser);
           const firestoreProfile = await getUserProfile(firebaseUser.uid);
-
+          
           if (firestoreProfile) {
-            const localTimestamp = userProfile?.autosave?.timestamp || 0;
-            const remoteTimestamp = firestoreProfile.autosave?.timestamp || 0;
-
-            if (remoteTimestamp > localTimestamp + 60000) { 
-              toast({
-                title: "Progresso mais recente encontrado!",
-                description: "Detectamos um salvamento automático mais novo no servidor. Use a opção 'Carregar Progresso' no menu para restaurá-lo.",
-                duration: 10000,
-                action: <Button variant="outline" size="sm" onClick={() => {}}><Download className="mr-2 h-4 w-4"/> Carregar</Button>
-              });
-            }
+             const localGuestDataRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+             const localGuestTimestamp = localGuestDataRaw ? (JSON.parse(localGuestDataRaw).autosave?.timestamp || 0) : 0;
+             const remoteTimestamp = firestoreProfile.autosave?.timestamp || 0;
+            
+             if (localGuestTimestamp > remoteTimestamp + 60000) { 
+                 toast({
+                     title: "Progresso de Convidado Encontrado!",
+                     description: "Deseja mesclar seu progresso de convidado com sua conta?",
+                     duration: 15000,
+                 });
+             }
             setUserProfile(firestoreProfile);
           } else {
             const newProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
             await saveUserProfileToFirestore(firebaseUser.uid, newProfile);
             setUserProfile(newProfile);
           }
+          setAuthStatus('authenticated');
         } else {
           setCurrentUser(null);
           const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
@@ -187,33 +197,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(guestProfile));
             setUserProfile(guestProfile);
           }
+          setAuthStatus('unauthenticated');
         }
       } catch (e) {
           console.error("Failed to load user profile:", e);
           if (!(e instanceof FirestorePermissionError)) {
             setConnectionError("Erro ao carregar seu perfil. Por favor, tente recarregar a página.");
           }
-      } finally {
-        setLoading(false);
+          setAuthStatus('unauthenticated');
       }
     });
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
   const refreshUserProfile = useCallback(async () => {
     if (currentUser) {
-      setLoading(true);
+      setAuthStatus('loading');
       try {
         const profile = await getUserProfile(currentUser.uid);
         if (profile) {
           setUserProfile(profile);
+          setAuthStatus('authenticated');
+        } else {
+          setAuthStatus('unauthenticated');
         }
       } catch (error) {
         console.error("Failed to refresh user profile:", error);
-      } finally {
-        setLoading(false);
+        setAuthStatus('unauthenticated');
       }
     }
   }, [currentUser]);
@@ -247,14 +258,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleServerProgressUpdate]);
 
   const signInWithGoogle = async () => {
-    setLoading(true);
+    setAuthStatus('loading');
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       toast({ title: "Erro no Login", description: "Não foi possível fazer login com Google.", variant: "destructive" });
-      setLoading(false);
+      setAuthStatus('unauthenticated');
     }
   };
 
@@ -265,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
     setUserProfile(null);
     localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+    setAuthStatus('unauthenticated');
   };
   
   const clearCurrentUserProgress = useCallback(async () => {
@@ -273,13 +285,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const activeUserId = currentUser?.uid || GUEST_USER_ID;
       const defaultProfile = createDefaultProfile(activeUserId, currentUser?.displayName, currentUser?.email, currentUser?.photoURL);
       
-      setUserProfile(defaultProfile);
-      
       if (currentUser) {
         await saveUserProfileToFirestore(activeUserId, defaultProfile);
       } else {
         localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(defaultProfile));
       }
+      setUserProfile(defaultProfile);
       
       setIsUpdatingProgress(false);
       window.location.reload(); 
@@ -287,11 +298,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   const registerWithEmail = async (email: string, password: string, name: string): Promise<FirebaseUser | null> => {
-    setLoading(true);
+    setAuthStatus('loading');
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
       toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
+      // A transição de estado será gerenciada pelo onAuthStateChanged
       return userCredential.user;
     } catch (error: any) {
       console.error("Erro ao registrar com email:", error);
@@ -300,16 +312,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         friendlyMessage = "Este email já está em uso. Tente fazer login ou use outro email.";
       }
       toast({ title: "Erro no Registro", description: friendlyMessage, variant: "destructive" });
-      setLoading(false);
+      setAuthStatus('unauthenticated');
       return null;
     }
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<FirebaseUser | null> => {
-    setLoading(true);
+    setAuthStatus('loading');
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
+      // A transição de estado será gerenciada pelo onAuthStateChanged
       return userCredential.user;
     } catch (error: any) {
       let friendlyMessage = "Email ou senha inválidos.";
@@ -317,7 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         friendlyMessage = "Email ou senha incorretos. Por favor, verifique seus dados.";
       }
       toast({ title: "Erro no Login", description: friendlyMessage, variant: "destructive" });
-      setLoading(false);
+      setAuthStatus('unauthenticated');
       return null;
     }
   };
@@ -344,7 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsRestoring(true);
       try {
           const backupSlot = userProfile[slotKey];
-          if (!backupSlot) {
+          if (!backupSlot || !backupSlot.lessonProgress) {
               toast({ title: "Backup não encontrado", description: `Nenhum progresso encontrado no slot '${slotKey}'.`, variant: "destructive" });
               setIsRestoring(false);
               return;
@@ -364,7 +377,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
   }, [currentUser, userProfile, toast]);
 
-  if (loading) {
+  if (authStatus === 'loading') {
     return (
       <div className="flex justify-center items-center h-screen w-screen bg-background text-foreground">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -387,7 +400,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       currentUser,
       userProfile,
-      loading,
+      authStatus,
+      loading: authStatus === 'loading',
       isUpdatingProgress,
       isRestoring,
       refreshUserProfile,

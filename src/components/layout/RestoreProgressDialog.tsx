@@ -21,7 +21,7 @@ import type { Lesson, LessonProgress } from '@/lib/types';
 import { mockLessons } from '@/lib/mockData';
 
 interface RestoreProgressDialogProps {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
 function formatTimestamp(timestamp: number | undefined): string {
@@ -47,7 +47,7 @@ function getProgressSummary(lessonProgress: Record<string, LessonProgress> | und
   
 export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { currentUser, userProfile, loading, restoreProgressFromSlot, isRestoring } = useAuth();
+  const { currentUser, userProfile, authStatus, restoreProgressFromSlot, isRestoring } = useAuth();
   
   const autosaveSlot = userProfile?.autosave;
   const manualSaveSlot = userProfile?.manualsave;
@@ -58,8 +58,6 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
   const handleRestore = async (slotKey: 'autosave' | 'manualsave') => {
     if (isRestoring) return;
     await restoreProgressFromSlot(slotKey);
-    // A página será recarregada pela função do contexto.
-    // setIsOpen(false); // Não é mais necessário fechar manualmente
   };
 
 
@@ -73,7 +71,7 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
             {currentUser ? "Escolha um ponto de salvamento para restaurar. Esta ação substituirá seu progresso atual e recarregará a página." : "Você precisa estar logado para ver e carregar seu progresso salvo."}
           </DialogDescription>
         </DialogHeader>
-        {currentUser && !loading ? (
+        {authStatus === 'authenticated' && userProfile ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             {/* Autosave Slot */}
             <Card>
@@ -138,7 +136,7 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
             </div>
         ) : (
             <div className="py-8 text-center text-muted-foreground">
-                {loading || isRestoring ? <Loader2 className="animate-spin mx-auto h-8 w-8" /> : <p>Faça login para acessar esta funcionalidade.</p>}
+                {authStatus === 'loading' || isRestoring ? <Loader2 className="animate-spin mx-auto h-8 w-8" /> : <p>Faça login para acessar esta funcionalidade.</p>}
             </div>
         )}
         <DialogFooter>
