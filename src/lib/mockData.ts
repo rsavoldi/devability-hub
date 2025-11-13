@@ -7,7 +7,12 @@ import { mockUserProfile as userProfileData } from './data/userProfile';
 import { mockDictionaryTerms as dictionaryData } from './data/dictionary';
 import { mockAchievements as achievementsData } from './data/achievements';
 
-import { module1Lessons } from './data/module1Data';
+import { lessonM1L1 } from './data/lessons/module1/lesson-m1-l1';
+import { lessonM1L2 } from './data/lessons/module1/lesson-m1-l2';
+import { lessonM1L3 } from './data/lessons/module1/lesson-m1-l3';
+import { lessonM1L4 } from './data/lessons/module1/lesson-m1-l4';
+const module1Lessons: Lesson[] = [lessonM1L1, lessonM1L2, lessonM1L3, lessonM1L4];
+
 import { module1Exercises } from './data/exercises/module1'; 
 
 import { module2Lessons } from './data/module2Data';
@@ -377,14 +382,27 @@ mockRoadmapData.forEach((trilha) => {
   if (trilha.modules && trilha.modules.length > 0) {
     trilha.modules.forEach(module => {
       const totalModuleLessons = module.lessons ? module.lessons.length : 0;
-      const completedModuleLessons = module.lessons ? module.lessons.filter(l => mockUserProfile.completedLessons.includes(l.id)).length : 0;
+      
+      // Using countInteractions to get total items for progress calculation
+      const totalLessonInteractions = module.lessons ? module.lessons.reduce((sum, lesson) => sum + countInteractions(lesson.content), 0) : 0;
+      const completedLessonInteractions = module.lessons ? module.lessons.reduce((sum, lesson) => {
+          const progress = mockUserProfile.lessonProgress[lesson.id];
+          return sum + (progress?.completedInteractions.length || 0);
+      }, 0) : 0;
+
+      const completedLessonsCount = module.lessons.filter(l => {
+          const progress = mockUserProfile.lessonProgress[l.id];
+          if(progress?.completed) return true;
+          const totalInteractions = countInteractions(l.content);
+          return totalInteractions > 0 && progress?.completedInteractions.length === totalInteractions;
+      }).length;
       
       const exercisesForThisModule = mockExercises.filter(ex => ex.moduleId === module.id);
       const totalModuleExercises = exercisesForThisModule.length;
       const completedModuleExercises = exercisesForThisModule.filter(e => mockUserProfile.completedExercises.includes(e.id)).length;
       
       const totalModuleItems = totalModuleLessons + totalModuleExercises;
-      const completedModuleItems = completedModuleLessons + completedModuleExercises;
+      const completedModuleItems = completedLessonsCount + completedModuleExercises;
 
       module.progress = totalModuleItems > 0 ? Math.round((completedModuleItems / totalModuleItems) * 100) : 0;
       

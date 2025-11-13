@@ -132,7 +132,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                     disabled={!autosaveSlot || isLoading}
                     className="w-full"
                 >
-                    <Loader2 className="mr-2 h-4 w-4" /> Carregar
+                    <Server className="mr-2 h-4 w-4" /> Carregar Autosave
                 </Button>
                 </DialogFooter>
             </Card>
@@ -162,7 +162,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                     disabled={!manualSaveSlot || isLoading}
                     className="w-full"
                 >
-                    <Loader2 className="mr-2 h-4 w-4" /> Carregar
+                    <Save className="mr-2 h-4 w-4" /> Carregar Manual
                 </Button>
                 </DialogFooter>
             </Card>

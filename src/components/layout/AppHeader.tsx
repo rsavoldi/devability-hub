@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
@@ -195,7 +194,7 @@ export function AppHeader() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={handleManualSave} aria-label="Salvar Progresso Manualmente">
-                    <span className="text-xl" role="img" aria-label="Salvar">💾</span>
+                    <Save className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -307,10 +306,8 @@ export function AppHeader() {
                 ))}
                  <RestoreProgressDialog lessonId={lessonUi?.lessonId}>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <span className="flex items-center w-full">
-                          <span className="mr-2 text-lg leading-none">📥</span>
-                          Carregar Progresso
-                        </span>
+                        <Download className="mr-2 h-4 w-4" />
+                        Carregar Progresso
                     </DropdownMenuItem>
                  </RestoreProgressDialog>
                  {userProfile && ( 
