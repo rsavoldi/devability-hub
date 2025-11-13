@@ -28,9 +28,15 @@ function formatTimestamp(timestamp: number): string {
 }
 
 function getProgressSummary(profile: UserProfile | null) {
-  if (!profile) return { lessons: 0, exercises: 0, points: 0 };
+  if (!profile) return { interactions: 0, exercises: 0, points: 0 };
+
+  const totalInteractions = Object.values(profile.lessonProgress || {}).reduce(
+    (acc, progress) => acc + (progress.completedInteractions?.length || 0),
+    0
+  );
+
   return {
-    lessons: profile.completedLessons?.length || 0,
+    interactions: totalInteractions,
     exercises: profile.completedExercises?.length || 0,
     points: profile.points || 0,
   };
@@ -86,7 +92,7 @@ export function RestoreProgressDialog({ children }: { children: React.ReactNode 
               {autosaveSlot ? (
                 <div className="space-y-1 text-sm">
                   <p><strong>Pontos:</strong> {autoSummary.points}</p>
-                  <p><strong>Lições Concluídas:</strong> {autoSummary.lessons}</p>
+                  <p><strong>Interações Concluídas:</strong> {autoSummary.interactions}</p>
                   <p><strong>Exercícios Concluídos:</strong> {autoSummary.exercises}</p>
                 </div>
               ) : (
@@ -116,7 +122,7 @@ export function RestoreProgressDialog({ children }: { children: React.ReactNode 
               {manualSaveSlot ? (
                  <div className="space-y-1 text-sm">
                   <p><strong>Pontos:</strong> {manualSummary.points}</p>
-                  <p><strong>Lições Concluídas:</strong> {manualSummary.lessons}</p>
+                  <p><strong>Interações Concluídas:</strong> {manualSummary.interactions}</p>
                   <p><strong>Exercícios Concluídos:</strong> {manualSummary.exercises}</p>
                 </div>
               ) : (
