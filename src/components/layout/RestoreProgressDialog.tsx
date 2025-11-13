@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Server, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { countInteractions } from '@/lib/interaction-counter';
+import type { Lesson, LessonProgress } from '@/lib/types';
 import { mockLessons } from '@/lib/mockData';
 
 interface RestoreProgressDialogProps {
@@ -31,27 +32,17 @@ function formatTimestamp(timestamp: number | undefined): string {
   }).format(new Date(timestamp));
 }
 
-function getProgressSummary(lessonProgress: Record<string, any> | undefined) {
-    if (!lessonProgress) return { interactions: '0/0', audio: '0%' };
+function getProgressSummary(lessonProgress: Record<string, LessonProgress> | undefined, lessonId: string | undefined, allLessons: Lesson[]) {
+    if (!lessonProgress || !lessonId) return '0/0';
     
-    let totalInteractions = 0;
-    let completedInteractions = 0;
+    const lesson = allLessons.find(l => l.id === lessonId);
+    if (!lesson) return 'N/A';
+    
+    const totalInteractions = countInteractions(lesson.content);
+    const progress = lessonProgress[lessonId];
+    const completedInteractions = progress?.completedInteractions?.length || 0;
 
-    for (const lessonId in lessonProgress) {
-        const lesson = mockLessons.find(l => l.id === lessonId);
-        if (lesson) {
-            const lessonTotalInteractions = countInteractions(lesson.content);
-            totalInteractions += lessonTotalInteractions;
-        }
-        const progress = lessonProgress[lessonId];
-        if (progress?.completedInteractions) {
-            completedInteractions += progress.completedInteractions.length;
-        }
-    }
-
-    return {
-      interactions: `${completedInteractions}/${totalInteractions}`,
-    };
+    return `${completedInteractions}/${totalInteractions}`;
 }
   
 export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) {
@@ -61,14 +52,14 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
   const autosaveSlot = userProfile?.autosave;
   const manualSaveSlot = userProfile?.manualsave;
 
-  const autoSummary = getProgressSummary(autosaveSlot?.lessonProgress);
-  const manualSummary = getProgressSummary(manualSaveSlot?.lessonProgress);
+  const autoSummary = getProgressSummary(autosaveSlot?.lessonProgress, autosaveSlot?.lessonId, mockLessons);
+  const manualSummary = getProgressSummary(manualSaveSlot?.lessonProgress, manualSaveSlot?.lessonId, mockLessons);
 
   const handleRestore = async (slotKey: 'autosave' | 'manualsave') => {
     if (isRestoring) return;
     await restoreProgressFromSlot(slotKey);
     // A página será recarregada pela função do contexto.
-    setIsOpen(false);
+    // setIsOpen(false); // Não é mais necessário fechar manualmente
   };
 
 
@@ -89,14 +80,15 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Server className="h-5 w-5 text-primary" />
-                    Autosave (Salvamento Automático)
+                    Autosave (Automático)
                 </CardTitle>
                 <CardDescription>{formatTimestamp(autosaveSlot?.timestamp)}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                {autosaveSlot ? (
-                    <div className="space-y-1 text-sm">
-                      <p><strong>Interações na Lição:</strong> {autoSummary.interactions}</p>
+                {autosaveSlot && autosaveSlot.lessonTitle ? (
+                    <div className="space-y-2 text-sm">
+                      <p><strong>Lição:</strong> <span className="text-muted-foreground">{autosaveSlot.lessonTitle}</span></p>
+                      <p><strong>Progresso:</strong> <span className="text-muted-foreground">{autoSummary} interações</span></p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento automático encontrado.</p>
@@ -118,14 +110,15 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Save className="h-5 w-5 text-primary" />
-                    Manual Save (Salvamento Manual)
+                    Manual Save (Manual)
                 </CardTitle>
                 <CardDescription>{formatTimestamp(manualSaveSlot?.timestamp)}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                {manualSaveSlot ? (
-                    <div className="space-y-1 text-sm">
-                       <p><strong>Interações na Lição:</strong> {manualSummary.interactions}</p>
+                {manualSaveSlot && manualSaveSlot.lessonTitle ? (
+                    <div className="space-y-2 text-sm">
+                       <p><strong>Lição:</strong> <span className="text-muted-foreground">{manualSaveSlot.lessonTitle}</span></p>
+                       <p><strong>Progresso:</strong> <span className="text-muted-foreground">{manualSummary} interações</span></p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento manual encontrado.</p>

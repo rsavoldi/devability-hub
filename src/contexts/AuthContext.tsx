@@ -2,8 +2,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import type { UserProfile, SaveSlot, LessonProgress } from '@/lib/types';
-import { Loader2, Trophy, Download } from 'lucide-react';
+import type { UserProfile, SaveSlot } from '@/lib/types';
+import { Loader2, Download } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { auth } from '@/lib/firebase';
 import {
@@ -16,13 +16,14 @@ import {
   updateProfile as updateFirebaseProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
 import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 import { FirestorePermissionError } from '@/lib/errors/error-emitter';
+import { useLessonUi } from './LessonUiContext';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -44,6 +45,7 @@ interface AuthContextType {
   completeLesson: (lessonId: string) => void;
   completeExercise: (exerciseId: string) => void;
   completeModule: (moduleId: string) => void;
+  saveAudioProgress: (lessonId: string, progress: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,8 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isRestoring, setIsRestoring] = useState(false);
   const { toast } = useToast();
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const lessonUi = useLessonUi();
 
-  const handleServerProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, options: { silent?: boolean, isManualBackup?: boolean } = {}) => {
+  const handleServerProgressUpdate = useCallback(async (
+    logicFunction: (profile: UserProfile | null) => Promise<any>, 
+    options: { silent?: boolean, isManualBackup?: boolean } = {}
+  ) => {
     if (!userProfile) {
         if (!options.silent) {
             toast({ title: "Ação não disponível", description: "O perfil de usuário não está carregado. Faça login para salvar seu progresso.", variant: "destructive" });
@@ -88,11 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (result.success && result.updatedProfile) {
             let finalProfile = result.updatedProfile;
-
+            
             const autosaveSlot: SaveSlot = {
                 timestamp: Date.now(),
+                lessonId: lessonUi?.lessonId || undefined,
+                lessonTitle: lessonUi?.lessonTitle || undefined,
                 lessonProgress: finalProfile.lessonProgress
             };
+
             finalProfile = { ...finalProfile, autosave: autosaveSlot };
 
             if (options.isManualBackup) {
@@ -109,21 +118,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (!options.silent) {
                 if (result.message && !result.message.includes("já estava concluíd")) {
-                    toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
+                    toast({ title: "Progresso Salvo!", description: result.message, variant: "success", duration: 3000 });
                 }
                 if (options.isManualBackup) {
-                    toast({ title: "Backup Salvo!", description: "Seu progresso foi salvo manualmente no servidor." });
+                    toast({ title: "Backup Salvo!", description: "Seu progresso foi salvo manualmente.", duration: 3000 });
                 }
-                if (result.pointsAdded && result.pointsAdded > 0) { playSound('pointGain'); }
                 result.unlockedAchievementsDetails?.forEach((ach: any, index: number) => {
                     setTimeout(() => {
                         playSound('achievementUnlock');
                         toast({
                             title: "Conquista Desbloqueada!",
-                            description: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-amber-900" /> <span>{ach.title} - {ach.description}</span> </div> ),
+                            description: `🏆 ${ach.title}`,
                             variant: "achievement",
+                            duration: 5000,
                         });
-                    }, 100 * (index + 1));
+                    }, 300 * (index + 1));
                 });
             }
         } else if (!options.silent && !result.success && result.message) {
@@ -139,8 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
         setIsUpdatingProgress(false);
     }
-  }, [userProfile, currentUser, toast]);
-
+  }, [userProfile, currentUser, toast, lessonUi]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -152,12 +160,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const firestoreProfile = await getUserProfile(firebaseUser.uid);
 
           if (firestoreProfile) {
-            // Check for newer autosave
-            const localTimestamp = firestoreProfile.autosave?.timestamp || 0;
-            const remoteAutosave = await getUserProfile(firebaseUser.uid); // Re-fetch for latest
-            const remoteTimestamp = remoteAutosave?.autosave?.timestamp || 0;
+            const localTimestamp = userProfile?.autosave?.timestamp || 0;
+            const remoteTimestamp = firestoreProfile.autosave?.timestamp || 0;
 
-            if (remoteTimestamp > localTimestamp + 60000) { // Notify if server is > 1 min newer
+            if (remoteTimestamp > localTimestamp + 60000) { 
               toast({
                 title: "Progresso mais recente encontrado!",
                 description: "Detectamos um salvamento automático mais novo no servidor. Use a opção 'Carregar Progresso' no menu para restaurá-lo.",
@@ -193,7 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const refreshUserProfile = useCallback(async () => {
     if (currentUser) {
@@ -213,6 +220,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const saveInteractionProgress = useCallback((lessonId: string, interactionId: string) => {
     handleServerProgressUpdate((profile) => saveInteractionProgressAction(profile, lessonId, interactionId), { silent: true });
+  }, [handleServerProgressUpdate]);
+
+  const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
+    handleServerProgressUpdate((profile) => saveAudioProgressLogic(profile, lessonId, progress), { silent: true });
   }, [handleServerProgressUpdate]);
   
   const uncompleteInteraction = useCallback((lessonId: string, interactionId: string) => {
@@ -339,16 +350,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return;
           }
           
-          const updatedProfile = { ...userProfile, lessonProgress: { ...backupSlot.lessonProgress } };
+          const updatedProfile = { ...userProfile, lessonProgress: { ...userProfile.lessonProgress, ...backupSlot.lessonProgress } };
           await saveUserProfileToFirestore(currentUser.uid, updatedProfile);
 
           toast({ title: "Progresso Restaurado!", description: `Seu progresso do '${slotKey}' foi carregado. A página será atualizada.` });
           
-          // Recarrega a página para garantir que todos os componentes recebam o novo estado
           setTimeout(() => window.location.reload(), 1500);
 
       } catch (error) {
-          console.error("Error restoring backup:", error);
+          console.error(`Error restoring ${slotKey} backup:`, error);
           toast({ title: "Erro ao Restaurar", description: "Não foi possível carregar o progresso do backup.", variant: "destructive" });
           setIsRestoring(false);
       }
@@ -394,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeLesson,
       completeExercise,
       completeModule,
+      saveAudioProgress,
     }}>
       <FirebaseErrorListener />
       {children}

@@ -41,7 +41,9 @@ export interface Lesson {
   aiHint?: string;
   emoji?: string;
   references?: string[];
-  points?: number; 
+  points?: number;
+  moduleId?: string; // Adicionado para referência
+  moduleTitle?: string; // Adicionado para referência
 }
 
 export type ExerciseType =
@@ -95,6 +97,8 @@ export interface Achievement {
 // Novo tipo para os slots de salvamento
 export interface SaveSlot {
   timestamp: number;
+  lessonId?: string;
+  lessonTitle?: string;
   lessonProgress: Record<string, LessonProgress>; // Salva todo o objeto de progresso
 }
 

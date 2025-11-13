@@ -12,8 +12,8 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <LessonUiProvider>
+    <LessonUiProvider>
+      <AuthProvider>
         <div className="flex min-h-screen w-full flex-col">
           <a
             href="#main-content"
@@ -27,7 +27,7 @@ export default function MainLayout({
           </main>
           <AppFooter />
         </div>
-      </LessonUiProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </LessonUiProvider>
   );
 }
