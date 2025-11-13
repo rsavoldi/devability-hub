@@ -4,56 +4,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Em um app real, você provavelmente teria papéis (roles) para definir quem pode escrever.
     match /roadmaps/{roadmapId} {
       allow read: if true;
-      allow write: if request.auth != null; // Apenas usuários autenticados podem escrever (ajuste conforme necessário)
-
-      match /modules/{moduleId} {
-        allow read: if true;
-        allow write: if request.auth != null;
-
-        match /lessons/{lessonId} {
-          allow read: if true;
-          allow write: if request.auth != null;
-        }
-
-        match /exercises/{exerciseId} {
-          allow read: if true;
-          allow write: if request.auth != null;
-        }
-      }
+      allow write: if request.auth != null;
     }
 
     // Perfis de Usuário
+    // Um usuário pode ler e escrever em seu próprio documento de perfil,
+    // o que inclui todas as operações de atualização de progresso e backups.
     match /users/{userId} {
-      // Um usuário pode ler e escrever em seu próprio perfil.
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Regra corrigida e explícita para a subcoleção saveSlots
-    match /users/{userId}/saveSlots/{slotId} {
-      allow read, write, delete, create: if request.auth != null && request.auth.uid == userId;
-    }
-
 
     // Dicionário - permitir leitura pública
     match /dictionary/{termId} {
       allow read: if true;
-      allow write: if request.auth != null; // Apenas autenticados para adicionar/editar (exemplo)
+      allow write: if request.auth != null; 
     }
 
     // Conquistas (definições) - permitir leitura pública
     match /achievements/{achievementId} {
       allow read: if true;
-      allow write: if request.auth != null; // Apenas autenticados para adicionar/editar (exemplo)
+      allow write: if request.auth != null;
     }
-    
-    // Adicione regras para outras coleções conforme necessário.
-    // Exemplo:
-    // match /someOtherCollection/{docId} {
-    //   allow read: if true; // Se for pública
-    //   allow write: if request.auth != null; // Se escrita autenticada
-    // }
   }
 }
