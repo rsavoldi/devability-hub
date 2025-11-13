@@ -29,26 +29,11 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   
-  const [selectedOption, setSelectedOption] = useState<string | null>(() => isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(() => isInteractionCompleted ? true : null);
-  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
-  
-  useEffect(() => {
-    setShuffledOptions(shuffleArray(options));
-  }, [options]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
 
-  useEffect(() => {
-    // Sincroniza o estado visual se o estado global mudar (ex: ao carregar a página)
-    if (isInteractionCompleted && selectedOption !== correctAnswer) {
-      setSelectedOption(correctAnswer);
-      setIsCorrect(true);
-    } else if (!isInteractionCompleted && selectedOption !== null && isCorrect) {
-      // Se o progresso for resetado globalmente, limpa o estado local
-      setSelectedOption(null);
-      setIsCorrect(null);
-    }
-  }, [isInteractionCompleted, selectedOption, correctAnswer, isCorrect]);
-
+  // A aleatorização agora acontece apenas uma vez na inicialização do estado.
+  const [shuffledOptions, setShuffledOptions] = useState<string[]>(() => shuffleArray(options));
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted) return;
@@ -88,7 +73,7 @@ export function InteractiveWordChoice({
         } else if (isSelected && !isCorrect) {
           prefixEmoji = '❌';
           variant = "destructive";
-          additionalClasses = "bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300 animate-in shake";
+          additionalClasses = "bg-red-100 border border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300 animate-in shake";
         } else if (!isInteractionCompleted) {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
@@ -97,7 +82,7 @@ export function InteractiveWordChoice({
         
         return (
           <Button
-            key={index}
+            key={option} // Usar a opção como chave garante estabilidade se a ordem não mudar
             type="button"
             variant={variant}
             size="sm"

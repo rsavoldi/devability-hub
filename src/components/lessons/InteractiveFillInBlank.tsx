@@ -35,27 +35,12 @@ export function InteractiveFillInBlank({
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
   
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(() => isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(() => isInteractionCompleted ? true : null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
   
-  useEffect(() => {
-    setShuffledDisplayOptions(shuffleArray(options));
-  }, [options]);
-
-  useEffect(() => {
-    // Sincroniza o estado visual se o estado global mudar (ex: ao carregar a página)
-    if (isInteractionCompleted && selectedAnswer !== correctAnswer) {
-      setSelectedAnswer(correctAnswer);
-      setIsCorrect(true);
-    } else if (!isInteractionCompleted && selectedAnswer !== null && isCorrect) {
-       // Se o progresso for resetado globalmente, limpa o estado local
-       setSelectedAnswer(null);
-       setIsCorrect(null);
-    }
-  }, [isInteractionCompleted, selectedAnswer, correctAnswer, isCorrect]);
-
+  // A aleatorização agora acontece apenas uma vez na inicialização do estado.
+  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>(() => shuffleArray(options));
 
   const handleOptionClick = (option: string) => {
     if (isLessonCompleted || isInteractionCompleted) return;
@@ -112,8 +97,10 @@ export function InteractiveFillInBlank({
      prefixEmoji = "";
   }
   
+  const isSubmitted = isInteractionCompleted || isCorrect !== null;
+
   return (
-    <Popover open={isPopoverOpen && !isInteractionCompleted && !isDisabled} onOpenChange={(openState) => { if (!isInteractionCompleted && !isDisabled) setIsPopoverOpen(openState);}}>
+    <Popover open={isPopoverOpen && !isSubmitted && !isDisabled} onOpenChange={(openState) => { if (!isSubmitted && !isDisabled) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isDisabled}>
         <button
             type="button"
@@ -125,11 +112,11 @@ export function InteractiveFillInBlank({
               cursorClass,
               backgroundClass,
               "border",
-              !isInteractionCompleted && !selectedAnswer && "border-dashed",
-              !isInteractionCompleted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
+              !isSubmitted && !selectedAnswer && "border-dashed",
+              !isSubmitted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}
-            aria-expanded={isPopoverOpen && !isInteractionCompleted}
+            aria-expanded={isPopoverOpen && !isSubmitted}
             aria-haspopup="listbox"
         >
              <span className="flex items-center justify-between w-full">
