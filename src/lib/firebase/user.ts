@@ -5,6 +5,9 @@ import { produce } from 'immer';
 import { errorEmitter, FirestorePermissionError } from '@/lib/errors/error-emitter';
 import type { User as FirebaseUser } from 'firebase/auth';
 
+const USERS_COLLECTION = 'users';
+const SAVE_SLOTS_SUBCOLLECTION = 'saveSlots';
+
 
 /**
  * Fetches a user's profile from Firestore.

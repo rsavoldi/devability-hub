@@ -22,6 +22,8 @@ import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveIn
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore, saveBackupToFirestore, restoreBackupFromFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
 import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
+import { FirestorePermissionError } from '@/lib/errors/error-emitter';
+
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -100,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await saveBackupToFirestore(currentUser.uid, lessonIdForAutosave, 'autosave', updatedProfile);
           }
         } else {
-          localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(updatedProfile));
+          // No longer saving to local storage for logged out users to prevent data loss on re-login
         }
 
         if (!silent) {
@@ -131,9 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
       }
     } catch (error) {
-      // Errors are now handled by the FirestorePermissionError emitter
-      // and will be caught by the FirebaseErrorListener component.
-      // We still log other potential errors.
       if (!(error instanceof FirestorePermissionError)) {
           console.error("Error during progress update:", error);
            if (!silent) {
@@ -152,12 +151,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setConnectionError(null);
     let connectionTimeout: NodeJS.Timeout | null = null;
   
-    // Only set a timeout if online
     if (typeof window !== 'undefined' && navigator.onLine) {
         connectionTimeout = setTimeout(() => {
-            setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
-            setLoading(false);
-        }, 10000); // 10 seconds timeout
+            if (loading) { // Only set error if it's still loading
+                setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
+                setLoading(false);
+            }
+        }, 10000); 
     }
   
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -167,7 +167,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           let firestoreProfile = await getUserProfile(firebaseUser.uid);
           if (!firestoreProfile) {
-            firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+            const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+            if (localGuestProfileRaw) {
+               firestoreProfile = JSON.parse(localGuestProfileRaw);
+               firestoreProfile.id = firebaseUser.uid; // Migrate guest ID to firebase UID
+               firestoreProfile.name = firebaseUser.displayName || firestoreProfile.name;
+               firestoreProfile.email = firebaseUser.email;
+               firestoreProfile.avatarUrl = firebaseUser.photoURL || firestoreProfile.avatarUrl;
+            } else {
+               firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+            }
             await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
           }
           setCurrentUser(firebaseUser);
@@ -181,9 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-        const guestProfile = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : createDefaultProfile(GUEST_USER_ID);
+        if (localGuestProfileRaw) {
+            setUserProfile(JSON.parse(localGuestProfileRaw));
+        } else {
+            const guestProfile = createDefaultProfile(GUEST_USER_ID);
+            setUserProfile(guestProfile);
+            localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(guestProfile));
+        }
         setCurrentUser(null);
-        setUserProfile(guestProfile);
       }
       setLoading(false);
     });
@@ -192,7 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (connectionTimeout) clearTimeout(connectionTimeout);
       unsubscribe();
     };
-  }, []);
+  }, [loading]); // Added loading to dependency array
   
   useEffect(() => {
     loadProfile();
@@ -241,12 +255,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle profile creation/loading.
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       toast({ title: "Erro no Login", description: "Não foi possível fazer login com Google.", variant: "destructive" });
     } finally {
-        setLoading(false);
+        // The onAuthStateChanged listener will handle setting loading to false
     }
   };
 
@@ -254,16 +267,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       if (currentUser && userProfile) {
-        // Save final progress before signing out
         await saveUserProfileToFirestore(currentUser.uid, userProfile);
       }
       await signOut(auth);
-      // onAuthStateChanged will set user to null and load guest profile.
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
       toast({ title: "Erro no Logout", description: error.message || "Não foi possível fazer logout.", variant: "destructive" });
     } finally {
-        setLoading(false);
+       // The onAuthStateChanged listener will handle setting loading to false
     }
   };
   
@@ -291,9 +302,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
-      // onAuthStateChanged will handle profile creation in Firestore.
       toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
-      setLoading(false);
+      // onAuthStateChanged will handle the rest
       return userCredential.user;
     } catch (error: any) {
       console.error("Erro ao registrar com email:", error);
@@ -311,9 +321,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle profile loading.
       toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
-      setLoading(false);
+      // onAuthStateChanged will handle the rest
       return userCredential.user;
     } catch (error: any) {
       let friendlyMessage = "Email ou senha inválidos.";

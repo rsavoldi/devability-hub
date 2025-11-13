@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Download, Save } from "lucide-react";
+import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Download } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -195,7 +195,7 @@ export function AppHeader() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={handleManualSave} aria-label="Salvar Progresso Manualmente">
-                    <Save className="h-5 w-5" />
+                    <span role="img" aria-label="Salvar" className="text-xl">💾</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
