@@ -7,6 +7,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from "@/components/ui/toaster";
 import VLibras from '@/components/VLibras';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { LessonUiProvider } from '@/contexts/LessonUiContext';
 
 export default function RootLayout({
   children,
@@ -27,7 +29,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <LessonUiProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </LessonUiProvider>
           <Toaster />
         </ThemeProvider>
         
