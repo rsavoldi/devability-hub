@@ -26,12 +26,16 @@ service cloud.firestore {
     }
 
     // Perfis de Usuário
-    // Cada usuário pode ler e escrever em seu próprio documento de perfil.
-    // Ninguém mais pode ler ou escrever no perfil de outro usuário (exceto via regras de admin, não mostradas aqui).
     match /users/{userId} {
+      // Um usuário pode ler e escrever em seu próprio perfil.
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Para criar o perfil inicialmente (no registro):
+      // Permite a criação inicial do perfil no registro.
       allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Adicionado: Permite que o usuário leia e escreva em sua própria subcoleção de saveSlots.
+      match /saveSlots/{slotId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // Dicionário - permitir leitura pública
