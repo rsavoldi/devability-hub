@@ -41,12 +41,10 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-        const customError = new FirestorePermissionError(
-            'read',
-            userDocRef,
-            null,
-            `Failed to read user profile for user ${userId}. Check firestore rules.`
-        );
+        const customError = new FirestorePermissionError({
+            operation: 'read',
+            path: userDocRef.path,
+        });
         errorEmitter.emit('permission-error', customError);
     }
     console.error("Error fetching user profile from Firestore:", error);
@@ -65,12 +63,11 @@ export async function updateUserProfile(userId: string, profileData: Partial<Use
     await setDoc(userDocRef, profileData, { merge: true });
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-        const customError = new FirestorePermissionError(
-            'write',
-            userDocRef,
-            profileData,
-            `Failed to write user profile for user ${userId}. Check firestore rules.`
-        );
+        const customError = new FirestorePermissionError({
+            operation: 'write',
+            path: userDocRef.path,
+            requestResource: profileData
+        });
         errorEmitter.emit('permission-error', customError);
     }
     console.error("Error updating user profile in Firestore:", error);
@@ -96,15 +93,15 @@ export async function saveBackupToFirestore(userId: string, lessonId: string, sl
     await setDoc(slotDocRef, saveData);
   } catch (error: any) {
      if (error.code === 'permission-denied') {
-        const customError = new FirestorePermissionError(
-            'write',
-            slotDocRef,
-            saveData,
-            `Failed to save backup slot '${slotKey}' for user ${userId} and lesson ${lessonId}. Check firestore rules.`
-        );
+        const customError = new FirestorePermissionError({
+            operation: 'write',
+            path: slotDocRef.path,
+            requestResource: saveData
+        });
         errorEmitter.emit('permission-error', customError);
     }
     console.error(`Error saving ${slotKey} backup to Firestore:`, error);
+    throw error;
   }
 }
 
@@ -126,16 +123,14 @@ export async function getBackupFromFirestore(userId: string, lessonId: string, s
         return null;
     } catch (error:any) {
         if (error.code === 'permission-denied') {
-            const customError = new FirestorePermissionError(
-                'read',
-                slotDocRef,
-                null,
-                `Failed to read backup slot '${slotKey}' for user ${userId} and lesson ${lessonId}. Check firestore rules.`
-            );
+            const customError = new FirestorePermissionError({
+                operation: 'read',
+                path: slotDocRef.path
+            });
             errorEmitter.emit('permission-error', customError);
         }
         console.error(`Error getting ${slotKey} backup from Firestore:`, error);
-        throw error; // Lança o erro para ser tratado por quem chamou
+        throw error;
     }
 }
 
