@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     allowedDevOrigins: [
+      'https://*.firebase.app',
+      'https://*.firebaseio.com',
       'https://6000-firebase-studio-1749393796145.cluster-etsqrqvqyvd4erxx7qq32imrjk.cloudworkstations.dev',
       'https://9000-firebase-studio-1749393796145.cluster-etsqrqvqyvd4erxx7qq32imrjk.cloudworkstations.dev',
     ],
