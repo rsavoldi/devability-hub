@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import type { UserProfile, SaveSlot, LessonProgress } from '@/lib/types';
-import { Loader2, Trophy } from 'lucide-react';
+import { Loader2, Trophy, Download } from 'lucide-react';
 import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { auth } from '@/lib/firebase';
 import {
@@ -18,8 +18,8 @@ import {
 } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast"
 import { playSound } from '@/lib/sounds';
-import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
-import { getUserProfile, updateUserProfile } from '@/lib/firebase/user';
+import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic } from '@/app/actions/userProgressActions';
+import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
 import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 import { FirestorePermissionError } from '@/lib/errors/error-emitter';
@@ -29,6 +29,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   isUpdatingProgress: boolean;
+  isRestoring: boolean;
   refreshUserProfile: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutFirebase: () => Promise<void>;
@@ -38,9 +39,8 @@ interface AuthContextType {
   saveInteractionProgress: (lessonId: string, interactionId: string) => void;
   uncompleteInteraction: (lessonId: string, interactionId: string) => void;
   resetLessonProgress: (lessonId: string) => void;
-  saveAudioProgress: (lessonId: string, progress: number) => void;
   saveManualBackup: () => void;
-  restoreProgressFromSlot: (slotKey: 'autosave' | 'manualsave') => void;
+  restoreProgressFromSlot: (slotKey: 'autosave' | 'manualsave') => Promise<void>;
   completeLesson: (lessonId: string) => void;
   completeExercise: (exerciseId: string) => void;
   completeModule: (moduleId: string) => void;
@@ -69,15 +69,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const { toast } = useToast();
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const handleServerProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, options: { silent?: boolean, isManualBackup?: boolean } = {}) => {
     if (!userProfile) {
-        console.warn("User profile is not available. Skipping progress update.");
+        if (!options.silent) {
+            toast({ title: "Ação não disponível", description: "O perfil de usuário não está carregado. Faça login para salvar seu progresso.", variant: "destructive" });
+        }
         return;
     }
-
+    
     setIsUpdatingProgress(true);
 
     try {
@@ -86,23 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.success && result.updatedProfile) {
             let finalProfile = result.updatedProfile;
 
-            // Sempre atualiza o slot de autosave com o progresso mais recente
             const autosaveSlot: SaveSlot = {
                 timestamp: Date.now(),
                 lessonProgress: finalProfile.lessonProgress
             };
             finalProfile = { ...finalProfile, autosave: autosaveSlot };
 
-            // Se for um backup manual, atualiza o slot manual também
             if (options.isManualBackup) {
-                const manualSaveSlot: SaveSlot = { ...autosaveSlot }; // Clona os dados do autosave
-                finalProfile = { ...finalProfile, manualsave: manualSaveSlot };
+                finalProfile = { ...finalProfile, manualsave: { ...autosaveSlot } };
             }
 
-            setUserProfile(finalProfile); // Optimistic update
+            setUserProfile(finalProfile);
 
             if (currentUser) {
-                await updateUserProfile(currentUser.uid, finalProfile);
+                await saveUserProfileToFirestore(currentUser.uid, finalProfile);
             } else {
                 localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(finalProfile));
             }
@@ -112,22 +112,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     toast({ title: "Progresso Salvo!", description: result.message, variant: "success" });
                 }
                 if (options.isManualBackup) {
-                    toast({ title: "Backup Salvo!", description: "Seu progresso foi salvo com sucesso no servidor." });
+                    toast({ title: "Backup Salvo!", description: "Seu progresso foi salvo manualmente no servidor." });
                 }
-                if (result.pointsAdded && result.pointsAdded > 0) {
-                    playSound('pointGain');
-                }
+                if (result.pointsAdded && result.pointsAdded > 0) { playSound('pointGain'); }
                 result.unlockedAchievementsDetails?.forEach((ach: any, index: number) => {
                     setTimeout(() => {
                         playSound('achievementUnlock');
                         toast({
                             title: "Conquista Desbloqueada!",
-                            description: (
-                                <div className="flex items-center">
-                                    <Trophy className="h-5 w-5 mr-2 text-amber-900" />
-                                    <span>{ach.title} - {ach.description}</span>
-                                </div>
-                            ),
+                            description: ( <div className="flex items-center"> <Trophy className="h-5 w-5 mr-2 text-amber-900" /> <span>{ach.title} - {ach.description}</span> </div> ),
                             variant: "achievement",
                         });
                     }, 100 * (index + 1));
@@ -150,20 +143,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    setLoading(true);
-    setConnectionError(null);
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      setConnectionError(null);
       try {
         if (firebaseUser) {
           setCurrentUser(firebaseUser);
-          let firestoreProfile = await getUserProfile(firebaseUser.uid);
+          const firestoreProfile = await getUserProfile(firebaseUser.uid);
 
-          if (!firestoreProfile) {
-            firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
-            await updateUserProfile(firebaseUser.uid, firestoreProfile);
+          if (firestoreProfile) {
+            // Check for newer autosave
+            const localTimestamp = firestoreProfile.autosave?.timestamp || 0;
+            const remoteAutosave = await getUserProfile(firebaseUser.uid); // Re-fetch for latest
+            const remoteTimestamp = remoteAutosave?.autosave?.timestamp || 0;
+
+            if (remoteTimestamp > localTimestamp + 60000) { // Notify if server is > 1 min newer
+              toast({
+                title: "Progresso mais recente encontrado!",
+                description: "Detectamos um salvamento automático mais novo no servidor. Use a opção 'Carregar Progresso' no menu para restaurá-lo.",
+                duration: 10000,
+                action: <Button variant="outline" size="sm" onClick={() => {}}><Download className="mr-2 h-4 w-4"/> Carregar</Button>
+              });
+            }
+            setUserProfile(firestoreProfile);
+          } else {
+            const newProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+            await saveUserProfileToFirestore(firebaseUser.uid, newProfile);
+            setUserProfile(newProfile);
           }
-          setUserProfile(firestoreProfile);
         } else {
           setCurrentUser(null);
           const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
@@ -176,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (e) {
-          console.error("Failed to load user profile from Firestore:", e);
+          console.error("Failed to load user profile:", e);
           if (!(e instanceof FirestorePermissionError)) {
             setConnectionError("Erro ao carregar seu perfil. Por favor, tente recarregar a página.");
           }
@@ -186,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const refreshUserProfile = useCallback(async () => {
     if (currentUser) {
@@ -219,10 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetLessonProgress = useCallback((lessonId: string) => {
     handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
-  
-  const saveAudioProgress = useCallback((lessonId: string, progress: number) => {
-    handleServerProgressUpdate((profile) => saveAudioProgressLogic(profile, lessonId, progress), { silent: true });
-  }, [handleServerProgressUpdate]);
 
   const completeExercise = useCallback((exerciseId: string) => {
     handleServerProgressUpdate((profile) => completeExerciseLogic(profile, exerciseId));
@@ -246,10 +249,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOutFirebase = async () => {
     if (currentUser && userProfile) {
-      await updateUserProfile(currentUser.uid, userProfile);
+      await saveUserProfileToFirestore(currentUser.uid, userProfile);
     }
     await signOut(auth);
-    setUserProfile(null); // Clear profile on sign out
+    setUserProfile(null);
     localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
   };
   
@@ -262,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserProfile(defaultProfile);
       
       if (currentUser) {
-        await updateUserProfile(activeUserId, defaultProfile);
+        await saveUserProfileToFirestore(activeUserId, defaultProfile);
       } else {
         localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(defaultProfile));
       }
@@ -322,34 +325,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const restoreProgressFromSlot = useCallback(async (slotKey: 'autosave' | 'manualsave') => {
-      if (!currentUser || !userProfile) return;
-
-      const backupSlot = userProfile[slotKey];
-
-      if (!backupSlot || !backupSlot.lessonProgress) {
-          toast({
-              title: "Nenhum Backup Encontrado",
-              description: `Nenhum progresso encontrado no slot '${slotKey}'.`,
-              variant: "destructive",
-          });
-          return;
+      if (!currentUser || !userProfile) {
+        toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+        return;
       }
-      
-      if (confirm(`Tem certeza que deseja restaurar o progresso do '${slotKey}' de ${new Date(backupSlot.timestamp).toLocaleString('pt-BR')}? Seu progresso atual será sobrescrito.`)) {
-          const updatedProfile = {
-            ...userProfile,
-            lessonProgress: backupSlot.lessonProgress
-          };
-          
-          setUserProfile(updatedProfile);
-          await updateUserProfile(currentUser.uid, updatedProfile);
 
-          toast({
-              title: "Progresso Restaurado!",
-              description: `Seu progresso foi restaurado com sucesso.`,
-              variant: "success",
-          });
-          window.location.reload(); 
+      setIsRestoring(true);
+      try {
+          const backupSlot = userProfile[slotKey];
+          if (!backupSlot) {
+              toast({ title: "Backup não encontrado", description: `Nenhum progresso encontrado no slot '${slotKey}'.`, variant: "destructive" });
+              setIsRestoring(false);
+              return;
+          }
+          
+          const updatedProfile = { ...userProfile, lessonProgress: { ...backupSlot.lessonProgress } };
+          await saveUserProfileToFirestore(currentUser.uid, updatedProfile);
+
+          toast({ title: "Progresso Restaurado!", description: `Seu progresso do '${slotKey}' foi carregado. A página será atualizada.` });
+          
+          // Recarrega a página para garantir que todos os componentes recebam o novo estado
+          setTimeout(() => window.location.reload(), 1500);
+
+      } catch (error) {
+          console.error("Error restoring backup:", error);
+          toast({ title: "Erro ao Restaurar", description: "Não foi possível carregar o progresso do backup.", variant: "destructive" });
+          setIsRestoring(false);
       }
   }, [currentUser, userProfile, toast]);
 
@@ -378,6 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfile,
       loading,
       isUpdatingProgress,
+      isRestoring,
       refreshUserProfile,
       signInWithGoogle,
       signOutFirebase,
@@ -387,7 +389,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       saveInteractionProgress,
       uncompleteInteraction,
       resetLessonProgress,
-      saveAudioProgress,
       saveManualBackup,
       restoreProgressFromSlot,
       completeLesson,
@@ -407,5 +408,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
