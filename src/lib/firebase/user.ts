@@ -66,7 +66,7 @@ export async function updateUserProfile(userId: string, profileData: Partial<Use
         const customError = new FirestorePermissionError({
             operation: 'write',
             path: userDocRef.path,
-            requestResource: profileData
+            requestResourceData: profileData
         });
         errorEmitter.emit('permission-error', customError);
     }
@@ -96,7 +96,7 @@ export async function saveBackupToFirestore(userId: string, lessonId: string, sl
         const customError = new FirestorePermissionError({
             operation: 'write',
             path: slotDocRef.path,
-            requestResource: saveData
+            requestResourceData: saveData
         });
         errorEmitter.emit('permission-error', customError);
     }

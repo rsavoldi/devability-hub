@@ -148,19 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  const loadProfile = useCallback(async () => {
     setLoading(true);
     setConnectionError(null);
-  
-    // Timeout para tratar falhas de conexão com o Firebase
-    const connectionTimeout = setTimeout(() => {
-      if (loading) { // Apenas se ainda estiver carregando
-        console.warn("Firebase connection timed out. App will assume offline state.");
-        setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
-        setLoading(false);
-      }
-    }, 10000); // 10 segundos
-  
+    
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      clearTimeout(connectionTimeout); // Limpa o timeout se a autenticação responder
-  
       if (firebaseUser) {
         try {
           let firestoreProfile = await getUserProfile(firebaseUser.uid);
@@ -187,7 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
-        // Usuário deslogado: carrega o perfil de convidado do localStorage
         const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
         if (localGuestProfileRaw) {
             setUserProfile(JSON.parse(localGuestProfileRaw));
@@ -202,14 +190,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   
     return () => {
-      clearTimeout(connectionTimeout);
       unsubscribe();
     };
-  }, [loading]); // Dependência em loading para que o timeout saiba o estado atual
+  }, []);
   
   useEffect(() => {
     loadProfile();
-  }, []); // Executa apenas uma vez no mount inicial
+  }, [loadProfile]);
 
 
   const refreshUserProfile = useCallback(async () => {
