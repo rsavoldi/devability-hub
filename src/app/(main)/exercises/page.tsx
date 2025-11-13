@@ -9,10 +9,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from '@/components/ui/button';
 // import { Target, ListChecks, Brain, Wand2, ArrowRight, RefreshCw } from 'lucide-react'; // Removido
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import type { Module as ModuleType, Exercise, ExerciseType } from '@/lib/types'; // Adicionado ExerciseType
+import type { Module as ModuleType, Exercise, ExerciseType, RoadmapStep } from '@/lib/types'; // Adicionado ExerciseType e RoadmapStep
 import { QuickChallengeDisplay } from '@/components/exercises/QuickChallengeDisplay';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 type ViewMode = 'byType' | 'byModule' | 'randomChallenge';
 
@@ -28,6 +30,7 @@ const exerciseTypeToEmoji: Record<ExerciseType, string> = {
 
 
 export default function ExercisesPage() {
+  const { userProfile } = useAuth();
   const [activeViewMode, setActiveViewMode] = useState<ViewMode>('byType');
   const [quickChallengeExercises, setQuickChallengeExercises] = useState<Exercise[]>([]);
   const [isQuickChallengeActive, setIsQuickChallengeActive] = useState(false);
@@ -47,7 +50,21 @@ export default function ExercisesPage() {
     if (isNaN(numberOfQuestions) || numberOfQuestions <= 0) {
         return;
     }
-    const shuffledExercises = [...mockExercises].sort(() => 0.5 - Math.random());
+
+    // Filtra módulos concluídos ou atuais para gerar um desafio relevante
+    const relevantModuleIds = new Set<string>();
+    mockRoadmapData.forEach((trilha: RoadmapStep) => {
+      if (trilha.isCurrent || trilha.isCompleted) {
+        trilha.modules.forEach(mod => relevantModuleIds.add(mod.id));
+      }
+    });
+
+    const relevantExercises = mockExercises.filter(ex => ex.moduleId && relevantModuleIds.has(ex.moduleId));
+    
+    // Se não houver exercícios relevantes, use todos como fallback para não quebrar a funcionalidade
+    const pool = relevantExercises.length > 0 ? relevantExercises : mockExercises;
+
+    const shuffledExercises = [...pool].sort(() => 0.5 - Math.random());
     setQuickChallengeExercises(shuffledExercises.slice(0, numberOfQuestions));
     setIsQuickChallengeActive(true);
     setActiveViewMode('randomChallenge');

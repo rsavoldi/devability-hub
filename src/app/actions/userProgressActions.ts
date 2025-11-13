@@ -322,12 +322,17 @@ export async function uncompleteInteractionLogic(
 
 
 export async function resetLessonProgressLogic(
-    currentProfile: UserProfile | null,
-    lessonId: string
+  currentProfile: UserProfile | null,
+  lessonId: string
 ): Promise<UpdateResult> {
     const profileToUpdate = createDefaultProfileIfNeeded(currentProfile, currentProfile?.id || "guest_user");
+    const lesson = mockLessons.find(l => l.id === lessonId);
+
+    if (!lesson) {
+        return { success: false, message: "Lição não encontrada." };
+    }
     
-    // Reset specific lesson progress
+    // Zera o progresso da lição
     if (profileToUpdate.lessonProgress[lessonId]) {
         profileToUpdate.lessonProgress[lessonId] = {
             completed: false,
@@ -336,17 +341,17 @@ export async function resetLessonProgressLogic(
         };
     }
 
-    // Remove lesson from completed list
+    // Se a lição estava concluída, remove-a da lista e subtrai os pontos
     const wasLessonCompleted = profileToUpdate.completedLessons.includes(lessonId);
     if (wasLessonCompleted) {
         profileToUpdate.completedLessons = profileToUpdate.completedLessons.filter((id: string) => id !== lessonId);
+        profileToUpdate.points -= (lesson.points || 10);
     }
-
-    // If the lesson was part of a completed module, un-complete the module as well
-    const lesson = mockLessons.find(l => l.id === lessonId);
-    if (wasLessonCompleted && lesson && lesson.moduleId && profileToUpdate.completedModules.includes(lesson.moduleId)) {
-        profileToUpdate.completedModules = profileToUpdate.completedModules.filter((id: string) => id !== lesson.moduleId);
-    }
+    
+    // Lógica futura: Desbloquear conquistas e subtrair pontos de conquistas.
+    // Isso é mais complexo pois uma conquista pode ser ganha por várias lições
+    // e não deve ser "re-trancada" se o critério ainda for válido por outras atividades.
+    // Por simplicidade, essa parte não será implementada agora.
     
     return {
         success: true,

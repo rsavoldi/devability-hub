@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type JSX, useEffect } from 'react';
+import { useState, type JSX, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -39,7 +39,7 @@ export function InteractiveFillInBlank({
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
-  const [shuffledDisplayOptions] = useState<string[]>(() => shuffleArray(options));
+  const shuffledDisplayOptions = useMemo(() => shuffleArray(options), []);
 
   useEffect(() => {
     if (isInteractionCompleted) {
