@@ -41,10 +41,11 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress, saveManualBackup } = useAuth();
+  const { userProfile, signOutFirebase, clearCurrentUserProgress, saveManualBackup } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
+  const { currentUser, authStatus } = useAuth();
 
   const handleClearProgress = () => {
     clearCurrentUserProgress();
@@ -52,7 +53,7 @@ export function AppHeader() {
 
   const handleManualSave = () => {
     if (lessonUi && lessonUi.lessonId) {
-      saveManualBackup(lessonUi.lessonId);
+      saveManualBackup();
     } else {
       toast({
         title: "Nenhuma Lição Ativa",
@@ -235,7 +236,7 @@ export function AppHeader() {
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{displayName}</p>
-                    {currentUser?.email && (
+                    {authStatus === 'authenticated' && currentUser?.email && (
                        <p className="text-xs leading-none text-muted-foreground">
                         {currentUser.email}
                       </p>
@@ -296,7 +297,7 @@ export function AppHeader() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Navegação</DropdownMenuLabel>
                 {mainNavItems.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
+                  <DropdownMenuItem key={item.href} asChild onSelect={(e) => e.preventDefault()}>
                     <Link href={item.href}>
                       <span className="flex items-center w-full">
                         <span className="mr-2 text-lg leading-none">{item.emoji}</span>
@@ -305,7 +306,7 @@ export function AppHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ))}
-                 <RestoreProgressDialog lessonId={lessonUi?.lessonId}>
+                 <RestoreProgressDialog>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                         <Download className="mr-2 h-4 w-4" />
                         Carregar Progresso
