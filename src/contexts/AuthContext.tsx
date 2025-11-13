@@ -21,9 +21,8 @@ import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore, saveBackupToFirestore, restoreBackupFromFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
-import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 import { FirestorePermissionError } from '@/lib/errors/error-emitter';
-
+import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -102,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await saveBackupToFirestore(currentUser.uid, lessonIdForAutosave, 'autosave', updatedProfile);
           }
         } else {
-          // No longer saving to local storage for logged out users to prevent data loss on re-login
+          localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(updatedProfile));
         }
 
         if (!silent) {
@@ -149,19 +148,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  const loadProfile = useCallback(async () => {
     setLoading(true);
     setConnectionError(null);
-    let connectionTimeout: NodeJS.Timeout | null = null;
   
-    if (typeof window !== 'undefined' && navigator.onLine) {
-        connectionTimeout = setTimeout(() => {
-            if (loading) { // Only set error if it's still loading
-                setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
-                setLoading(false);
-            }
-        }, 10000); 
-    }
+    // Timeout para tratar falhas de conexão com o Firebase
+    const connectionTimeout = setTimeout(() => {
+      if (loading) { // Apenas se ainda estiver carregando
+        console.warn("Firebase connection timed out. App will assume offline state.");
+        setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
+        setLoading(false);
+      }
+    }, 10000); // 10 segundos
   
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (connectionTimeout) clearTimeout(connectionTimeout);
+      clearTimeout(connectionTimeout); // Limpa o timeout se a autenticação responder
   
       if (firebaseUser) {
         try {
@@ -170,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
             if (localGuestProfileRaw) {
                firestoreProfile = JSON.parse(localGuestProfileRaw);
-               firestoreProfile.id = firebaseUser.uid; // Migrate guest ID to firebase UID
+               firestoreProfile.id = firebaseUser.uid;
                firestoreProfile.name = firebaseUser.displayName || firestoreProfile.name;
                firestoreProfile.email = firebaseUser.email;
                firestoreProfile.avatarUrl = firebaseUser.photoURL || firestoreProfile.avatarUrl;
@@ -181,7 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setCurrentUser(firebaseUser);
           setUserProfile(firestoreProfile);
-          localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS); 
+          localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
         } catch (e) {
           console.error("Failed to load user profile from Firestore:", e);
           if (!(e instanceof FirestorePermissionError)) {
@@ -189,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
+        // Usuário deslogado: carrega o perfil de convidado do localStorage
         const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
         if (localGuestProfileRaw) {
             setUserProfile(JSON.parse(localGuestProfileRaw));
@@ -203,14 +202,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   
     return () => {
-      if (connectionTimeout) clearTimeout(connectionTimeout);
+      clearTimeout(connectionTimeout);
       unsubscribe();
     };
-  }, [loading]); // Added loading to dependency array
+  }, [loading]); // Dependência em loading para que o timeout saiba o estado atual
   
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+  }, []); // Executa apenas uma vez no mount inicial
 
 
   const refreshUserProfile = useCallback(async () => {
