@@ -23,7 +23,7 @@ A Deficiência Intelectual (DI) é caracterizada por limitações significativas
     #   Utilizar linguagem <!-- INTERACTIVE_FILL_IN_BLANK: [clara e concreta|complexa e técnica|metafórica e irônica] -->, com frases curtas. A concretude ajuda na <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*compreensão;memorização;atenção] -->.
     #   Dividir instruções em passos <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*menores;maiores;complexos] -->. Verificar a compreensão em cada etapa.
     #   Permitir <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*tempo adicional;tempo rigidamente controlado;tempo ilimitado] --> e pausas frequentes.
-    #   Criar um ambiente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*acolhedor;altamente estimulante;formal e sério] -->, com mínimos distratores. Usar reforçadores <!-- INTERACTIVE_FILL_IN_BLANK: [positivos|negativos|punitivos] --> pode ser útil.
+    #   Criar um ambiente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*estruturado;altamente estimulante;formal e sério] -->, com mínimos distratores. Usar reforçadores <!-- INTERACTIVE_FILL_IN_BLANK: [positivos|negativos|punitivos] --> pode ser útil.
     #   Focar no processo de resolução da tarefa. A avaliação assistida mede o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*potencial de aprendizagem;desempenho atual;QI fixo] -->.
     #   Utilizar instrumentos que avaliem o comportamento <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*adaptativo;intelectual;emocional] --> em contextos reais.
 
@@ -94,7 +94,7 @@ A avaliação deve focar nas habilidades <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[
 A avaliação de pessoas com Deficiências Múltiplas (DM) é particularmente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*complexa;simples;impossível] --> e exige alta individualização.
 
 #   **Barreiras Comuns na Avaliação de Deficiências Múltiplas:**
-    #   A combinação das barreiras inerentes a cada deficiência. A avaliação é altamente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*individualizada e criativa;padronizada e rígida;praticamente impossível] -->.
+    #   A combinação das barreiras inerentes a cada deficiência. A avaliação é altamente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*individualizada e criativa;padronizada e rígida;praticamente impossível] -->. Devido a baixa quantidade de testes validados é importante que a psicóloga e o psicólogo tenham ferramentas técnicas para a Avaliação adequada. 
 #   **Comunicação Inclusiva e Adaptações na Avaliação para Deficiências Múltiplas:**
     #   **Abordagem Centrada na Pessoa e Funcional:** A avaliação deve ser <!-- INTERACTIVE_FILL_IN_BLANK: [individualizada e ecológica|padronizada e normativa|rápida e superficial] -->. O foco é entender como a pessoa <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*funciona;se desvia;se encaixa] -->.
     #   **Múltiplas Fontes de Informação e Observação Intensiva:** Utilizar múltiplas fontes, incluindo observação em diversos contextos e entrevistas detalhadas.
@@ -104,7 +104,7 @@ A avaliação de pessoas com Deficiências Múltiplas (DM) é particularmente <!
 
 Em todas as situações, a **comunicação inclusiva** é a espinha dorsal de um processo ético. Isso envolve uma postura de escuta atenta, <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*empática;distante;julgadora] --> e respeito genuíno. O objetivo final da avaliação é promover o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*entendimento e a inclusão;diagnóstico e a classificação;cumprimento de uma exigência] -->. A avaliação deve ser uma porta para oportunidades, e não um obstáculo. O respeito é <!-- INTERACTIVE_FILL_IN_BLANK: [fundamental|opcional|secundário] -->. A ética guia a <!-- INTERACTIVE_FILL_IN_BLANK: [prática|teoria|intuição] -->.
 `,
-  estimatedTime: '18-21 mins', 
+  estimatedTime: '10-12 mins', 
   coverImage: '/images/Dev6.1.png',
   aiHint: 'avaliação deficiência diversidade CIF TEA DI DV DA DM barreiras comunicação inclusiva ética', // Adicionado mais termos
   references: [

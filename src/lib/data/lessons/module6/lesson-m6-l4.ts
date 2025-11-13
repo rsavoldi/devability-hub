@@ -76,11 +76,10 @@ Instrumentos que avaliam a **qualidade de vida** acessam a percepção <!-- INTE
 
 A avaliação adaptada, a avaliação assistida e o uso integrado de múltiplas técnicas são ferramentas poderosas para uma compreensão rica, funcional e anticapacista. O profissional precisa ser <!-- INTERACTIVE_FILL_IN_BLANK: [criativo, ético e fundamentado|rígido, rápido e superficial|dependente de manuais] -->. A avaliação deve ser um ato de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*cuidado;julgamento;poder] -->.
 `,
-  estimatedTime: '12-15 mins', 
+  estimatedTime: '10-12 mins', 
   coverImage: '/images/Dev6.1.png',
   aiHint: 'psicologia avaliação instrumentos deficiência adaptação ética testes CIF DUA DA', // Adicionado mais termos
   references: [
-    "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 
     "Brasil. (2009). Decreto nº 6.949, de 25 de agosto de 2009. Promulga a Convenção Internacional sobre os Direitos das Pessoas com Deficiência. <a href='http://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/decreto/d6949.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Brasil. (2015). Lei nº 13.146, de 6 de julho de 2015. Institui a Lei Brasileira de Inclusão da Pessoa com Deficiência (Estatuto da Pessoa com Deficiência). <a href='https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Campbell, F. K. (2009). *Contours of Ableism: The Production of Disability and Abledness*. Palgrave Macmillan.",

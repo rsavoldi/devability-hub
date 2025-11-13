@@ -86,11 +86,10 @@ Os objetivos do psicodiagnóstico no contexto da deficiência variam, mas freque
 
 O processo de psicodiagnóstico, conduzido com boas práticas, torna-se um ato ético de compreensão e parceria, visando sempre a promoção da dignidade, da autonomia e da inclusão.
 `,
-  estimatedTime: '12-15 mins',
+  estimatedTime: '08-10 mins',
   coverImage: '/images/Dev6.1.png',
   aiHint: 'psicodiagnóstico etapas deficiência avaliação boas práticas laudo devolutiva ética CFP anamnese SATEPSI neurodiversidade', // Adicionado mais termos
   references: [
-    "Akotirene, C. (2019). *Interseccionalidade*. Pólen.", 
     "Brasil. (2009). Decreto nº 6.949, de 25 de agosto de 2009. Promulga a Convenção Internacional sobre os Direitos das Pessoas com Deficiência. <a href='http://www.planalto.gov.br/ccivil_03/_ato2007-2010/2009/decreto/d6949.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Brasil. (2015). Lei nº 13.146, de 6 de julho de 2015. Institui a Lei Brasileira de Inclusão da Pessoa com Deficiência (Estatuto da Pessoa com Deficiência). <a href='https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2015/lei/l13146.htm' target='_blank' rel='noopener noreferrer' class='hover:text-primary hover:underline'>Disponível aqui</a>.",
     "Campbell, F. K. (2009). *Contours of Ableism: The Production of Disability and Abledness*. Palgrave Macmillan.",

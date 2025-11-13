@@ -4,6 +4,7 @@ export const lessonM6L7: Lesson = {
   id: 'm6-l7',
   title: 'Lição 6.7: Estudo de Caso em Avaliação Psicológicae de Pessoa com Deficiência: Percurso de "Rafael"',
   type: 'interactive',
+  audioSrc: '/audio/lesson-m6-l7.mp3',
   content: `
 Nesta lição, vamos explorar um **estudo de caso** para ilustrar como os princípios da avaliação psicológica <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*inclusiva;tradicional;rápida] -->, adaptada e anticapacitista podem ser aplicados. Este caso não representa uma pessoa <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*real;imaginária;ideal] --> específica, mas combina desafios e potencialidades comuns na avaliação de adolescentes com múltiplas necessidades de <!-- INTERACTIVE_FILL_IN_BLANK: [suporte|cura|controle] -->. O objetivo é visualizar a aplicação dos conceitos discutidos nas lições <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*anteriores;seguintes;paralelas] -->.
 
@@ -28,7 +29,7 @@ O planejamento visou uma abordagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*holí
     #   **Assentimento de Rafael:** Rafael foi informado sobre a avaliação em linguagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*clara e simples;técnica e formal;mínima possível] -->. Sua concordância foi buscada e respeitada. O assentimento é o <!-- INTERACTIVE_FILL_IN_BLANK: [acordo do adolescente|consentimento dos pais|contrato legal] -->.
     #   **Confidencialidade e Compartilhamento de Informações:** Garantida a confidencialidade, com clareza sobre com quem os resultados seriam compartilhados, sempre com o <!-- INTERACTIVE_FILL_IN_BLANK: [consentimento explícito|conhecimento tácito|acordo verbal] --> dos pais e de Rafael.
 
-#   **Seleção de Instrumentos e Técnicas (Abordagem Multimodal, Multidimensional e Ecológica):**
+#   **Seleção de Instrumentos e Técnicas (Exemplos):**
     #   **Entrevistas Clínicas Detalhadas:**
         #   Com Rafael: Utilizando uma abordagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*lúdica e adaptada;formal e diretiva;rápida e superficial] -->, com linguagem clara.
         #   Com os Pais: Para coletar a história de <!-- INTERACTIVE_FILL_IN_BLANK: [desenvolvimento e vida|queixas apenas|sucessos somente] --> e a dinâmica familiar.
@@ -45,6 +46,8 @@ O planejamento visou uma abordagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*holí
         #   Ex: Desenho da Figura Humana, Jogo de Rabiscos. O objetivo seria explorar aspectos <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*emocionais;cognitivos;motores] --> e relacionais.
     #   ***Questionários e Escalas Específicas:***
         #   Sobre interesses, autoestima e sintomas emocionais.
+    
+        Estes métodos, técnicas e instrumentos são apenas exemlos, voce deve analisar o caso e sugerir os métodos e técnicas utilizadas. Veja as questões ao final do texto.
 
 **3. Conduzindo a Avaliação de Rafael: Adaptações em Ação e Barreiras Superadas (Processo Ilustrativo)**
 
@@ -58,7 +61,7 @@ O planejamento visou uma abordagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*holí
     #   Validar as tentativas de comunicação de Rafael, reforçando seu <!-- INTERACTIVE_FILL_IN_BLANK: [esforço|silêncio|erro] -->.
 
 #   **Aplicação Adaptada de Testes e Técnicas:**
-    #   **Tempo Adicional e Flexibilidade:** Concedido generosamente em tarefas cronometradas. O importante era avaliar a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*capacidade;velocidade;resistência] -->.
+    #   **Tempo Adicional e Flexibilidade:** Concedido em tarefas cronometradas. Verificar se existem critérios específicos para adaptações no manual.O importante é avaliar a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*habilidade;velocidade;resistência] -->.
     #   **Divisão de Tarefas e Pausas:** Tarefas longas foram divididas. Pausas foram oferecidas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*proativamente;só se pedidas;raramente] -->.
     #   **Ambiente Controlado e Acolhedor:** Sala silenciosa, bem iluminada e com mínimos distratores.
     #   **Exemplo Ilustrativo no WISC-IV:** A análise qualitativa das respostas e do processo seria <!-- INTERACTIVE_FILL_IN_BLANK: [tão ou mais importante|secundária aos escores|desnecessária com DI] --> que os escores normativos.
@@ -66,7 +69,7 @@ O planejamento visou uma abordagem <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*holí
 
 #   **Barreiras Encontradas e Estratégias de Superação (Processo Dinâmico):**
     #   ***Fadiga Cognitiva e Física:*** Foram introduzidas pausas mais frequentes e atividades lúdicas.
-    #   ***Ansiedade de Desempenho e Frustração:*** O avaliador ofereceu <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*encorajamento;pistas diretas;focar em tarefas fáceis] --> e validou seus sentimentos. A relação de confiança foi <!-- INTERACTIVE_FILL_IN_BLANK: [fundamental|secundária|irrelevante] -->.
+    #   ***Ansiedade de Desempenho e Frustração:*** O avaliador ofere <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*encorajamento;pistas diretas;focar em tarefas fáceis] --> e valida os sentimentos de Rafael. A relação de confiança foi <!-- INTERACTIVE_FILL_IN_BLANK: [fundamental|secundária|irrelevante] -->.
     #   ***Interpretação do Impacto da Surdez:*** Foi crucial não confundir dificuldades de compreensão auditiva com falta de capacidade intelectual ou desatenção.
 
 **4. Síntese dos Resultados e Construção do Perfil Funcional de Rafael (Exemplo Fictício e Simplificado):**
@@ -76,11 +79,11 @@ A avaliação revelou um perfil complexo:
 #   **Funcionamento Intelectual e Cognitivo:** Confirmou-se a DI Leve, com um perfil <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*heterogêneo;homogêneo;estável] -->. Rafael demonstrou habilidades visuoespaciais e de raciocínio não-verbal relativamente mais preservadas. Maiores dificuldades em raciocínio verbal abstrato e memória de trabalho verbal.
 #   **Atenção e Funções Executivas (FE):** Observou-se <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*desatenção;hiperfoco;atenção normal] --> em tarefas longas ou de baixo interesse. Dificuldades em planejamento, organização e automonitoramento.
 #   **Linguagem e Comunicação:** Vocabulário expressivo limitado. A compreensão de instruções orais longas era desafiadora, especialmente com ruído. Ele se beneficiava de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*apoios visuais;instruções rápidas;ambientes ruidosos] -->.
-#   **Comportamento Adaptativo (Vineland-3):** Desempenho em habilidades conceituais e sociais abaixo do esperado. Nas habilidades práticas, desempenho mais próximo do esperado, com necessidade de <!-- INTERACTIVE_FILL_IN_BLANK: [lembretes e supervisão|independência total|ajuda completa] -->.
+#   **Comportamento Adaptativo:** Desempenho em habilidades conceituais e sociais abaixo do esperado. Nas habilidades práticas, desempenho mais próximo do esperado, com necessidade de <!-- INTERACTIVE_FILL_IN_BLANK: [lembretes e supervisão|independência total|ajuda completa] -->.
 #   **Aspectos Emocionais e Sociais:** Desejo de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*interagir;isolar-se;competir] -->, mas com insegurança social. Relatou sentir-se "diferente" e triste por ter poucos amigos. Bom vínculo afetivo com a família, que era uma fonte de <!-- INTERACTIVE_FILL_IN_BLANK: [suporte e segurança|estresse e conflito|indiferença e negligência] -->.
 #   **Potencialidades e Interesses Identificados:** Habilidade em desenho e montagem de objetos. Demonstrou persistência em tarefas de seu interesse.
 
-**5. Devolutiva Colaborativa e Recomendações Funcionais e Empoderadoras:**
+**5. Devolutiva Colaborativa e Recomendações Funcionais:**
 
 A devolutiva foi um processo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*dialógico;unilateral;rápido] -->, focando em potencialidades e orientações práticas.
 
@@ -91,11 +94,22 @@ A devolutiva foi um processo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*dialógico;
     #   **Família:** Estabelecimento de rotinas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*estruturadas;flexíveis;rígidas] -->. Uso de agendas visuais. Incentivo à autonomia, evitando a <!-- INTERACTIVE_FILL_IN_BLANK: [superproteção|negligência|cobrança excessiva] -->. Valorização de atividades de lazer baseadas em seus interesses.
     #   **Terapias e Suportes Especializados:** **Fonoaudiologia** para linguagem e processamento auditivo. **Acompanhamento Psicológico/Psicopedagógico** para habilidades sociais e autoestima.
 
-**6. Elaboração do Laudo/Relatório Psicológico: Documentando para Empoderar**
+**6. Elaboração do Laudo Psicológico**
 
 O laudo seguiu as diretrizes do CFP, utilizando linguagem clara, respeitosa e <!-- INTERACTIVE_FILL_IN_BLANK: [não capacitista|altamente técnica|excessivamente otimista] -->. O documento descreveu o processo, os resultados (integrando dados qualitativos e quantitativos), a análise funcional, as potencialidades e as necessidades de suporte, com recomendações práticas. O laudo foi concebido como um instrumento de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*empoderamento;julgamento;classificação] -->.
 
 Este estudo de caso ilustra como uma avaliação inclusiva e eticamente orientada pode ir além do diagnóstico. Ela pode se tornar um instrumento para compreender a singularidade, identificar necessidades e construir, colaborativamente, caminhos para o desenvolvimento. A avaliação é um ponto de <!-- INTERACTIVE_FILL_IN_BLANK: [partida|chegada|parada] --> para a ação.
+
+**Questões para a Atividade Avaliativa**
+
+1. Descrever as principais queixas apresentadas.
+
+2. Quais são os objetivos da Avaliação Psicológica de Rafael?
+
+3. Detalhe como seria o planejamento da Avaliação de Rafael. Quais construtos você avaliaria? Quais métodos, técnicas e instrumentos você utilizaria e por que? Você pode pesquisar no site do [SATEPSI](https://satepsi.cfp.org.br/testesFavoraveis.cfm) quais instrumentos são favoráveis e para qual público se destina para completar sua resposta adequadamente.
+
+4. Quais as características da entrevista devolutiva e as principais recomendações para o caso?
+
 `,
   estimatedTime: '13-16 mins', 
   coverImage: '/images/Dev6.1.png',
