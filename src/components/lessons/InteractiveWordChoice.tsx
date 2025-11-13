@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types';
@@ -29,16 +29,29 @@ export function InteractiveWordChoice({
   isLessonCompleted
 }: InteractiveWordChoiceProps) {
   
-  const [selectedOption, setSelectedOption] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  // A aleatorização agora acontece apenas uma vez na inicialização do estado.
+  useEffect(() => {
+    if (isInteractionCompleted) {
+      setSelectedOption(correctAnswer);
+      setIsCorrect(true);
+    } else {
+      setSelectedOption(null);
+      setIsCorrect(null);
+    }
+  }, [isInteractionCompleted, correctAnswer]);
+
   const [shuffledOptions] = useState<string[]>(() => shuffleArray(options));
 
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted || isInteractionCompleted) return;
+    if (isLessonCompleted) return;
 
-    // Se a opção clicada já está selecionada, desmarque-a.
+    if (isInteractionCompleted) {
+      onUncomplete(interactionId);
+      return;
+    }
+    
     if (selectedOption === option) {
       setSelectedOption(null);
       setIsCorrect(null);
@@ -55,7 +68,30 @@ export function InteractiveWordChoice({
   };
   
   const isDisabled = isLessonCompleted || false;
-  const isPermanentlyLocked = isLessonCompleted || isInteractionCompleted;
+  
+  if (isInteractionCompleted) {
+    return (
+        <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
+            <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => handleOptionClick(correctAnswer)}
+                disabled={isDisabled}
+                className={cn(
+                    "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
+                    "inline-flex items-center",
+                    "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40",
+                    !isDisabled && "cursor-pointer"
+                )}
+                style={{gap: '0.2rem'}}
+            >
+                <span className="shrink-0 -ml-0.5 mr-0.5">✅</span>
+                <span>{correctAnswer}</span>
+            </Button>
+        </span>
+    );
+  }
 
   return (
     <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1 mx-1 align-baseline not-prose">
@@ -65,31 +101,17 @@ export function InteractiveWordChoice({
         let prefixEmoji: React.ReactNode = null;
         let additionalClasses = "";
 
-        const isCorrectlySelectedAndLocked = isPermanentlyLocked && option === correctAnswer;
-        
-        // Lógica CORRIGIDA: Se a interação está travada como correta, SÓ renderize a opção correta.
-        if (isPermanentlyLocked && option !== correctAnswer) {
-          return null;
-        }
-
-        if (isCorrectlySelectedAndLocked) {
-           prefixEmoji = '✅';
-           variant = "default";
-           additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
-        } else if (isSelected && isCorrect === false) { // Estado de erro (temporário)
+        if (isSelected && isCorrect === false) {
           prefixEmoji = '❌';
           variant = "destructive";
-          // Adicionando a borda vermelha que faltava
           additionalClasses = "border border-red-500 bg-red-100 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300 animate-in shake";
-        } else if (isSelected && isCorrect === true) { // Estado de acerto (antes de travar)
+        } else if (isSelected && isCorrect === true) {
            prefixEmoji = '✅';
            variant = "default";
            additionalClasses = "border border-green-600 bg-green-100 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200 hover:bg-green-100/90 dark:hover:bg-green-900/40";
-        } else { // Estado padrão
+        } else {
           additionalClasses = "border-primary/50 text-primary/90 hover:bg-primary/10 dark:text-primary-foreground/70 dark:hover:bg-primary/20";
         }
-
-        const isButtonDisabled = isPermanentlyLocked && option !== correctAnswer;
         
         return (
           <Button
@@ -98,13 +120,12 @@ export function InteractiveWordChoice({
             variant={variant}
             size="sm"
             onClick={() => handleOptionClick(option)}
-            disabled={isButtonDisabled || isPermanentlyLocked}
+            disabled={isDisabled}
             className={cn(
               "h-auto px-2 py-1 text-sm leading-tight transition-all duration-200 rounded focus-visible:ring-offset-0 align-baseline",
               "inline-flex items-center",
               additionalClasses,
-              (isButtonDisabled || isPermanentlyLocked) && "cursor-not-allowed",
-              !isPermanentlyLocked && "cursor-pointer"
+              !isDisabled && "cursor-pointer"
             )}
             style={{gap: prefixEmoji ? '0.2rem' : '0'}}
           >

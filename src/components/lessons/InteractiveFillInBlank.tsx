@@ -35,15 +35,25 @@ export function InteractiveFillInBlank({
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
   
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(isInteractionCompleted ? correctAnswer : null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(isInteractionCompleted ? true : null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   
-  // A aleatorização agora acontece apenas uma vez na inicialização do estado.
-  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>(() => shuffleArray(options));
+  const [shuffledDisplayOptions] = useState<string[]>(() => shuffleArray(options));
+
+  useEffect(() => {
+    if (isInteractionCompleted) {
+      setSelectedAnswer(correctAnswer);
+      setIsCorrect(true);
+    } else {
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+    }
+  }, [isInteractionCompleted, correctAnswer]);
+
 
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted || isInteractionCompleted) return;
+    if (isLessonCompleted) return;
     
     const currentIsCorrect = option === correctAnswer;
     setIsCorrect(currentIsCorrect);
@@ -60,8 +70,6 @@ export function InteractiveFillInBlank({
 
     if (isInteractionCompleted) {
       // Logic to un-complete
-      setSelectedAnswer(null);
-      setIsCorrect(null);
       onUncomplete(interactionId);
     } else {
       setIsPopoverOpen(o => !o);
@@ -77,7 +85,7 @@ export function InteractiveFillInBlank({
   let prefixEmoji: React.ReactNode = "✏️";
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
   
-  if (isInteractionCompleted || (selectedAnswer && isCorrect)) {
+  if (isInteractionCompleted) {
     prefixEmoji = "✅";
     mainText = correctAnswer;
     textColorClass = "text-green-800 dark:text-green-200";
@@ -100,7 +108,7 @@ export function InteractiveFillInBlank({
   const isSubmitted = isInteractionCompleted || isCorrect !== null;
 
   return (
-    <Popover open={isPopoverOpen && !isSubmitted && !isDisabled} onOpenChange={(openState) => { if (!isSubmitted && !isDisabled) setIsPopoverOpen(openState);}}>
+    <Popover open={isPopoverOpen && !isInteractionCompleted && !isDisabled} onOpenChange={(openState) => { if (!isInteractionCompleted && !isDisabled) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isDisabled}>
         <button
             type="button"
