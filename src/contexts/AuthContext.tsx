@@ -17,12 +17,13 @@ import {
   updateProfile as updateFirebaseProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"
 import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore } from '@/lib/firebase/user';
 import { mockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -41,7 +42,7 @@ interface AuthContextType {
   saveAudioProgress: (lessonId: string, progress: number) => void;
   saveManualBackup: (lessonId: string) => void;
   restoreProgressFromSlot: (slotKey: 'autosave' | 'manualsave', lessonId: string) => void;
-  completeLesson: (lessonId: string, action?: 'complete' | 'uncomplete') => void;
+  completeLesson: (lessonId: string) => void;
   completeExercise: (exerciseId: string) => void;
   completeModule: (moduleId: string) => void;
 }
@@ -54,7 +55,7 @@ const createDefaultProfile = (userId: string, userName?: string | null, userEmai
   id: userId,
   name: userName || (userId === GUEST_USER_ID ? "Convidado(a)" : "Usuário Anônimo"),
   email: userEmail || null,
-  avatarUrl: userAvatar || `https://placehold.co/100x100.png?text=${(userName || "G").charAt(0).toUpperCase()}`,
+  avatarUrl: userAvatar || `https://placehold.co/100x100.png?text=${(userName || "C").charAt(0).toUpperCase()}`,
   points: 0,
   lessonProgress: {},
   completedLessons: [],
@@ -70,17 +71,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const { toast } = useToast();
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  let activeUpdatePromise: Promise<any> | null = null;
+
 
   const handleServerProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, silent: boolean = false, lessonIdForAutosave?: string) => {
-    if (isUpdatingProgress) {
+    if (activeUpdatePromise) {
+      // Se uma atualização já estiver em andamento, ignore a nova para evitar corridas
       return;
     }
     if (!userProfile) return;
-
+  
     setIsUpdatingProgress(true);
     
+    const promise = logicFunction(userProfile);
+    activeUpdatePromise = promise;
+  
     try {
-      const result = await logicFunction(userProfile);
+      const result = await promise;
+  
+      if (promise !== activeUpdatePromise) {
+        // Se uma nova atualização foi iniciada enquanto esta estava em andamento, descarte este resultado
+        return;
+      }
       
       if (result.success && result.updatedProfile) {
         setUserProfile(result.updatedProfile);
@@ -132,36 +145,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         toast({ title: "Erro", description: "Ocorreu um erro ao salvar seu progresso.", variant: "destructive" });
       }
     } finally {
+      activeUpdatePromise = null;
       setIsUpdatingProgress(false);
     }
-  }, [userProfile, currentUser, toast, isUpdatingProgress]);
+  }, [userProfile, currentUser, toast]);
+
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setCurrentUser(firebaseUser);
-        let firestoreProfile = await getUserProfile(firebaseUser.uid);
-        if (!firestoreProfile) {
-          firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
-          await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
+    setConnectionError(null);
+
+    const connectionTimeout = setTimeout(() => {
+        if (loading) { // Apenas se ainda estiver carregando
+            const lastUserProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE);
+            if(lastUserProfileRaw) {
+                setUserProfile(JSON.parse(lastUserProfileRaw));
+            } else {
+                 const guestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+                 if (guestProfileRaw) {
+                    setUserProfile(JSON.parse(guestProfileRaw));
+                 }
+            }
+            setConnectionError("Você está offline. Por favor, conecte-se à internet para continuar.");
+            setLoading(false);
         }
-        setUserProfile(firestoreProfile);
-      } else {
-        setCurrentUser(null);
-        const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-        const guestProfile = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : createDefaultProfile(GUEST_USER_ID);
-        setUserProfile(guestProfile);
-      }
-      setLoading(false);
+    }, 10000); // 10 segundos
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        clearTimeout(connectionTimeout); // Cancela o timeout se a conexão for bem-sucedida
+
+        if (firebaseUser) {
+            setCurrentUser(firebaseUser);
+            let firestoreProfile = await getUserProfile(firebaseUser.uid);
+            if (!firestoreProfile) {
+                firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
+                await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
+            }
+            setUserProfile(firestoreProfile);
+            localStorage.setItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE, JSON.stringify(firestoreProfile));
+        } else {
+            setCurrentUser(null);
+            const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+            const guestProfile = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : createDefaultProfile(GUEST_USER_ID);
+            setUserProfile(guestProfile);
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE);
+        }
+        setLoading(false);
+        setConnectionError(null);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+        clearTimeout(connectionTimeout);
+        unsubscribe();
+    };
+}, [loading]); // Adicionei 'loading' como dependência
+
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+  }, []);
 
   const refreshUserProfile = useCallback(async () => {
     await loadProfile();
@@ -175,13 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     handleServerProgressUpdate((profile) => uncompleteInteractionLogic(profile, lessonId, interactionId), true, lessonId);
   }, [handleServerProgressUpdate]);
   
-  const completeLesson = useCallback((lessonId: string, action: 'complete' | 'uncomplete' = 'complete') => {
-      if (action === 'complete') {
-          handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
-      } else {
-          // Placeholder para futura lógica de desmarcar se necessário
-          // Por agora, o reset faz essa função.
-      }
+  const completeLesson = useCallback((lessonId: string) => {
+      handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
   }, [handleServerProgressUpdate]);
   
   const resetLessonProgress = useCallback((lessonId: string) => {
@@ -205,6 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged irá lidar com a atualização do perfil
     } catch (error: any) {
       console.error("Erro ao fazer login com Google:", error);
       const errorCode = error.code;
@@ -225,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserProfile(guestProfile);
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(guestProfile));
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.LAST_USER_PROFILE);
       }
     } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
@@ -258,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateFirebaseProfile(userCredential.user, { displayName: name });
+      // onAuthStateChanged irá lidar com a criação do perfil no Firestore
       toast({ title: "Registro Bem-Sucedido!", description: `Bem-vindo(a), ${name}!` });
       return userCredential.user;
     } catch (error: any) {
@@ -278,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged irá lidar com a atualização do perfil
       toast({ title: "Login Bem-Sucedido!", description: `Bem-vindo(a) de volta!` });
       return userCredential.user;
     } catch (error: any) {
@@ -311,29 +352,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (savedDataRaw && userProfile) {
       const savedSlot: SaveSlot = JSON.parse(savedDataRaw);
-      const restoredProfileForLesson = savedSlot.profile.lessonProgress[lessonId];
       
-      const newProfile = JSON.parse(JSON.stringify(userProfile));
-      newProfile.lessonProgress[lessonId] = restoredProfileForLesson;
-
-      const lesson = mockLessons.find(l => l.id === lessonId);
-      const totalInteractions = lesson ? countInteractions(lesson.content) : 0;
-      const completedCount = restoredProfileForLesson?.completedInteractions?.length || 0;
-      
-      if (totalInteractions > 0 && completedCount >= totalInteractions) {
-        if (!newProfile.completedLessons.includes(lessonId)) {
-            newProfile.completedLessons.push(lessonId);
-        }
-      } else {
-        newProfile.completedLessons = newProfile.completedLessons.filter((id: string) => id !== lessonId);
-      }
-
-      setUserProfile(newProfile);
+      setUserProfile(savedSlot.profile);
       
       if (currentUser) {
-        await saveUserProfileToFirestore(currentUser.uid, newProfile);
+        await saveUserProfileToFirestore(currentUser.uid, savedSlot.profile);
       } else {
-        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(newProfile));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(savedSlot.profile));
       }
       
       toast({
@@ -359,6 +384,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       </div>
     );
   }
+
+  if (connectionError) {
+    return (
+        <div className="flex flex-col justify-center items-center h-screen w-screen bg-background text-foreground">
+            <h2 className="text-2xl font-semibold mb-4">Erro de Conexão</h2>
+            <p className="text-muted-foreground mb-6">{connectionError}</p>
+            <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+        </div>
+    );
+  }
+
 
   return (
     <AuthContext.Provider value={{

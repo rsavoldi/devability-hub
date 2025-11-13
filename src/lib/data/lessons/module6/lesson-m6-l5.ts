@@ -16,7 +16,7 @@ Os objetivos do psicodiagnóstico no contexto da deficiência variam, mas freque
 #   **Screening (Rastreamento) e Identificação Precoce:** Detectar sinais de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*alerta;certeza;gravidade] --> para possíveis deficiências ou atrasos no desenvolvimento, especialmente na primeira <!-- INTERACTIVE_FILL_IN_BLANK: [infância|adolescência|vida adulta] -->, para direcionar a avaliações mais <!-- INTERACTIVE_FILL_IN_BLANK: [especializadas|rápidas|padronizadas] --> e intervenções precoces.
 #   **Diagnóstico Diferencial e Funcional Abrangente:** Contribuir para o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*esclarecimento;agravamento;ocultamento] --> diagnóstico, diferenciando condições com manifestações semelhantes. O objetivo é descrever o perfil de <!-- INTERACTIVE_FILL_IN_BLANK: [funcionamento|limitações|doenças] --> da pessoa, indo além de um rótulo. O foco é no "<!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*como e porquê;quando e onde;com quem] -->" a pessoa funciona.
 #   **Planejamento de Intervenções Personalizadas e Baseadas em Evidências:** Fornecer informações que subsidiem o planejamento de intervenções terapêuticas, educacionais e sociais, que sejam <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*personalizadas;protocolares;focadas em sintomas] --> e baseadas em evidências.
-#   **Orientação, Aconselhamento e Advocacy:** Oferecer direcionamento para a própria pessoa com deficiência, sua família e a escola. A orientação deve ser <!-- INTERACTIVE_FILL_IN_BLANK: [colaborativa|diretiva|genérica] -->.
+#   **Orientação, Aconselhamento e Defesa de Direitos:** Oferecer direcionamento para a própria pessoa com deficiência, sua família e a escola. A orientação deve ser <!-- INTERACTIVE_FILL_IN_BLANK: [colaborativa|diretiva|genérica] -->.
 #   **Monitoramento e Reavaliação (Follow-up):** Acompanhar a <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*evolução;estagnação;regressão] --> do quadro, avaliar o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*impacto das estratégias;aumento dos escores;grau de satisfação] --> e ajustar os planos.
 
 **2. Etapas do Processo Psicodiagnóstico e Boas Práticas Essenciais no Contexto da Deficiência:**
@@ -44,7 +44,7 @@ Os objetivos do psicodiagnóstico no contexto da deficiência variam, mas freque
     #   A escolha deve ser <!-- INTERACTIVE_FILL_IN_BLANK: [criteriosa|rápida|padronizada] -->.
     #   Considerar a adequação dos instrumentos às características da pessoa (<!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*idade;peso;altura] -->, tipo de deficiência, habilidades de <!-- INTERACTIVE_FILL_IN_BLANK: [comunicação|locomoção|alimentação] -->).
     #   Analisar as qualidades <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*psicométricas;estéticas;econômicas] --> dos instrumentos.
-    #   Priorizar instrumentos que ofereçam informações sobre o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*funcionamento e processo|desempenho comparativo|potencial de "cura"] -->.
+    #   Priorizar instrumentos que ofereçam informações sobre o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*funcionamento e processo;desempenho comparativo;potencial de "cura"] -->.
 
 **Etapa 4: Aplicação Cuidadosa e Adaptada de Técnicas e Instrumentos**
 #   **Administração Flexível e Respeitosa:** A aplicação deve ser <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*flexível e adaptativa;rígida e padronizada;rápida e focada] -->, respeitando o ritmo e as necessidades comunicacionais, motoras e sensoriais.

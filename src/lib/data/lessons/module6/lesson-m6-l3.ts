@@ -4,6 +4,7 @@ export const lessonM6L3: Lesson = {
   id: 'm6-l3',
   title: 'Lição 6.3: Especificidades da Pessoa com Deficiência, Barreiras Comuns e Comunicação Inclusiva',
   type: 'interactive',
+  audioSrc: '/audio/lesson-m6-l3.mp3',
   content: `
 A avaliação psicológica eficaz, ética e socialmente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*justa;rápida;barata] --> de pessoas com deficiência exige do profissional um profundo entendimento e respeito pela imensa **diversidade** inerente a essa população. Não existe "a" pessoa com deficiência; existem <!-- INTERACTIVE_FILL_IN_BLANK: [pessoas com deficiências|homogeneidade|casos iguais] -->, cada uma com sua história, sua singularidade e suas interações contextuais. Cada tipo de deficiência, e mais ainda, cada indivíduo dentro de um mesmo "diagnóstico", apresenta **especificidades** que devem ser cuidadosamente consideradas para que o processo avaliativo seja válido, fidedigno e, acima de tudo, útil e <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*empoderador;classificatório;punitivo] -->. Ignorar essas particularidades, ou adotar uma abordagem "tamanho único", pode levar a interpretações equivocadas, à subestimação de capacidades e a práticas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*capacitistas;inclusivas;neutras] --> que reforçam a exclusão. A diversidade é uma <!-- INTERACTIVE_FILL_IN_BLANK: [riqueza|dificuldade|barreira] -->.
 
