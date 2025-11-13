@@ -135,7 +135,7 @@ export async function getBackupFromFirestore(userId: string, lessonId: string, s
             errorEmitter.emit('permission-error', customError);
         }
         console.error(`Error getting ${slotKey} backup from Firestore:`, error);
-        return null;
+        throw error; // Lança o erro para ser tratado por quem chamou
     }
 }
 
