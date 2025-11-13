@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import type { Lesson } from '@/lib/types'; 
 import { useState, useEffect, useMemo, useCallback } from 'react'; 
 import { useAuth } from '@/contexts/AuthContext';
-import { countInteractions } from '@/lib/utils';
+import { countInteractions } from '@/lib/interaction-counter';
 
 interface LessonCategoryWithEmoji {
   name: string;
