@@ -31,12 +31,13 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       // Permite a criação inicial do perfil no registro.
       allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Adicionado: Permite que o usuário leia e escreva em sua própria subcoleção de saveSlots.
-      match /saveSlots/{slotId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
     }
+    
+    // Regra corrigida e explícita para a subcoleção saveSlots
+    match /users/{userId}/saveSlots/{slotId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
 
     // Dicionário - permitir leitura pública
     match /dictionary/{termId} {
