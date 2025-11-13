@@ -79,7 +79,7 @@ A avaliação deve considerar a modalidade linguística preferencial (Libras, L�
 A avaliação deve focar nas habilidades <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*cognitivas e emocionais;apenas motoras;só sensoriais] -->, separando-as das limitações motoras.
 
 #   **Barreiras Comuns na Avaliação da Deficiência Física/Motora:**
-    #   Dificuldade em <!-- INTERACTIVE_FILL_IN_BLANK: [realizar tarefas que exigem manipulação fina|compreender instruções verbais|manter a atenção focada] -->. Muitos testes dependem de respostas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*motoras;verbais;visuais] -->.
+    #   Dificuldade em realizar tarefas que exigem <!-- INTERACTIVE_FILL_IN_BLANK: [ manipulação fina|instruções verbais|atenção focada] -->. Muitos testes dependem de respostas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*motoras;verbais;visuais] -->.
     #   Fadiga física ou dor que podem interferir no desempenho.
 #   **Comunicação Inclusiva e Adaptações na Avaliação para Deficiência Física/Motora:**
     #   **Formas Alternativas de Resposta:** Permitir respostas <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*verbais, apontadas ou por CAA;apenas escritas;limitadas a "sim" ou "não"] -->. A CAA é uma ferramenta <!-- INTERACTIVE_FILL_IN_BLANK: [essencial|opcional|desnecessária] -->.

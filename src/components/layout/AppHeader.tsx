@@ -1,4 +1,3 @@
-
 // src/components/layout/AppHeader.tsx
 "use client";
 
@@ -64,12 +63,17 @@ export function AppHeader() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <span role="img" aria-label="Troféu DevAbility Hub" className="text-2xl">🏆</span>
-              <h1 className="text-xl font-bold tracking-tight">DevAbility Hub</h1>
+              <h1 className={cn(
+                "text-xl font-bold tracking-tight",
+                (isMobile && lessonUi && lessonUi.lessonId) && "hidden" // Oculta o texto em telas menores se a UI da lição estiver ativa
+              )}>
+                DevAbility Hub
+              </h1>
             </Link>
           </div>
 
           {!isMobile && (
-            lessonUi && lessonUi.lessonTitle ? (
+            lessonUi && lessonUi.lessonId ? (
               // MINI PROGRESS GUI (for lesson pages)
               <div className="flex-1 flex items-center justify-center px-4">
                 <div
@@ -131,9 +135,37 @@ export function AppHeader() {
             </nav>
             )
           )}
+          
+          {/* Se a UI da lição estiver ativa em mobile, mostrar aqui */}
+          {isMobile && lessonUi && lessonUi.lessonId && (
+             <div className="flex-1 flex items-center justify-center px-2">
+              <div
+                className="flex items-center gap-2 text-xs font-medium border rounded-full px-2 py-1 bg-muted/50 shadow-inner"
+                title={lessonUi.lessonTitle ?? undefined}
+              >
+                <span className="text-md" role="img" aria-label="Lição">
+                  📖
+                </span>
+                <Progress
+                  value={
+                    lessonUi.totalInteractions > 0
+                      ? (lessonUi.completedInteractions /
+                          lessonUi.totalInteractions) *
+                        100
+                      : 0
+                  }
+                  className="h-1.5 w-16"
+                />
+                <span className="font-mono text-muted-foreground text-xs w-12 text-center">
+                  {lessonUi.completedInteractions}/{lessonUi.totalInteractions}
+                </span>
+              </div>
+            </div>
+          )}
+
 
           {/* This spacer is only needed when the main nav is visible */}
-          <div className={cn("flex-grow", (lessonUi && lessonUi.lessonTitle && !isMobile) ? "hidden" : "block")} />
+          <div className={cn("flex-grow", (lessonUi && lessonUi.lessonId) ? "hidden sm:block" : "block")} />
 
           <div className="flex items-center gap-2">
             {userProfile && (

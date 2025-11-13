@@ -35,17 +35,34 @@ export function InteractiveFillInBlank({
   isLessonCompleted
 }: InteractiveFillInBlankProps) {
   
-  const [filledAnswer, setFilledAnswer] = useState<string | null>(() => isInteractionCompleted ? correctAnswer : null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(() => isInteractionCompleted ? correctAnswer : null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(() => isInteractionCompleted ? true : null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [shuffledDisplayOptions] = useState(() => shuffleArray(options));
+  const [shuffledDisplayOptions, setShuffledDisplayOptions] = useState<string[]>([]);
+  
+  useEffect(() => {
+    setShuffledDisplayOptions(shuffleArray(options));
+  }, [options]);
+
+  useEffect(() => {
+    // Sincroniza o estado visual se o estado global mudar (ex: ao carregar a página)
+    if (isInteractionCompleted && selectedAnswer !== correctAnswer) {
+      setSelectedAnswer(correctAnswer);
+      setIsCorrect(true);
+    } else if (!isInteractionCompleted && selectedAnswer !== null && isCorrect) {
+       // Se o progresso for resetado globalmente, limpa o estado local
+       setSelectedAnswer(null);
+       setIsCorrect(null);
+    }
+  }, [isInteractionCompleted, selectedAnswer, correctAnswer, isCorrect]);
+
 
   const handleOptionClick = (option: string) => {
-    if (isLessonCompleted || (isCorrect)) return;
+    if (isLessonCompleted || isInteractionCompleted) return;
     
     const currentIsCorrect = option === correctAnswer;
     setIsCorrect(currentIsCorrect);
-    setFilledAnswer(option);
+    setSelectedAnswer(option);
     setIsPopoverOpen(false);
 
     if (currentIsCorrect) {
@@ -58,7 +75,7 @@ export function InteractiveFillInBlank({
 
     if (isInteractionCompleted) {
       // Logic to un-complete
-      setFilledAnswer(null);
+      setSelectedAnswer(null);
       setIsCorrect(null);
       onUncomplete(interactionId);
     } else {
@@ -66,36 +83,35 @@ export function InteractiveFillInBlank({
     }
   };
   
+  const isDisabled = isLessonCompleted || false;
+  let mainText = selectedAnswer || "______";
   let chevronIcon: JSX.Element | null = isPopoverOpen ? <ChevronUp className="h-4 w-4 opacity-70 shrink-0 ml-1" /> : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
   let textColorClass = "text-primary dark:text-primary-foreground/80";
   let borderColorClass = "border-primary/50 hover:border-primary focus-visible:border-primary";
   let cursorClass = "cursor-pointer";
-  let mainText = "______";
   let prefixEmoji: React.ReactNode = "✏️";
   let backgroundClass = "bg-transparent hover:bg-accent/50 dark:hover:bg-accent/20";
-
-  if (isInteractionCompleted && isCorrect) {
+  
+  if (isInteractionCompleted || (selectedAnswer && isCorrect)) {
     prefixEmoji = "✅";
     mainText = correctAnswer;
     textColorClass = "text-green-800 dark:text-green-200";
     borderColorClass = "border-green-600 dark:border-green-700";
     backgroundClass = "bg-green-100 dark:bg-green-900/30";
-    cursorClass = isLessonCompleted ? "cursor-default" : "cursor-pointer";
-    chevronIcon = isLessonCompleted ? null : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
-  } else if (filledAnswer && isCorrect === false) {
+    cursorClass = isDisabled ? "cursor-default" : "cursor-pointer";
+    chevronIcon = isDisabled ? null : <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
+  } else if (selectedAnswer && isCorrect === false) {
     prefixEmoji = '❌';
-    mainText = filledAnswer;
+    mainText = selectedAnswer;
     textColorClass = "text-red-700 dark:text-red-300";
     borderColorClass = "border-red-500 dark:border-red-700";
     backgroundClass = "bg-red-100 dark:bg-red-900/30";
     chevronIcon = <ChevronDown className="h-4 w-4 opacity-70 shrink-0 ml-1" />;
-  } else if (filledAnswer && isCorrect === null) {
-     mainText = filledAnswer;
+  } else if (selectedAnswer && isCorrect === null) {
+     mainText = selectedAnswer;
      prefixEmoji = "";
   }
   
-  const isDisabled = isLessonCompleted;
-
   return (
     <Popover open={isPopoverOpen && !isInteractionCompleted && !isDisabled} onOpenChange={(openState) => { if (!isInteractionCompleted && !isDisabled) setIsPopoverOpen(openState);}}>
       <PopoverTrigger asChild disabled={isDisabled}>
@@ -109,7 +125,7 @@ export function InteractiveFillInBlank({
               cursorClass,
               backgroundClass,
               "border",
-              !isInteractionCompleted && !filledAnswer && "border-dashed",
+              !isInteractionCompleted && !selectedAnswer && "border-dashed",
               !isInteractionCompleted && !isDisabled && "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 outline-none"
             )}
             style={{ height: '1.75rem' }}

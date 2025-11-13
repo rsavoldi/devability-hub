@@ -17,7 +17,8 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Save, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -131,19 +132,17 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson: completeLessonAction, saveAudioProgress } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, uncompleteLesson, saveAudioProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
+  const { toast } = useToast();
 
-  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
   
-  const [localCompletedInteractions, setLocalCompletedInteractions] = useState<Set<string>>(
-    () => new Set(userProfile?.lessonProgress[lesson.id]?.completedInteractions || [])
-  );
+  const [localCompletedInteractions, setLocalCompletedInteractions] = useState<Set<string>>(new Set());
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -156,6 +155,14 @@ export function LessonView({ lesson }: LessonViewProps) {
     return userProfile?.completedLessons?.includes(lesson.id) || false;
   }, [userProfile?.completedLessons, lesson.id]);
 
+  useEffect(() => {
+    // Sincroniza o estado local com o perfil do usuário na montagem e quando o perfil muda
+    if (userProfile) {
+      const completedIds = userProfile.lessonProgress[lesson.id]?.completedInteractions || [];
+      setLocalCompletedInteractions(new Set(completedIds));
+    }
+  }, [userProfile, lesson.id]);
+
   const audioProgress = useMemo(() => userProfile?.lessonProgress[lesson.id]?.audioProgress || 0, [userProfile?.lessonProgress, lesson.id]);
   const audioCompleted = useMemo(() => audioProgress >= 100, [audioProgress]);
 
@@ -166,7 +173,7 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [totalInteractiveElements, localCompletedInteractions]);
 
   useEffect(() => {
-    if (lessonUi) {
+    if (lessonUi && lesson.id) {
         const lessonNumber = lesson.id.replace('m', '').replace('-l', '.');
         lessonUi.setLessonData(lesson.id, lesson.title, lessonNumber, totalInteractiveElements, Array.from(localCompletedInteractions));
     }
@@ -176,12 +183,12 @@ export function LessonView({ lesson }: LessonViewProps) {
   const { progressPercentage, interactionsProgressText } = useMemo(() => {
     const completedCount = localCompletedInteractions.size;
     const total = totalInteractiveElements;
-    const percentage = total > 0 ? (completedCount / total) * 100 : 0;
+    const percentage = total > 0 ? Math.round((completedCount / total) * 100) : 0;
     const text = total > 0
       ? `Interações: ${completedCount}/${total}`
       : "Nenhuma interação nesta lição.";
     return { progressPercentage: percentage, interactionsProgressText: text };
-  }, [localCompletedInteractions, totalInteractiveElements]);
+  }, [localCompletedInteractions.size, totalInteractiveElements]);
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
     setLocalCompletedInteractions(prev => new Set(prev).add(interactionId));
@@ -214,7 +221,6 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, []);
 
   useEffect(() => {
-    setIsMarkingComplete(false);
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
@@ -393,18 +399,36 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isLessonAlreadyCompletedByProfile || isMarkingComplete || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
-    setIsMarkingComplete(true);
-    completeLessonAction(lesson.id);
-    setIsMarkingComplete(false);
+    if (isUpdating || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
+    setIsUpdating(true);
+    await completeLesson(lesson.id);
+    setIsUpdating(false);
+  };
+
+  const handleUncompleteLesson = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    await uncompleteLesson(lesson.id);
+    setIsUpdating(false);
   };
   
   const handleResetLesson = async () => {
-      setIsResetting(true);
+      if (isUpdating) return;
+      setIsUpdating(true);
       await resetLessonProgress(lesson.id);
-      setLocalCompletedInteractions(new Set());
-      setIsResetting(false);
+      setLocalCompletedInteractions(new Set()); // Limpa o estado local
+      setIsUpdating(false);
   };
+
+  const handleManualSave = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    // Simula uma chamada de salvamento. O AuthContext já salva,
+    // mas isso pode forçar uma atualização e mostrar feedback.
+    await saveAudioProgress(lesson.id, currentTime / duration * 100);
+    toast({ title: "Progresso Salvo!", description: "Seu avanço foi salvo com sucesso." });
+    setIsUpdating(false);
+  }
 
   if (authLoading || !lesson) {
     return (
@@ -421,20 +445,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     }
     return title;
   };
-  
-  const getButtonText = () => {
-    if (isMarkingComplete || isResetting) return "Processando...";
-    if (isLessonAlreadyCompletedByProfile) return "Lição Concluída!";
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações";
-    return "Marcar como Concluída";
-  };
-
-  const getButtonEmoji = () => {
-    if (isMarkingComplete || isResetting) return <Loader2 className="animate-spin" />;
-    if (isLessonAlreadyCompletedByProfile) return <CheckCircle />;
-    if (!allInteractionsCompleted && totalInteractiveElements > 0) return <span role="img" aria-label="Bloqueado">🔒</span>;
-    return <span role="img" aria-label="Finalizar">🏁</span>;
-  }
   
   const lessonModuleId = lesson.moduleId;
 
@@ -550,7 +560,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         </Button>
       )}
 
-      <CardFooter className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
+      <CardFooter className="mt-8 flex flex-col sm:flex-row flex-wrap justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
         <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-start">
             {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
@@ -565,40 +575,54 @@ export function LessonView({ lesson }: LessonViewProps) {
             ) : <div className="w-full sm:w-auto min-w-[88px] sm:min-w-[100px]">&nbsp;</div>}
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-2 order-first sm:order-none">
           {lessonModuleId && (
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="w-full sm:w-auto">
                   <Link href={`/modules/${lessonModuleId}`} className="flex items-center gap-2">
                       <Map className="h-4 w-4"/> Voltar ao Módulo
                   </Link>
               </Button>
           )}
-          <Button
-            variant={isLessonAlreadyCompletedByProfile ? "default" : "secondary"}
-            size="lg"
-            className={cn(
-              "w-full max-w-xs sm:w-auto",
-              isLessonAlreadyCompletedByProfile ? "bg-green-500 hover:bg-green-600" :
-              (!allInteractionsCompleted && totalInteractiveElements > 0) ? "bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed" : ""
-            )}
-            onClick={handleMarkAsCompleted}
-            disabled={isLessonAlreadyCompletedByProfile || isMarkingComplete || isResetting || (!allInteractionsCompleted && totalInteractiveElements > 0)}
-          >
-              {getButtonEmoji()}
-              {getButtonText()}
-          </Button>
-          {isLessonAlreadyCompletedByProfile && (
-              <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full max-w-xs sm:w-auto"
-                  onClick={handleResetLesson}
-                  disabled={isResetting || isMarkingComplete}
-              >
-                  {isResetting ? <Loader2 className="animate-spin" /> : <span role="img" aria-label="Reiniciar">🔄</span>}
-                  Reiniciar Lição
-              </Button>
+          {isLessonAlreadyCompletedByProfile ? (
+            <Button
+              variant="destructive" size="lg"
+              className="w-full sm:w-auto"
+              onClick={handleUncompleteLesson}
+              disabled={isUpdating}
+            >
+              {isUpdating ? <Loader2 className="animate-spin" /> : <XCircle />}
+              Desmarcar Conclusão
+            </Button>
+          ) : (
+             <Button
+                variant="secondary" size="lg"
+                className="w-full sm:w-auto"
+                onClick={handleMarkAsCompleted}
+                disabled={isUpdating || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+             >
+                {isUpdating ? <Loader2 className="animate-spin" /> : <CheckCircle/>}
+                {(!allInteractionsCompleted && totalInteractiveElements > 0) ? "Complete as Interações" : "Marcar como Concluída"}
+             </Button>
           )}
+          <Button
+              variant="outline" size="sm"
+              className="w-full sm:w-auto"
+              onClick={handleResetLesson}
+              disabled={isUpdating}
+          >
+              {isUpdating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Reiniciar Lição
+          </Button>
+          <Button
+              variant="outline" size="icon"
+              className="w-full sm:w-auto"
+              onClick={handleManualSave}
+              disabled={isUpdating}
+              title="Salvar progresso manualmente"
+          >
+              {isUpdating ? <Loader2 className="animate-spin" /> : <Save />}
+              <span className="sr-only">Salvar Progresso</span>
+          </Button>
         </div>
 
 
