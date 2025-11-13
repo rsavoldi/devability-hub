@@ -33,7 +33,7 @@ interface AuthContextType {
   clearCurrentUserProgress: () => void;
   registerWithEmail: (email: string, password: string, name: string) => Promise<FirebaseUser | null>;
   signInWithEmail: (email: string, password: string) => Promise<FirebaseUser | null>;
-  completeLesson: (lessonId: string) => void;
+  completeLesson: (lessonId: string, action?: 'complete' | 'uncomplete') => void;
   completeExercise: (exerciseId: string) => void;
   completeModule: (moduleId: string) => void;
   saveInteractionProgress: (lessonId: string, interactionId: string) => void;
@@ -69,12 +69,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
+  
+  const [lastProgressUpdate, setLastProgressUpdate] = useState(0);
+
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   const handleServerProgressUpdate = useCallback(async (logicFunction: (profile: UserProfile | null) => Promise<any>, silent: boolean = false) => {
+    // Evita chamadas concorrentes se uma já estiver em andamento
+    if (isUpdatingProgress) {
+        console.log("Progress update already in progress. Skipping.");
+        return;
+    }
     if (!userProfile) return;
 
     setIsUpdatingProgress(true);
@@ -85,14 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (result.success && result.updatedProfile) {
         setUserProfile(result.updatedProfile);
         
-        // --- LÓGICA DE BACKUP E SALVAMENTO ---
         if (result.updatedProfile.id === GUEST_USER_ID) {
           localStorage.setItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS, JSON.stringify(result.updatedProfile));
         } else if (currentUser) {
           await saveUserProfileToFirestore(currentUser.uid, result.updatedProfile);
         }
         
-        // Autosave em localStorage, independente de ser guest ou logado
         const autosaveSlot: SaveSlot = {
           timestamp: Date.now(),
           profile: result.updatedProfile,
@@ -134,34 +140,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsUpdatingProgress(false);
     }
-  }, [userProfile, currentUser, toast]);
+  }, [userProfile, currentUser, toast, isUpdatingProgress]);
 
   const loadProfile = useCallback(async () => {
+    let activeProfile: UserProfile | null = null;
+    const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
+    const localGuestProfile: UserProfile | null = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : null;
+    
+    // First, load local data to provide a fast initial state
+    if (localGuestProfile) {
+        activeProfile = localGuestProfile;
+    }
+
     setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setCurrentUser(firebaseUser);
         let firestoreProfile = await getUserProfile(firebaseUser.uid);
         
-        // Lógica de Prevenção de Perda de Dados
-        const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-        const localGuestProfile: UserProfile | null = localGuestProfileRaw ? JSON.parse(localGuestProfileRaw) : null;
-
         if (!firestoreProfile) {
           firestoreProfile = createDefaultProfile(firebaseUser.uid, firebaseUser.displayName, firebaseUser.email, firebaseUser.photoURL);
           if (localGuestProfile && (localGuestProfile.points > 0 || localGuestProfile.completedLessons.length > 0)) {
-            // Migra o progresso do convidado para o novo perfil logado
             firestoreProfile.points = localGuestProfile.points;
             firestoreProfile.lessonProgress = localGuestProfile.lessonProgress;
             firestoreProfile.completedLessons = localGuestProfile.completedLessons;
             firestoreProfile.completedExercises = localGuestProfile.completedExercises;
             firestoreProfile.unlockedAchievements = localGuestProfile.unlockedAchievements;
             firestoreProfile.completedModules = localGuestProfile.completedModules;
-            localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS); // Limpa o progresso local do convidado após a migração
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS); 
           }
           await saveUserProfileToFirestore(firebaseUser.uid, firestoreProfile);
         } else if (localGuestProfile && localGuestProfile.points > firestoreProfile.points) {
-          // Se o progresso do convidado é maior, funde-o com o perfil do Firestore
           firestoreProfile.points = localGuestProfile.points;
           firestoreProfile.lessonProgress = { ...firestoreProfile.lessonProgress, ...localGuestProfile.lessonProgress };
           firestoreProfile.completedLessons = [...new Set([...firestoreProfile.completedLessons, ...localGuestProfile.completedLessons])];
@@ -174,8 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserProfile(firestoreProfile);
       } else {
         setCurrentUser(null);
-        const storedGuestProfile = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
-        setUserProfile(storedGuestProfile ? JSON.parse(storedGuestProfile) : createDefaultProfile(GUEST_USER_ID));
+        setUserProfile(localGuestProfile || createDefaultProfile(GUEST_USER_ID));
       }
       setLoading(false);
     });
@@ -200,9 +208,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     handleServerProgressUpdate((profile) => uncompleteInteractionLogic(profile, lessonId, interactionId), true);
   }, [handleServerProgressUpdate]);
   
-  const completeLesson = useCallback((lessonId: string) => {
-    handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
+  const completeLesson = useCallback((lessonId: string, action: 'complete' | 'uncomplete' = 'complete') => {
+    if (action === 'complete') {
+        handleServerProgressUpdate((profile) => completeLessonLogic(profile, lessonId));
+    } else {
+        // Implement uncomplete logic if different from reset
+        handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId)); 
+    }
   }, [handleServerProgressUpdate]);
+
 
   const resetLessonProgress = useCallback((lessonId: string) => {
     handleServerProgressUpdate((profile) => resetLessonProgressLogic(profile, lessonId));

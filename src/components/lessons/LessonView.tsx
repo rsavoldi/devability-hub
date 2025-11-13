@@ -132,12 +132,11 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, isUpdatingProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
 
-  const [isUpdating, setIsUpdating] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [prevLesson, setPrevLesson] = useState<Lesson | null>(null);
   const [nextLesson, setNextLesson] = useState<Lesson | null>(null);
@@ -227,14 +226,12 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (lesson && allMockLessons && allMockLessons.length > 0) {
       const currentIndex = allMockLessons.findIndex(l => l.id === lesson.id);
       if (currentIndex > -1) {
-        const currentModuleLessons = allMockLessons.filter(l => l.moduleId === lesson.moduleId);
-        const currentLessonIndexInModule = currentModuleLessons.findIndex(l => l.id === lesson.id);
-
-        setPrevLesson(currentLessonIndexInModule > 0 ? currentModuleLessons[currentLessonIndexInModule - 1] : null);
-        setNextLesson(currentLessonIndexInModule < currentModuleLessons.length - 1 ? currentModuleLessons[currentLessonIndexInModule + 1] : null);
+        setPrevLesson(currentIndex > 0 ? allMockLessons[currentIndex - 1] : null);
+        setNextLesson(currentIndex < allMockLessons.length - 1 ? allMockLessons[currentIndex + 1] : null);
       }
     }
   }, [lesson]);
+  
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -258,7 +255,6 @@ export function LessonView({ lesson }: LessonViewProps) {
 
     const handleAudioEnded = () => {
       setIsPlaying(false);
-      // saveAudioProgress(lesson.id, 100);
       if (progressSaveInterval.current) {
         clearInterval(progressSaveInterval.current);
       }
@@ -289,13 +285,11 @@ export function LessonView({ lesson }: LessonViewProps) {
       if (audio.ended || audioProgress >= 100) {
         audio.currentTime = 0;
         setCurrentTime(0);
-        // saveAudioProgress(lesson.id, 0); 
       }
       audio.play();
       progressSaveInterval.current = setInterval(() => {
         const progress = duration > 0 ? (audio.currentTime / duration) * 100 : 0;
         if (progress < 100) {
-          // saveAudioProgress(lesson.id, progress);
         }
       }, 5000);
     }
@@ -309,7 +303,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      // saveAudioProgress(lesson.id, (newTime / duration) * 100);
     }
   };
 
@@ -401,18 +394,19 @@ export function LessonView({ lesson }: LessonViewProps) {
   
 
   const handleMarkAsCompleted = async () => {
-    if (isUpdating || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
-    setIsUpdating(true);
-    await completeLesson(lesson.id);
-    setIsUpdating(false);
+    if (isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
+    await completeLesson(lesson.id, 'complete');
   };
   
+  const handleUncompleteLesson = async () => {
+    if (isUpdatingProgress) return;
+    await completeLesson(lesson.id, 'uncomplete');
+  };
+
   const handleResetLesson = async () => {
-      if (isUpdating) return;
-      setIsUpdating(true);
+      if (isUpdatingProgress) return;
       await resetLessonProgress(lesson.id);
       setLocalCompletedInteractions(new Set());
-      setIsUpdating(false);
   };
 
   if (authLoading || !lesson) {
@@ -546,7 +540,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       )}
 
       <CardFooter className="mt-8 flex flex-col sm:flex-row flex-wrap justify-between items-center gap-4 p-6 bg-muted/30 rounded-lg">
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-start">
+        <div className="flex justify-start w-full sm:w-auto sm:flex-1">
             {prevLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${prevLesson.id}`} title={`Anterior: ${prevLesson.title}`}>
@@ -572,10 +566,10 @@ export function LessonView({ lesson }: LessonViewProps) {
             <Button
               variant="destructive" size="lg"
               className="w-full sm:w-auto"
-              onClick={() => {}}
-              disabled={isUpdating}
+              onClick={handleUncompleteLesson}
+              disabled={isUpdatingProgress}
             >
-              {isUpdating ? <Loader2 className="animate-spin" /> : <XCircle />}
+              {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <XCircle />}
               Desmarcar Conclusão
             </Button>
           ) : (
@@ -583,9 +577,9 @@ export function LessonView({ lesson }: LessonViewProps) {
                 variant="secondary" size="lg"
                 className="w-full sm:w-auto"
                 onClick={handleMarkAsCompleted}
-                disabled={isUpdating || (!allInteractionsCompleted && totalInteractiveElements > 0)}
+                disabled={isUpdatingProgress || (!allInteractionsCompleted && totalInteractiveElements > 0)}
              >
-                {isUpdating ? <Loader2 className="animate-spin" /> : <CheckCircle/>}
+                {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <CheckCircle/>}
                 {(!allInteractionsCompleted && totalInteractiveElements > 0) ? "Complete as Interações" : "Marcar como Concluída"}
              </Button>
           )}
@@ -593,15 +587,15 @@ export function LessonView({ lesson }: LessonViewProps) {
               variant="outline" size="sm"
               className="w-full sm:w-auto"
               onClick={handleResetLesson}
-              disabled={isUpdating}
+              disabled={isUpdatingProgress}
           >
-              {isUpdating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              {isUpdatingProgress ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Reiniciar Lição
           </Button>
         </div>
 
 
-        <div className="w-full sm:w-auto flex-1 sm:flex-initial flex justify-center sm:justify-end">
+        <div className="flex justify-end w-full sm:w-auto sm:flex-1">
             {nextLesson ? (
             <Button variant="outline" size="default" asChild className="w-full sm:w-auto">
                 <Link href={`/lessons/${nextLesson.id}`} title={`Próxima: ${nextLesson.title}`}>
