@@ -21,6 +21,7 @@ import { playSound } from '@/lib/sounds';
 import { completeLessonLogic, completeExerciseLogic, completeModuleLogic, saveInteractionProgress as saveInteractionProgressAction, uncompleteInteractionLogic, resetLessonProgressLogic, saveAudioProgressLogic } from '@/app/actions/userProgressActions';
 import { getUserProfile, updateUserProfile as saveUserProfileToFirestore, saveBackupToFirestore, restoreBackupFromFirestore } from '@/lib/firebase/user';
 import { Button } from '@/components/ui/button';
+import { FirebaseErrorListener } from '@/lib/errors/FirebaseErrorListener';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -130,9 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           toast({ title: "Erro", description: result.message || "Não foi possível atualizar o progresso.", variant: "destructive" });
       }
     } catch (error) {
-      console.error("Error during progress update:", error);
-      if (!silent) {
-        toast({ title: "Erro", description: "Ocorreu um erro ao salvar seu progresso.", variant: "destructive" });
+      // Errors are now handled by the FirestorePermissionError emitter
+      // and will be caught by the FirebaseErrorListener component.
+      // We still log other potential errors.
+      if (!(error instanceof FirestorePermissionError)) {
+          console.error("Error during progress update:", error);
+           if (!silent) {
+            toast({ title: "Erro", description: "Ocorreu um erro ao salvar seu progresso.", variant: "destructive" });
+          }
       }
     } finally {
       setActiveUpdatePromise(null);
@@ -141,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userProfile, currentUser, toast, activeUpdatePromise]);
 
 
-  const loadProfile = useCallback(async () => {
+ const loadProfile = useCallback(async () => {
     setLoading(true);
     setConnectionError(null);
     let connectionTimeout: NodeJS.Timeout | null = null;
@@ -149,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Only set a timeout if online
     if (typeof window !== 'undefined' && navigator.onLine) {
         connectionTimeout = setTimeout(() => {
-            setConnectionError("Você está sem conexão com a internet. Por favor, conecte-se para continuar.");
+            setConnectionError("Erro de Conexão. Você está offline. Por favor, conecte-se à internet para continuar.");
             setLoading(false);
         }, 10000); // 10 seconds timeout
     }
@@ -169,7 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS); 
         } catch (e) {
           console.error("Failed to load user profile from Firestore:", e);
-          setConnectionError("Erro ao carregar seu perfil. Por favor, tente recarregar a página.");
+          if (!(e instanceof FirestorePermissionError)) {
+            setConnectionError("Erro ao carregar seu perfil. Por favor, tente recarregar a página.");
+          }
         }
       } else {
         const localGuestProfileRaw = localStorage.getItem(LOCAL_STORAGE_KEYS.GUEST_PROGRESS);
@@ -245,6 +253,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOutFirebase = async () => {
     setLoading(true);
     try {
+      if (currentUser && userProfile) {
+        // Save final progress before signing out
+        await saveUserProfileToFirestore(currentUser.uid, userProfile);
+      }
       await signOut(auth);
       // onAuthStateChanged will set user to null and load guest profile.
     } catch (error: any) {
@@ -398,6 +410,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeExercise,
       completeModule,
     }}>
+      <FirebaseErrorListener />
       {children}
     </AuthContext.Provider>
   );
