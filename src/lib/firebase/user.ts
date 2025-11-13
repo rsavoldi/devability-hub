@@ -1,9 +1,10 @@
-
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from './index';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, SaveSlot } from '@/lib/types';
+import { produce } from 'immer';
 
 const USERS_COLLECTION = 'users';
+const SAVE_SLOTS_SUBCOLLECTION = 'saveSlots';
 
 /**
  * Fetches a user's profile from Firestore.
@@ -17,8 +18,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 
     if (userDocSnap.exists()) {
       const fetchedData = userDocSnap.data();
-      // Ensure that essential fields are present, merging with defaults if they are missing.
-      // This makes the data structure resilient to older versions or incomplete data in Firestore.
       const profile: UserProfile = {
         id: userId,
         name: fetchedData.name || 'Usuário',
@@ -39,24 +38,95 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     }
   } catch (error) {
     console.error("Error fetching user profile from Firestore:", error);
-    return null;
+    throw error;
   }
 }
 
 /**
  * Creates or updates a user's profile in Firestore.
- * Using `set` with `merge: true` ensures that it works for both creation (if the document doesn't exist)
- * and update (merging fields without overwriting the entire document if not all fields are provided).
  * @param userId The UID of the user.
  * @param profileData The full or partial user profile data to save.
  */
 export async function updateUserProfile(userId: string, profileData: Partial<UserProfile>): Promise<void> {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, userId);
-    // Use `set` with `merge: true` to create or update the document non-destructively.
     await setDoc(userDocRef, profileData, { merge: true });
   } catch (error) {
     console.error("Error updating user profile in Firestore:", error);
-    // Handle the error appropriately, e.g., show a notification to the user.
+    throw error;
+  }
+}
+
+
+/**
+ * Saves a backup of the current user profile to a specific slot in Firestore.
+ * @param userId The UID of the user.
+ * @param lessonId The ID of the current lesson to associate the save with.
+ * @param slotKey 'autosave' or 'manualsave'.
+ * @param profile The full user profile to back up.
+ */
+export async function saveBackupToFirestore(userId: string, lessonId: string, slotKey: 'autosave' | 'manualsave', profile: UserProfile): Promise<void> {
+  try {
+    const slotDocRef = doc(db, USERS_COLLECTION, userId, SAVE_SLOTS_SUBCOLLECTION, `${slotKey}_${lessonId}`);
+    const saveData: SaveSlot = {
+      timestamp: Date.now(),
+      profile: profile,
+    };
+    await setDoc(slotDocRef, saveData);
+  } catch (error) {
+    console.error(`Error saving ${slotKey} backup to Firestore:`, error);
+  }
+}
+
+
+/**
+ * Retrieves a specific backup slot from Firestore.
+ * @param userId The UID of the user.
+ * @param lessonId The ID of the lesson.
+ * @param slotKey 'autosave' or 'manualsave'.
+ * @returns The SaveSlot data or null if not found.
+ */
+export async function getBackupFromFirestore(userId: string, lessonId: string, slotKey: 'autosave' | 'manualsave'): Promise<SaveSlot | null> {
+    try {
+        const slotDocRef = doc(db, USERS_COLLECTION, userId, SAVE_SLOTS_SUBCOLLECTION, `${slotKey}_${lessonId}`);
+        const docSnap = await getDoc(slotDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as SaveSlot;
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error getting ${slotKey} backup from Firestore:`, error);
+        return null;
+    }
+}
+
+
+/**
+ * Restores progress for a specific lesson from a saved slot in Firestore.
+ * @param userId The UID of the user.
+ * @param lessonId The ID of the lesson to restore progress for.
+ * @param slotKey 'autosave' or 'manualsave'.
+ * @param currentProfile The user's current profile.
+ * @returns The updated user profile or null on failure.
+ */
+export async function restoreBackupFromFirestore(userId: string, lessonId: string, slotKey: 'autosave' | 'manualsave', currentProfile: UserProfile): Promise<UserProfile | null> {
+  try {
+    const backupSlot = await getBackupFromFirestore(userId, lessonId, slotKey);
+    if (!backupSlot) {
+      console.warn(`No ${slotKey} backup found for lesson ${lessonId}.`);
+      return null;
+    }
+
+    // Use Immer for safe, immutable updates
+    const nextProfile = produce(currentProfile, draft => {
+      // Restore only the progress related to the specific lesson
+      draft.lessonProgress[lessonId] = backupSlot.profile.lessonProgress[lessonId];
+    });
+
+    return nextProfile;
+
+  } catch (error) {
+    console.error(`Error restoring ${slotKey} backup:`, error);
+    return null;
   }
 }

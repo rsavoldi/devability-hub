@@ -1,4 +1,3 @@
-
 // src/components/layout/AppHeader.tsx
 "use client";
 
@@ -48,9 +47,7 @@ export function AppHeader() {
   const { toast } = useToast();
 
   const handleClearProgress = () => {
-    if (confirm("Tem certeza que deseja limpar seu progresso local? Esta ação não pode ser desfeita.")) {
-      clearCurrentUserProgress();
-    }
+    clearCurrentUserProgress();
   };
 
   const handleManualSave = () => {
@@ -194,16 +191,18 @@ export function AppHeader() {
               </TooltipContent>
             </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={handleManualSave} aria-label="Salvar Progresso Manualmente">
-                  <span className="text-xl" role="img" aria-label="Salvar">💾</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Salvar Progresso</p>
-              </TooltipContent>
-            </Tooltip>
+            {lessonUi.lessonId && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleManualSave} aria-label="Salvar Progresso Manualmente">
+                    <span className="text-xl" role="img" aria-label="Salvar">💾</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Salvar Progresso da Lição</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -259,7 +258,7 @@ export function AppHeader() {
                 
                 <DropdownMenuItem onClick={handleClearProgress}>
                   <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                  <span className="text-destructive">Limpar Progresso Local</span>
+                  <span className="text-destructive">Limpar Progresso</span>
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />

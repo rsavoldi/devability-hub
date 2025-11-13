@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,8 +15,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Server, Save } from 'lucide-react';
 import type { SaveSlot, UserProfile } from '@/lib/types';
-import { LOCAL_STORAGE_KEYS } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
+import { getBackupFromFirestore } from '@/lib/firebase/user';
 import { countInteractions } from '@/lib/interaction-counter';
 import { mockLessons } from '@/lib/mockData';
 
@@ -56,34 +55,39 @@ function getProgressSummary(profile: UserProfile | null, lessonId: string | null
       points: profile.points || 0,
       exercises: profile.completedExercises?.length || 0,
     };
-  }
+}
   
-
 export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [autosaveSlot, setAutosaveSlot] = useState<SaveSlot | null>(null);
   const [manualSaveSlot, setManualSaveSlot] = useState<SaveSlot | null>(null);
-  const { restoreProgressFromSlot } = useAuth();
+  const { currentUser, restoreProgressFromSlot } = useAuth();
+
+  const fetchBackups = useCallback(async () => {
+    if (!isOpen || !currentUser || !lessonId) {
+      setAutosaveSlot(null);
+      setManualSaveSlot(null);
+      return;
+    }
+    setIsLoading(true);
+    const [auto, manual] = await Promise.all([
+      getBackupFromFirestore(currentUser.uid, lessonId, 'autosave'),
+      getBackupFromFirestore(currentUser.uid, lessonId, 'manualsave')
+    ]);
+    setAutosaveSlot(auto);
+    setManualSaveSlot(manual);
+    setIsLoading(false);
+  }, [isOpen, currentUser, lessonId]);
 
   useEffect(() => {
-    if (isOpen) {
-      const autoKey = lessonId ? `${LOCAL_STORAGE_KEYS.AUTOSAVE_PROGRESS}_${lessonId}` : null;
-      const manualKey = lessonId ? `${LOCAL_STORAGE_KEYS.MANUALSAVE_PROGRESS}_${lessonId}` : null;
-      
-      const autoRaw = autoKey ? localStorage.getItem(autoKey) : null;
-      const manualRaw = manualKey ? localStorage.getItem(manualKey) : null;
-      
-      setAutosaveSlot(autoRaw ? JSON.parse(autoRaw) : null);
-      setManualSaveSlot(manualRaw ? JSON.parse(manualRaw) : null);
-    }
-  }, [isOpen, lessonId]);
+    fetchBackups();
+  }, [fetchBackups]);
 
   const handleRestore = (slotKey: 'autosave' | 'manualsave') => {
     if (!lessonId) return;
-    if (confirm(`Tem certeza que deseja carregar os dados do slot "${slotKey === 'autosave' ? 'Autosave' : 'Manual Save'}"? Seu progresso atual nesta lição será substituído.`)) {
-        restoreProgressFromSlot(slotKey, lessonId);
-        setIsOpen(false);
-    }
+    restoreProgressFromSlot(slotKey, lessonId);
+    setIsOpen(false);
   };
   
   const autoSummary = getProgressSummary(autosaveSlot?.profile ?? null, lessonId);
@@ -97,27 +101,26 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
         <DialogHeader>
           <DialogTitle>Carregar Progresso da Lição</DialogTitle>
           <DialogDescription>
-            {lessonId ? "Escolha um ponto de salvamento para restaurar para esta lição. Esta ação substituirá seu progresso atual nesta lição." : "Abra uma lição para ver e carregar seu progresso salvo."}
+            {lessonId && currentUser ? "Escolha um ponto de salvamento para restaurar. Esta ação substituirá seu progresso atual nesta lição." : "Abra uma lição e esteja logado para ver e carregar seu progresso salvo."}
           </DialogDescription>
         </DialogHeader>
-        {lessonId ? (
+        {lessonId && currentUser ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             {/* Autosave Slot */}
-            <Card className={!autosaveSlot ? 'opacity-50' : ''}>
+            <Card className={!autosaveSlot || isLoading ? 'opacity-50' : ''}>
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Server className="h-5 w-5 text-primary" />
                     Autosave
                 </CardTitle>
-                <CardDescription>{formatTimestamp(autosaveSlot?.timestamp ?? 0)}</CardDescription>
+                <CardDescription>{isLoading ? 'Carregando...' : formatTimestamp(autosaveSlot?.timestamp ?? 0)}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                {autosaveSlot ? (
+                {isLoading ? <Loader2 className="animate-spin" /> : autosaveSlot ? (
                     <div className="space-y-1 text-sm">
                     <p><strong>Pontos Totais:</strong> {autoSummary.points}</p>
                     <p><strong>Interações na Lição:</strong> {autoSummary.interactions}</p>
                     <p><strong>Progresso do Áudio:</strong> {autoSummary.audio}</p>
-                    <p><strong>Exercícios Concluídos:</strong> {autoSummary.exercises}</p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento automático encontrado para esta lição.</p>
@@ -126,7 +129,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                 <DialogFooter className="p-6 pt-0">
                 <Button 
                     onClick={() => handleRestore('autosave')} 
-                    disabled={!autosaveSlot}
+                    disabled={!autosaveSlot || isLoading}
                     className="w-full"
                 >
                     <Loader2 className="mr-2 h-4 w-4" /> Carregar
@@ -134,21 +137,20 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                 </DialogFooter>
             </Card>
             {/* Manual Save Slot */}
-            <Card className={!manualSaveSlot ? 'opacity-50' : ''}>
+            <Card className={!manualSaveSlot || isLoading ? 'opacity-50' : ''}>
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Save className="h-5 w-5 text-primary" />
                     Manual Save
                 </CardTitle>
-                <CardDescription>{formatTimestamp(manualSaveSlot?.timestamp ?? 0)}</CardDescription>
+                <CardDescription>{isLoading ? 'Carregando...' : formatTimestamp(manualSaveSlot?.timestamp ?? 0)}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                {manualSaveSlot ? (
+                {isLoading ? <Loader2 className="animate-spin" /> : manualSaveSlot ? (
                     <div className="space-y-1 text-sm">
                         <p><strong>Pontos Totais:</strong> {manualSummary.points}</p>
                         <p><strong>Interações na Lição:</strong> {manualSummary.interactions}</p>
                         <p><strong>Progresso do Áudio:</strong> {manualSummary.audio}</p>
-                        <p><strong>Exercícios Concluídos:</strong> {manualSummary.exercises}</p>
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground">Nenhum salvamento manual encontrado para esta lição.</p>
@@ -157,7 +159,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                 <DialogFooter className="p-6 pt-0">
                 <Button 
                     onClick={() => handleRestore('manualsave')} 
-                    disabled={!manualSaveSlot}
+                    disabled={!manualSaveSlot || isLoading}
                     className="w-full"
                 >
                     <Loader2 className="mr-2 h-4 w-4" /> Carregar
@@ -167,7 +169,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
             </div>
         ) : (
             <div className="py-8 text-center text-muted-foreground">
-                <p>Nenhuma lição ativa para carregar o progresso.</p>
+                <p>Nenhuma lição ativa ou usuário não logado.</p>
             </div>
         )}
         <DialogFooter>
