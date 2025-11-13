@@ -4,6 +4,7 @@ export const lessonM6L5: Lesson = {
   id: 'm6-l5',
   title: 'Lição 6.5: Boas Práticas no Psicodiagnóstico da Pessoa com Deficiência',
   type: 'interactive',
+  audioSrc: '/audio/lesson-m6-l5.mp3',
   content: `
 O **psicodiagnóstico** é uma modalidade específica, estruturada e tecnicamente <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*fundamentada;improvisada;opcional] --> de avaliação psicológica. Caracteriza-se por ser um processo <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*científico;artístico;intuitivo] -->, geralmente limitado no <!-- INTERACTIVE_FILL_IN_BLANK: [tempo|espaço|custo] -->, que utiliza técnicas e testes psicológicos com o objetivo de compreender problemas, identificar e avaliar aspectos <!-- INTERACTIVE_FILL_IN_BLANK: [específicos|gerais|superficiais] --> do funcionamento psicológico, classificar o caso e/ou prever seu curso, sempre visando subsidiar a tomada de <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*decisões;opiniões;julgamentos] --> e o planejamento de intervenções eficazes. O psicodiagnóstico busca <!-- INTERACTIVE_FILL_IN_BLANK: [compreensão|rotulação|simplificação] -->.
 

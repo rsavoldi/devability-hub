@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { LessonItemCard } from '@/components/lessons/LessonItemCard';
-import { countInteractions } from '@/lib/utils';
+import { countInteractions } from '@/lib/interaction-counter';
 
 interface ModulePageProps {
   params: Promise<{

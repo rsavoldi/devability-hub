@@ -4,6 +4,7 @@ export const lessonM6L6: Lesson = {
   id: 'm6-l6',
   title: 'Lição 6.6: Aspectos Ético-Legais na Avaliação Psicológica da Pessoa com Deficiência: Fundamentos para uma Prática Justa e Emancipatória',
   type: 'interactive',
+  //audioSrc: '/audio/lesson-m6-l6.mp3',
   content: `
 A avaliação psicológica da pessoa com deficiência é uma prática que transcende a mera aplicação de técnicas ou a busca por um <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*diagnóstico;rótulo;escore] -->; ela está profundamente ancorada e deve ser rigorosamente guiada por um arcabouço **ético e legal** robusto. Este arcabouço visa proteger os <!-- INTERACTIVE_FILL_IN_BLANK: [direitos|interesses|privilégios] -->, a dignidade, a autonomia e o bem-estar do indivíduo avaliado, especialmente considerando as históricas vulnerabilidades e opressões vivenciadas por este grupo. A atuação do psicólogo neste campo complexo e sensível deve ser pautada não apenas pela <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*competência técnica;intuição clínica;pressa institucional] -->, mas, fundamentalmente, por uma <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*consciência crítica;busca pela objetividade;adesão a protocolos] -->, uma postura reflexiva e um compromisso inabalável com os direitos humanos e com a justiça <!-- INTERACTIVE_FILL_IN_BLANK: [social|divina|punitiva] -->. A ética é o <!-- INTERACTIVE_WORD_CHOICE: OPTIONS=[*alicerce;complemento;obstáculo] --> da prática.
 
