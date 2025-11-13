@@ -1,9 +1,8 @@
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './index';
 import type { UserProfile, SaveSlot } from '@/lib/types';
 import { produce } from 'immer';
 import { errorEmitter, FirestorePermissionError } from '@/lib/errors/error-emitter';
-import type { User as FirebaseUser } from 'firebase/auth';
 
 const USERS_COLLECTION = 'users';
 const SAVE_SLOTS_SUBCOLLECTION = 'saveSlots';
@@ -59,9 +58,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
  */
 export async function updateUserProfile(userId: string, profileData: Partial<UserProfile>): Promise<void> {
   const userDocRef = doc(db, USERS_COLLECTION, userId);
-  try {
-    await setDoc(userDocRef, profileData, { merge: true });
-  } catch (error: any) {
+  await setDoc(userDocRef, profileData, { merge: true }).catch(error => {
     if (error.code === 'permission-denied') {
         const customError = new FirestorePermissionError({
             operation: 'write',
@@ -71,8 +68,8 @@ export async function updateUserProfile(userId: string, profileData: Partial<Use
         errorEmitter.emit('permission-error', customError);
     }
     console.error("Error updating user profile in Firestore:", error);
-    throw error;
-  }
+    throw error; // Re-throw to be caught by the calling function
+  });
 }
 
 
@@ -89,9 +86,7 @@ export async function saveBackupToFirestore(userId: string, lessonId: string, sl
       timestamp: Date.now(),
       profile: profile,
     };
-  try {
-    await setDoc(slotDocRef, saveData);
-  } catch (error: any) {
+  await setDoc(slotDocRef, saveData).catch(error => {
      if (error.code === 'permission-denied') {
         const customError = new FirestorePermissionError({
             operation: 'write',
@@ -102,7 +97,7 @@ export async function saveBackupToFirestore(userId: string, lessonId: string, sl
     }
     console.error(`Error saving ${slotKey} backup to Firestore:`, error);
     throw error;
-  }
+  });
 }
 
 
@@ -130,7 +125,7 @@ export async function getBackupFromFirestore(userId: string, lessonId: string, s
             errorEmitter.emit('permission-error', customError);
         }
         console.error(`Error getting ${slotKey} backup from Firestore:`, error);
-        throw error;
+        throw error; // Re-throw the error
     }
 }
 
@@ -161,6 +156,6 @@ export async function restoreBackupFromFirestore(userId: string, lessonId: strin
 
   } catch (error) {
     console.error(`Error restoring ${slotKey} backup:`, error);
-    return null;
+    throw error; // Re-throw
   }
 }

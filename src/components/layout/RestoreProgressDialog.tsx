@@ -66,23 +66,29 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
 
   const fetchBackups = useCallback(async () => {
     if (!isOpen || !currentUser || !lessonId) {
-      setAutosaveSlot(null);
-      setManualSaveSlot(null);
       return;
     }
     setIsLoading(true);
-    const [auto, manual] = await Promise.all([
-      getBackupFromFirestore(currentUser.uid, lessonId, 'autosave'),
-      getBackupFromFirestore(currentUser.uid, lessonId, 'manualsave')
-    ]);
-    setAutosaveSlot(auto);
-    setManualSaveSlot(manual);
-    setIsLoading(false);
+    try {
+      const [auto, manual] = await Promise.all([
+        getBackupFromFirestore(currentUser.uid, lessonId, 'autosave'),
+        getBackupFromFirestore(currentUser.uid, lessonId, 'manualsave')
+      ]);
+      setAutosaveSlot(auto);
+      setManualSaveSlot(manual);
+    } catch (error) {
+      console.error("Failed to fetch backups:", error);
+      // Toast notification is handled by the global error listener
+    } finally {
+      setIsLoading(false);
+    }
   }, [isOpen, currentUser, lessonId]);
 
   useEffect(() => {
-    fetchBackups();
-  }, [fetchBackups]);
+    if(isOpen) {
+      fetchBackups();
+    }
+  }, [isOpen, fetchBackups]);
 
   const handleRestore = (slotKey: 'autosave' | 'manualsave') => {
     if (!lessonId) return;
@@ -107,7 +113,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
         {lessonId && currentUser ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             {/* Autosave Slot */}
-            <Card className={!autosaveSlot || isLoading ? 'opacity-50' : ''}>
+            <Card className={isLoading ? 'opacity-50' : ''}>
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Server className="h-5 w-5 text-primary" />
@@ -137,7 +143,7 @@ export function RestoreProgressDialog({ children, lessonId }: RestoreProgressDia
                 </DialogFooter>
             </Card>
             {/* Manual Save Slot */}
-            <Card className={!manualSaveSlot || isLoading ? 'opacity-50' : ''}>
+            <Card className={isLoading ? 'opacity-50' : ''}>
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Save className="h-5 w-5 text-primary" />
