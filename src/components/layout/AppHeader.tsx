@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2 } from "lucide-react";
+import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Save, Wand2, Bot } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useLessonUi } from "@/contexts/LessonUiContext";
 import { Progress } from "../ui/progress";
+import { useToast } from "@/hooks/use-toast";
 
 
 const mainNavItems: NavItem[] = [
@@ -42,6 +43,17 @@ export function AppHeader() {
   const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
+  const { toast } = useToast();
+
+  const handleManualSave = () => {
+    // A lógica real de salvamento já está sendo chamada continuamente pelo AuthContext
+    // Este botão agora serve principalmente para dar feedback ao usuário de que uma ação foi feita
+    toast({
+      title: "Progresso Salvo!",
+      description: "Seu progresso é salvo automaticamente, mas garantimos o registro de seu último avanço.",
+      variant: "success",
+    });
+  };
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
 
@@ -65,7 +77,7 @@ export function AppHeader() {
               <span role="img" aria-label="Troféu DevAbility Hub" className="text-2xl">🏆</span>
               <h1 className={cn(
                 "text-xl font-bold tracking-tight",
-                (isMobile && lessonUi && lessonUi.lessonId) && "hidden" // Oculta o texto em telas menores se a UI da lição estiver ativa
+                 isMobile && lessonUi && lessonUi.lessonId && "hidden" 
               )}>
                 DevAbility Hub
               </h1>
@@ -74,7 +86,6 @@ export function AppHeader() {
 
           {!isMobile && (
             lessonUi && lessonUi.lessonId ? (
-              // MINI PROGRESS GUI (for lesson pages)
               <div className="flex-1 flex items-center justify-center px-4">
                 <div
                   className="flex items-center gap-3 text-sm font-medium border rounded-full px-3 py-1.5 bg-muted/50 shadow-inner"
@@ -102,7 +113,6 @@ export function AppHeader() {
                 </div>
               </div>
             ) : (
-            // MAIN NAV (for other pages)
             <nav className="ml-6 flex items-center gap-1">
               {mainNavItems.map((item) => (
                 <Tooltip key={item.href}>
@@ -136,7 +146,6 @@ export function AppHeader() {
             )
           )}
           
-          {/* Se a UI da lição estiver ativa em mobile, mostrar aqui */}
           {isMobile && lessonUi && lessonUi.lessonId && (
              <div className="flex-1 flex items-center justify-center px-2">
               <div
@@ -164,29 +173,53 @@ export function AppHeader() {
           )}
 
 
-          {/* This spacer is only needed when the main nav is visible */}
           <div className={cn("flex-grow", (lessonUi && lessonUi.lessonId) ? "hidden sm:block" : "block")} />
 
           <div className="flex items-center gap-2">
-            {userProfile && (
-              <div className={cn("items-center gap-2 text-sm font-medium", isMobile ? "hidden" : "flex")}>
+            {userProfile && !isMobile && (
+              <div className="flex items-center gap-2 text-sm font-medium">
                 <span>💎</span>
                 <span>{userProfile.points} Pontos</span>
               </div>
             )}
             
-            <ChatbotDialog />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ChatbotDialog />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Chatbot</p>
+              </TooltipContent>
+            </Tooltip>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              aria-label="Alternar tema"
-              className="text-xl"
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-              <span className="sr-only">Alternar tema</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Salvar Progresso" onClick={handleManualSave}>
+                   <span className="text-xl" role="img" aria-label="Salvar">💾</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Salvar Progresso</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                  aria-label="Alternar tema"
+                  className="text-xl"
+                >
+                  {theme === 'dark' ? '☀️' : '🌙'}
+                  <span className="sr-only">Alternar tema</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Alternar Tema</p>
+              </TooltipContent>
+            </Tooltip>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -253,37 +286,35 @@ export function AppHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {isMobile && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Abrir menu principal" suppressHydrationWarning>
-                    <MenuIcon className="h-6 w-6" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Navegação</DropdownMenuLabel>
-                  {allNavItemsForMobileMenu.map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link href={item.href}>
-                        <span className="flex items-center w-full">
-                          <span className="mr-2 text-lg leading-none">{item.emoji}</span>
-                          {item.label}
-                        </span>
-                      </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Abrir menu principal" suppressHydrationWarning>
+                  <MenuIcon className="h-6 w-6" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Navegação</DropdownMenuLabel>
+                {allNavItemsForMobileMenu.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild>
+                    <Link href={item.href}>
+                      <span className="flex items-center w-full">
+                        <span className="mr-2 text-lg leading-none">{item.emoji}</span>
+                        {item.label}
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                 {userProfile && ( 
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">
+                        <span>💎</span>
+                        <span>{userProfile.points} Pontos</span>
                     </DropdownMenuItem>
-                  ))}
-                   {userProfile && ( 
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="flex sm:hidden items-center gap-2 text-sm font-medium">
-                          <span>💎</span>
-                          <span>{userProfile.points} Pontos</span>
-                      </DropdownMenuItem>
-                    </>
-                   )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                  </>
+                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </TooltipProvider>

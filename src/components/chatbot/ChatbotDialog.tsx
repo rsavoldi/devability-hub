@@ -60,7 +60,7 @@ export function ChatbotDialog() {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "bot",
-        text: "Sorry, I encountered an error. Please try again.",
+        text: "Desculpe, encontrei um erro. Por favor, tente novamente.",
       };
       setMessages((prevMessages) => [...prevMessages, errorMessage]);
     } finally {
@@ -77,9 +77,9 @@ export function ChatbotDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] md:sm:max-w-[550px] flex flex-col h-[70vh] max-h-[600px]">
         <DialogHeader>
-          <DialogTitle>DevAbility Chat 💬</DialogTitle>
+          <DialogTitle>Converse com a DevAI 💬</DialogTitle>
           <DialogDescription>
-            Ask me questions about your learning materials or development concepts.
+            Faça perguntas sobre os materiais de estudo ou conceitos de desenvolvimento.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow p-1 pr-4 -mx-1 my-4 border-t border-b">
@@ -106,7 +106,7 @@ export function ChatbotDialog() {
                   <p className="whitespace-pre-wrap">{message.text}</p>
                   {message.sources && message.sources.length > 0 && (
                     <div className="mt-2 text-xs text-muted-foreground opacity-80">
-                      <p className="font-semibold">Sources:</p>
+                      <p className="font-semibold">Fontes:</p>
                       <ul className="list-disc pl-4">
                         {message.sources.map((source, index) => (
                           <li key={index}>{source}</li>
@@ -128,7 +128,7 @@ export function ChatbotDialog() {
                     <AvatarFallback><span role="img" aria-label="Bot">🤖</span></AvatarFallback>
                   </Avatar>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Thinking...</span>
+                <span>Pensando...</span>
               </div>
             )}
           </div>
@@ -144,7 +144,7 @@ export function ChatbotDialog() {
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type your message..."
+              placeholder="Digite sua mensagem..."
               disabled={isLoading}
               className="flex-grow"
             />
@@ -154,7 +154,7 @@ export function ChatbotDialog() {
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              <span className="sr-only">Send</span>
+              <span className="sr-only">Enviar</span>
             </Button>
           </form>
         </DialogFooter>

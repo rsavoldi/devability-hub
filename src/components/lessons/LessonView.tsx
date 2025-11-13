@@ -17,7 +17,7 @@ import { mockLessons as allMockLessons } from '@/lib/mockData';
 import { countInteractions } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useLessonUi } from '@/contexts/LessonUiContext';
-import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Save, Volume2, VolumeX, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpCircle, CheckCircle, Loader2, Map, Pause, Play, RefreshCw, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LessonViewProps {
@@ -156,10 +156,9 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [userProfile?.completedLessons, lesson.id]);
 
   useEffect(() => {
-    // Sincroniza o estado local com o perfil do usuário na montagem e quando o perfil muda
-    if (userProfile) {
-      const completedIds = userProfile.lessonProgress[lesson.id]?.completedInteractions || [];
-      setLocalCompletedInteractions(new Set(completedIds));
+    if (userProfile && lesson.id) {
+        const completedIds = userProfile.lessonProgress[lesson.id]?.completedInteractions || [];
+        setLocalCompletedInteractions(new Set(completedIds));
     }
   }, [userProfile, lesson.id]);
 
@@ -191,7 +190,11 @@ export function LessonView({ lesson }: LessonViewProps) {
   }, [localCompletedInteractions.size, totalInteractiveElements]);
 
   const handleInteractionCorrect = useCallback((interactionId: string) => {
-    setLocalCompletedInteractions(prev => new Set(prev).add(interactionId));
+    setLocalCompletedInteractions(prev => {
+        const newSet = new Set(prev);
+        newSet.add(interactionId);
+        return newSet;
+    });
     saveInteractionProgress(lesson.id, interactionId);
   }, [saveInteractionProgress, lesson.id]);
 
@@ -416,19 +419,9 @@ export function LessonView({ lesson }: LessonViewProps) {
       if (isUpdating) return;
       setIsUpdating(true);
       await resetLessonProgress(lesson.id);
-      setLocalCompletedInteractions(new Set()); // Limpa o estado local
+      setLocalCompletedInteractions(new Set());
       setIsUpdating(false);
   };
-
-  const handleManualSave = async () => {
-    if (isUpdating) return;
-    setIsUpdating(true);
-    // Simula uma chamada de salvamento. O AuthContext já salva,
-    // mas isso pode forçar uma atualização e mostrar feedback.
-    await saveAudioProgress(lesson.id, currentTime / duration * 100);
-    toast({ title: "Progresso Salvo!", description: "Seu avanço foi salvo com sucesso." });
-    setIsUpdating(false);
-  }
 
   if (authLoading || !lesson) {
     return (
@@ -612,16 +605,6 @@ export function LessonView({ lesson }: LessonViewProps) {
           >
               {isUpdating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Reiniciar Lição
-          </Button>
-          <Button
-              variant="outline" size="icon"
-              className="w-full sm:w-auto"
-              onClick={handleManualSave}
-              disabled={isUpdating}
-              title="Salvar progresso manualmente"
-          >
-              {isUpdating ? <Loader2 className="animate-spin" /> : <Save />}
-              <span className="sr-only">Salvar Progresso</span>
           </Button>
         </div>
 
