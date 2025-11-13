@@ -92,6 +92,12 @@ export interface Achievement {
   pointsAwarded?: number;
 }
 
+// Novo tipo para os slots de salvamento
+export interface SaveSlot {
+  timestamp: number;
+  lessonProgress: Record<string, LessonProgress>; // Salva todo o objeto de progresso
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -104,7 +110,10 @@ export interface UserProfile {
   unlockedAchievements: string[];
   completedModules: string[];
   roles: string[];
+  autosave?: SaveSlot;     // Slot de salvamento automático
+  manualsave?: SaveSlot;  // Slot de salvamento manual
 }
+
 
 export interface NavItem {
   href: string;
@@ -129,10 +138,4 @@ export interface SummarizeLessonInput {
 
 export interface SummarizeLessonOutput {
   summary: string;
-}
-
-// Novo tipo para os slots de salvamento
-export interface SaveSlot {
-  timestamp: number;
-  profile: UserProfile;
 }

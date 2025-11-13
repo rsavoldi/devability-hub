@@ -35,17 +35,19 @@ class EventEmitter<T extends EventMap> {
 export const errorEmitter = new EventEmitter<EventMap>();
 
 // Custom Error for Firestore Permission Denied
-export type SecurityRuleContext = {
+export interface FirestorePermissionErrorContext {
     path: string;
     operation: 'read' | 'write' | 'delete' | 'create' | 'update' | 'list' | 'get';
-    requestResource?: any;
-};
+    message?: string; // Optional custom message
+    requestResourceData?: any;
+}
+
 
 export class FirestorePermissionError extends Error {
-    public context: SecurityRuleContext;
+    public context: FirestorePermissionErrorContext;
 
-    constructor(context: SecurityRuleContext) {
-        const message = `Failed to ${context.operation} at path "${context.path}". Check Firestore rules.`;
+    constructor(context: FirestorePermissionErrorContext) {
+        const message = context.message || `Failed to ${context.operation} at path "${context.path}". Check Firestore rules.`;
         super(message);
         this.name = 'FirestorePermissionError';
         this.context = context;
