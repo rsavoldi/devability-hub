@@ -1,8 +1,9 @@
+
 // src/components/layout/AppHeader.tsx
 "use client";
 
 import Link from "next/link";
-import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Save, Wand2, Bot } from "lucide-react";
+import { UserCircle, Menu as MenuIcon, Settings, LogOut, UserPlus, LogIn, Trash2, Download } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { useLessonUi } from "@/contexts/LessonUiContext";
 import { Progress } from "../ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { RestoreProgressDialog } from "./RestoreProgressDialog";
 
 
 const mainNavItems: NavItem[] = [
@@ -40,19 +42,13 @@ const toolNavItems: NavItem[] = [
 export function AppHeader() {
   const { setTheme, theme } = useTheme();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile, signInWithGoogle, signOutFirebase, clearCurrentUserProgress } = useAuth();
+  const { currentUser, userProfile, signOutFirebase, clearCurrentUserProgress, saveManualBackup } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
 
   const handleManualSave = () => {
-    // A lógica real de salvamento já está sendo chamada continuamente pelo AuthContext
-    // Este botão agora serve principalmente para dar feedback ao usuário de que uma ação foi feita
-    toast({
-      title: "Progresso Salvo!",
-      description: "Seu progresso é salvo automaticamente, mas garantimos o registro de seu último avanço.",
-      variant: "success",
-    });
+    saveManualBackup();
   };
 
   const allNavItemsForMobileMenu = [...mainNavItems, ...toolNavItems];
@@ -95,7 +91,7 @@ export function AppHeader() {
                     📖
                   </span>
                   <h2 className="font-semibold text-foreground">
-                    Lição {lessonUi.lessonNumber}
+                    Lição
                   </h2>
                   <Progress
                     value={
@@ -173,7 +169,7 @@ export function AppHeader() {
           )}
 
 
-          <div className={cn("flex-grow", (lessonUi && lessonUi.lessonId) ? "hidden sm:block" : "block")} />
+          <div className="flex-grow" />
 
           <div className="flex items-center gap-2">
             {userProfile && !isMobile && (
@@ -194,12 +190,12 @@ export function AppHeader() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Salvar Progresso" onClick={handleManualSave}>
+                <Button variant="ghost" size="icon" aria-label="Salvar Progresso Manualmente" onClick={handleManualSave}>
                    <span className="text-xl" role="img" aria-label="Salvar">💾</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Salvar Progresso</p>
+                <p>Salvar Progresso Manualmente</p>
               </TooltipContent>
             </Tooltip>
 
@@ -294,7 +290,7 @@ export function AppHeader() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Navegação</DropdownMenuLabel>
-                {allNavItemsForMobileMenu.map((item) => (
+                {mainNavItems.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <Link href={item.href}>
                       <span className="flex items-center w-full">
@@ -304,6 +300,14 @@ export function AppHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ))}
+                 <RestoreProgressDialog>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <span className="flex items-center w-full">
+                          <span className="mr-2 text-lg leading-none">📥</span>
+                          Carregar Progresso
+                        </span>
+                    </DropdownMenuItem>
+                 </RestoreProgressDialog>
                  {userProfile && ( 
                   <>
                     <DropdownMenuSeparator />

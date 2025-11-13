@@ -31,14 +31,13 @@ export interface LessonProgress {
 
 export interface Lesson {
   id: string;
-  moduleId?: string;
   title: string;
   order?: number;
   type: 'text' | 'video' | 'interactive' | 'quiz';
   content: string;
   estimatedTime: string;
   coverImage?: string;
-  audioSrc?: string; // Caminho para o arquivo de áudio
+  audioSrc?: string; 
   aiHint?: string;
   emoji?: string;
   references?: string[];
@@ -101,7 +100,7 @@ export interface UserProfile {
   points: number;
   lessonProgress: Record<string, LessonProgress>; // lessonId -> progress
   completedExercises: string[];
-  completedLessons: string[]; // Adicionado para rastrear lições 100% concluídas
+  completedLessons: string[];
   unlockedAchievements: string[];
   completedModules: string[];
   roles: string[];
@@ -130,4 +129,10 @@ export interface SummarizeLessonInput {
 
 export interface SummarizeLessonOutput {
   summary: string;
+}
+
+// Novo tipo para os slots de salvamento
+export interface SaveSlot {
+  timestamp: number;
+  profile: UserProfile;
 }

@@ -132,7 +132,7 @@ const parseMarkdownForHTML = (text: string): string => {
 };
 
 export function LessonView({ lesson }: LessonViewProps) {
-  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson, uncompleteLesson, saveAudioProgress } = useAuth();
+  const { userProfile, loading: authLoading, saveInteractionProgress, uncompleteInteraction, resetLessonProgress, completeLesson } = useAuth();
   const router = useRouter();
   const lessonUi = useLessonUi();
   const { toast } = useToast();
@@ -258,7 +258,7 @@ export function LessonView({ lesson }: LessonViewProps) {
 
     const handleAudioEnded = () => {
       setIsPlaying(false);
-      saveAudioProgress(lesson.id, 100);
+      // saveAudioProgress(lesson.id, 100);
       if (progressSaveInterval.current) {
         clearInterval(progressSaveInterval.current);
       }
@@ -276,7 +276,7 @@ export function LessonView({ lesson }: LessonViewProps) {
         clearInterval(progressSaveInterval.current);
       }
     };
-  }, [lesson.id, saveAudioProgress, audioProgress]);
+  }, [lesson.id, audioProgress]);
 
   const togglePlayPause = () => {
     const audio = audioRef.current;
@@ -289,13 +289,13 @@ export function LessonView({ lesson }: LessonViewProps) {
       if (audio.ended || audioProgress >= 100) {
         audio.currentTime = 0;
         setCurrentTime(0);
-        saveAudioProgress(lesson.id, 0); 
+        // saveAudioProgress(lesson.id, 0); 
       }
       audio.play();
       progressSaveInterval.current = setInterval(() => {
         const progress = duration > 0 ? (audio.currentTime / duration) * 100 : 0;
         if (progress < 100) {
-          saveAudioProgress(lesson.id, progress);
+          // saveAudioProgress(lesson.id, progress);
         }
       }, 5000);
     }
@@ -309,7 +309,7 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      saveAudioProgress(lesson.id, (newTime / duration) * 100);
+      // saveAudioProgress(lesson.id, (newTime / duration) * 100);
     }
   };
 
@@ -330,8 +330,7 @@ export function LessonView({ lesson }: LessonViewProps) {
       const combinedRegex = new RegExp(
         `<!--\\s*(${wordChoiceRegexSource})\\s*-->|<!--\\s*(${fillBlankRegexSource})\\s*-->`, "g"
       );
-      const generalCommentsRegex = /<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs;
-      const contentWithoutGeneralComments = lesson.content.replace(generalCommentsRegex, '');
+      const contentWithoutGeneralComments = lesson.content.replace(/<!--(?!.*?INTERACTIVE_WORD_CHOICE:|.*?INTERACTIVE_FILL_IN_BLANK:).*?-->/gs, '');
   
       let match;
       while ((match = combinedRegex.exec(contentWithoutGeneralComments)) !== null) {
@@ -405,13 +404,6 @@ export function LessonView({ lesson }: LessonViewProps) {
     if (isUpdating || (!allInteractionsCompleted && totalInteractiveElements > 0)) return;
     setIsUpdating(true);
     await completeLesson(lesson.id);
-    setIsUpdating(false);
-  };
-
-  const handleUncompleteLesson = async () => {
-    if (isUpdating) return;
-    setIsUpdating(true);
-    await uncompleteLesson(lesson.id);
     setIsUpdating(false);
   };
   
@@ -580,7 +572,7 @@ export function LessonView({ lesson }: LessonViewProps) {
             <Button
               variant="destructive" size="lg"
               className="w-full sm:w-auto"
-              onClick={handleUncompleteLesson}
+              onClick={() => {}}
               disabled={isUpdating}
             >
               {isUpdating ? <Loader2 className="animate-spin" /> : <XCircle />}
