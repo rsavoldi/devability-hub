@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -14,13 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Server, Save } from 'lucide-react';
-import type { SaveSlot, UserProfile } from '@/lib/types';
+import type { LessonProgress } from '@/lib/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { countInteractions } from '@/lib/interaction-counter';
 import { mockLessons } from '@/lib/mockData';
 
 interface RestoreProgressDialogProps {
-  children: React.ReactNode;
+    children: React.ReactNode;
+    lessonId?: string | null;
 }
 
 function formatTimestamp(timestamp: number | undefined): string {
@@ -107,7 +109,10 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
                 </CardContent>
                 <DialogFooter className="p-6 pt-0">
                 <Button 
-                    onClick={() => restoreProgressFromSlot('autosave')} 
+                    onClick={() => {
+                        restoreProgressFromSlot('autosave');
+                        setIsOpen(false);
+                    }} 
                     disabled={!autosaveSlot}
                     className="w-full"
                 >
@@ -136,7 +141,10 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
                 </CardContent>
                 <DialogFooter className="p-6 pt-0">
                 <Button 
-                    onClick={() => restoreProgressFromSlot('manualsave')} 
+                    onClick={() => {
+                        restoreProgressFromSlot('manualsave');
+                        setIsOpen(false);
+                    }} 
                     disabled={!manualSaveSlot}
                     className="w-full"
                 >
@@ -159,3 +167,5 @@ export function RestoreProgressDialog({ children }: RestoreProgressDialogProps) 
     </Dialog>
   );
 }
+
+    
